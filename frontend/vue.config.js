@@ -3,12 +3,12 @@ module.exports = {
 }
 
 module.exports = {
-  chainWebpack: config => {
-    config
-      .plugin('html')
-      .tap(args => {
-        args[0].title= '芒果相册1'
-        return args
-      })
-  }
+    chainWebpack: config => {
+        config
+            .plugin('html')
+            .tap(args => {
+                args[0].title = '芒果相册2'
+                return args
+            })
+    }
 }
