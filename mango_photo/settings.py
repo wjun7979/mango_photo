@@ -35,18 +35,21 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'browse.apps.BrowseConfig',  # 照片浏览
+    'backend_api.apps.BackendApiConfig',  # 后端API
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+CORS_ORIGIN_ALLOW_ALL = True  # 解决跨域问题
 
 ROOT_URLCONF = 'mango_photo.urls'
 
@@ -66,6 +69,7 @@ TEMPLATES = [
     },
 ]
 
+# 静态文件的搜索路径
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'frontend/dist/static')
 ]

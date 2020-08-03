@@ -12,7 +12,9 @@
                     <router-view></router-view>
                 </el-main>
             </el-container>
-            <el-footer>Footer</el-footer>
+            <el-footer height="40px" style="padding: 0">
+                <Footer></Footer>
+            </el-footer>
         </el-container>
     </div>
 </template>
@@ -20,11 +22,12 @@
 <script>
     import Header from "../../components/Header";
     import NavMenu from "../../components/NavMenu";
+    import Footer from "../../components/Footer";
 
     export default {
         name: 'Index',
         components: {
-            Header, NavMenu
+            Footer, Header, NavMenu
         }
     }
 </script>

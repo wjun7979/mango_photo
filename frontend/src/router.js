@@ -1,9 +1,9 @@
-import Vue from 'vue';
-import VueRouter from 'vue-router';
-import Browse from "./components/Browse";
-import Trash from "./components/Trash";
+import Vue from 'vue'
+import VueRouter from 'vue-router'
+import Browse from "./components/Browse"
+import Trash from "./components/Trash"
 
-Vue.use(VueRouter);
+Vue.use(VueRouter)
 
 //定义routes路由的集合，数组类型
 const routes = [
@@ -18,4 +18,4 @@ const router = new VueRouter({
 })
 
 //抛出这个实例对象方便外部读取以及访问
-export default router;
+export default router

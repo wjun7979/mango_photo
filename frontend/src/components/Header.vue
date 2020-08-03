@@ -8,15 +8,17 @@
                 <el-input class="input-search" placeholder="搜索你的照片" prefix-icon="el-icon-search"></el-input>
             </el-col>
             <el-col :span="10" style="text-align: right">
-                <el-button icon="el-icon-upload2">上传</el-button>
+                <UploadFile></UploadFile>
             </el-col>
         </el-row>
     </div>
 </template>
 
 <script>
+    import UploadFile from "./UploadFile";
     export default {
-        name: "Header"
+        name: "Header",
+        components: {UploadFile}
     }
 </script>
 
