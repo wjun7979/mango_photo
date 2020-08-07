@@ -57,6 +57,11 @@ def upload_file(request):
         if dt[4:5] == ':':  # 从Exif信息中获取的日期分隔符是冒号，需要替换
             dt = str(dt).replace(':', '-', 2)
 
+        # 获取照片的尺寸
+        im = Image.open(full_path)  # 打开原始照片文件
+        im_width = im.width
+        im_height = im.height
+
         # 写入数据库
         photo = Photo()
         photo.uuid = str(uuid.uuid1()).replace('-', '')
@@ -66,6 +71,8 @@ def upload_file(request):
         photo.size = file.size
         photo.thumbnail_path = thumbnail
         photo.exif_datetime = dt
+        photo.width = im_width
+        photo.height = im_height
         photo.save()
 
         response['msg'] = 'success'

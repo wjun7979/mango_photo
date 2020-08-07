@@ -28,17 +28,22 @@
         name: 'Index',
         data() {
             return {
-                main_height: document.documentElement.clientHeight - 72 - 48 + 'px',
-            }
-        },
-        mounted() {
-            const that = this
-            window.onresize = function () {  //窗口改变时更新el-main的高度
-                that.main_height = document.documentElement.clientHeight - 72 - 48 + 'px'
+                main_height: this.listenResize(),
             }
         },
         components: {
             Footer, Header, NavMenu
+        },
+        mounted() {
+            window.addEventListener('resize', this.listenResize)
+        },
+        beforeDestroy() {
+            window.removeEventListener('resize', this.listenResize)
+        },
+        methods: {
+            listenResize: function () {
+                this.main_height = document.documentElement.clientHeight - 72 - 48 + 'px'
+            }
         }
     }
 </script>
