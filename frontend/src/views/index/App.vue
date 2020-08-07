@@ -8,11 +8,11 @@
                 <el-aside width="256px">
                     <NavMenu></NavMenu>
                 </el-aside>
-                <el-main>
+                <el-main :style="{height: main_height}">
                     <router-view></router-view>
                 </el-main>
             </el-container>
-            <el-footer height="40px" style="padding: 0">
+            <el-footer height="48px" style="padding: 0">
                 <Footer></Footer>
             </el-footer>
         </el-container>
@@ -26,6 +26,17 @@
 
     export default {
         name: 'Index',
+        data() {
+            return {
+                main_height: document.documentElement.clientHeight - 72 - 48 + 'px',
+            }
+        },
+        mounted() {
+            const that = this
+            window.onresize = function () {  //窗口改变时更新el-main的高度
+                that.main_height = document.documentElement.clientHeight - 72 - 48 + 'px'
+            }
+        },
         components: {
             Footer, Header, NavMenu
         }
