@@ -15,6 +15,14 @@ const store = new Vuex.Store({
         refresh_photo: false,  //是否刷新照片列表
     },
     mutations: {
+        setApiUrl(state) {  //根据客户端访问地址改变API请求地址
+            if (window.location.href.indexOf('localhost') > -1) {
+                state.api_url = 'http://127.0.0.1:8000'
+            }
+            else {
+                state.api_url = 'http://wlon.vicp.net:7081'
+            }
+        },
         showLog(state, payload) {  // 更新当前日志
             state.curr_log.type = payload.type
             state.curr_log.msg = payload.msg

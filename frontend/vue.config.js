@@ -7,5 +7,10 @@ module.exports = {
             filename: "index.html",  //打包后的html文件的名称
             title: "芒果相册"  //打包后的html中<title>标签的文本内容
         }
+    },
+    devServer: {
+        allowedHosts: [
+            'wlon.vicp.net'
+        ]
     }
 }

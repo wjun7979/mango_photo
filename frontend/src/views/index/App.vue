@@ -28,11 +28,14 @@
         name: 'Index',
         data() {
             return {
-                main_height: this.listenResize(),
+                main_height: document.documentElement.clientHeight - 72 - 48 + 'px',
             }
         },
         components: {
             Footer, Header, NavMenu
+        },
+        created() {
+            this.$store.commit('setApiUrl')  //根据客户端访问地址改变API请求地址
         },
         mounted() {
             window.addEventListener('resize', this.listenResize)
