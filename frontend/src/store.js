@@ -20,7 +20,7 @@ const store = new Vuex.Store({
                 state.api_url = 'http://127.0.0.1:8000'
             }
             else {
-                state.api_url = 'http://wlon.vicp.net:7081'
+                state.api_url = 'http://wlon.vicp.net:7080'
             }
         },
         showLog(state, payload) {  // 更新当前日志

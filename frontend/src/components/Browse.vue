@@ -1,11 +1,12 @@
 <template>
     <div>
+        <!--当照片列表为空时显示一些提示信息-->
         <div v-if="isShowTips" style="text-align: center;">
             <img src="../assets/images/upload-bg.png" style="width: 649px; height: 327px;"/>
             <div style="font-size: 32px; line-height: 50px; font-weight: 400; color: #202124">准备好添加一些照片了吗？</div>
             <div style="font-size: 16px; line-height: 40px; font-weight: 400; color: #3c4043">点击右上角的【上传】按钮上传照片</div>
         </div>
-
+        <!--瀑布流样式的照片列表-->
         <div class="div-images">
             <div v-for="(img, index) in photo_list"
                  :key="img.uuid"
@@ -13,8 +14,10 @@
                  :style="{'width': img.width*220/img.height+'px','flex-grow':img.width*200/img.height}">
                 <i :style="{'padding-bottom': img.height/img.width*100 + '%', 'display':'block'}"></i>
                 <el-image :src="api_url + '/' + img.thumbnail_path + '/' + img.name" lazy
-                          :alt="img.name" :title="img.name"
-                          :preview-src-list="getSrcList(index)">
+                          :alt="img.name"
+                          :title="img.name"
+                          @click="showPreview(index)"
+                          style="cursor: pointer;">
                     <div slot="error">
                         <div class="image-slot">
                             <i class="el-icon-picture-outline"></i>
@@ -23,17 +26,23 @@
                 </el-image>
             </div>
         </div>
+        <!--大图预览-->
+        <Preview v-if="isShowPreview" :url-list="preview_list_order" :on-close="closeViewer"></Preview>
     </div>
 </template>
 
 <script>
+    import Preview from "./Preview";
     export default {
         name: "Browse",
+        components: {Preview},
         data() {
             return {
                 photo_list: [],  //照片列表
-                preview_list: [],  //照片预览列表
                 isShowTips: false,  //是否显示上传提示
+                isShowPreview: false,  //是否显示大图预览
+                preview_list: [],  //初始的照片预览列表
+                preview_list_order: [],  //重新排序之后的照片预览列表
             }
         },
         computed: {
@@ -77,10 +86,13 @@
                     this.$store.commit('refreshPhoto', {show: false})
                 })
             },
-            getSrcList(index) {  //获取大图预览对象
-                //改变数组顺序，从当前索引截取到最后，再加上从第一个到当前索引
-                return this.preview_list.slice(index).concat(this.preview_list.slice(0, index))
+            showPreview(index) {  //显示大图预览
+                this.preview_list_order = this.preview_list.slice(index).concat(this.preview_list.slice(0, index))
+                this.isShowPreview = true
             },
+            closeViewer() {  //关闭大图预览
+                this.isShowPreview = false
+            }
         }
     }
 </script>

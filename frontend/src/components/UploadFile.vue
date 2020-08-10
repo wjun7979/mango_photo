@@ -65,7 +65,7 @@
                 let newDate = new Date()
                 if (file.status == 'ready') {  // 文件添加之后
                     //检查文件类型
-                    const extension_name = file.name.substring(file.name.lastIndexOf('.') + 1)  //上传文件的扩展名
+                    const extension_name = file.name.substring(file.name.lastIndexOf('.') + 1).toLowerCase()  //上传文件的扩展名
                     const accept_list = ['jpg', 'jpeg', 'png', 'bmp']  //允许上传的文件类型列表
                     const isImage = accept_list.indexOf(extension_name) != -1
                     if (!isImage) {

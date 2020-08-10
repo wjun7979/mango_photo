@@ -12,5 +12,8 @@ module.exports = {
         allowedHosts: [
             'wlon.vicp.net'
         ]
-    }
+    },
+    chainWebpack: config => {
+        config.plugins.delete('hmr');
+    },
 }

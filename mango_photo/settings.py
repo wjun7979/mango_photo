@@ -74,6 +74,7 @@ TEMPLATES = [
 
 # 静态文件的搜索路径
 STATICFILES_DIRS = [
+    os.path.join(BASE_DIR, 'frontend/dist'),  # 加这一行可以正确显示网站图标文件
     os.path.join(BASE_DIR, 'frontend/dist/static')
 ]
 
