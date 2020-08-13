@@ -1,6 +1,8 @@
 export default {
-    date_format: function (dt, fmt) {
-        //将datetime对象格式化成指定格式的字符串
+    date_format(dt, fmt) {  //将datetime对象格式化成指定格式的字符串
+        if (typeof dt == 'string') {
+            dt = new Date(Date.parse(dt.replace(/-/g, "/")))
+        }
         let o = {
             "y+": dt.getFullYear(),
             "M+": dt.getMonth() + 1,                 //月份
@@ -9,7 +11,8 @@ export default {
             "m+": dt.getMinutes(),                 //分
             "s+": dt.getSeconds(),                 //秒
             "q+": Math.floor((dt.getMonth() + 3) / 3), //季度
-            "S+": dt.getMilliseconds()             //毫秒
+            "S+": dt.getMilliseconds(),             //毫秒
+            "w+": dt.getDay(),  //星期
         };
         for (let k in o) {
             if (new RegExp("(" + k + ")").test(fmt)) {
@@ -19,11 +22,21 @@ export default {
                     let lens = RegExp.$1.length;
                     lens = lens == 1 ? 3 : lens;
                     fmt = fmt.replace(RegExp.$1, ("00" + o[k]).substr(("" + o[k]).length - 1, lens));
+                } else if (k == "w+") {
+                    fmt = fmt.replace(RegExp.$1, '日一二三四五六'.charAt(o[k]))
                 } else {
                     fmt = fmt.replace(RegExp.$1, (RegExp.$1.length == 1) ? (o[k]) : (("00" + o[k]).substr(("" + o[k]).length)));
                 }
             }
         }
         return fmt;
+    },
+    isContain(arr1, arr2) {  //判断arr2是否是arr1的子集
+        for (let i = arr2.length - 1; i >= 0; i--) {
+            if(!arr1.includes(arr2[i])){
+                return false;
+            }
+        }
+        return true;
     }
 }

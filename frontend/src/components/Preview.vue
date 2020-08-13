@@ -126,7 +126,7 @@
                 return this.urlList.length <= 1;
             },
             currentImg() {  //当前图片默认是传入数组urlList的第一个元素
-                return this.urlList[this.index];
+                return this.urlList[this.index].url;
             },
             imgStyle() {
                 const {scale, deg, offsetX, offsetY, enableTransition} = this.transform;
