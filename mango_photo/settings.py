@@ -25,6 +25,7 @@ SECRET_KEY = '9=uj$#e$!#0*@$cahjwlnwnq_e=v&&*)jctajavq69+-)svseb'
 DEBUG = True
 
 ALLOWED_HOSTS = [
+    'localhost',
     '127.0.0.1',
     'wlon.vicp.net'
 ]

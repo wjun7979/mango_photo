@@ -7,9 +7,10 @@
             <div style="font-size: 16px; line-height: 40px; font-weight: 400; color: #3c4043">点击右上角的【上传】按钮上传照片</div>
         </div>
 
-        <el-checkbox-group v-model="checkGroupList">
-            <el-row v-for="(photo, index) in photo_list" :key="index">
-                <el-checkbox class="chk-group" :label="photo.timestamp" @change="selectPhotoGroup">
+        <!--照片列表-->
+        <el-checkbox-group v-model="checkGroupList" class="images-wrap">
+            <el-row v-for="(photo, index) in photo_list" :key="index" style="margin-right: 28px;">
+                <el-checkbox class="chk-group" :label="photo.timestamp" @change="selectPhotoGroup(photo.timestamp)">
                     {{common.date_format(photo.timestamp,'yyyy年M月d日 周w')}}
                 </el-checkbox>
                 <el-checkbox-group v-model="checkList">
@@ -20,13 +21,19 @@
                              class="div-img"
                              :class="{'chk-checked': checkList.indexOf(img.uuid) != -1,
                                       'show-checkbox': checkList.length > 0}"
-                             :style="{'width': img.width*220/img.height+'px','flex-grow':img.width*220/img.height}">
-                            <i :style="{'padding-bottom': img.height/img.width*100 + '%', 'display':'block'}"></i>
-                            <el-checkbox :label="img.uuid" @change="selectPhoto"></el-checkbox>
+                             :style="{'width': img.width * imgHeight / img.height + 'px',
+                                      'flex-grow':img.width * imgHeight / img.height}">
+                            <i :style="{'padding-bottom': img.height / img.width * 100 + '%', 'display':'block'}"></i>
+                            <el-checkbox :label="img.uuid"
+                                         @change="selectPhoto(img.index, img.uuid, photo.timestamp)"
+                                         @click.native.shift.exact="multiSelectPhotos($event, img.index, img.uuid, photo.timestamp)">
+                            </el-checkbox>
+                            <i class="el-icon-zoom-in btn-preview" @click="showPreview(img.uuid)"></i>
                             <el-image :src="api_url + '/' + img.path_thumbnail + '/' + img.name" lazy
                                       :alt="img.name"
                                       :title="img.name"
-                                      @click="showPreview(img.uuid)"
+                                      @click.exact="clickImage(img.index, img.uuid, photo.timestamp)"
+                                      @click.shift.exact="multiSelectPhotos($event, img.index, img.uuid, photo.timestamp)"
                                       style="cursor: pointer;">
                                 <div slot="error">
                                     <div class="image-slot">
@@ -42,11 +49,27 @@
 
         <!--大图预览-->
         <Preview v-if="isShowPreview" :url-list="preview_list_order" :on-close="closeViewer"></Preview>
+
+        <!--选中照片后的工具栏-->
+        <el-row class="chk-toolbar" v-show="checkList.length > 0">
+            <el-col :span="12">
+                <i class="el-icon-close" style="color: #202124;" @click="unselectPhoto"></i>
+                <span style="font-size: 1.125rem; padding-left: 7px;">选择了 {{checkList.length}} 张照片</span>
+            </el-col>
+            <el-col :span="12" style="text-align: right">
+                <i class="el-icon-plus" title="添加到影集"></i>
+                <i class="el-icon-star-off" title="收藏"></i>
+                <i class="el-icon-delete" title="删除"></i>
+                <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
+            </el-col>
+        </el-row>
     </div>
 </template>
 
 <script>
     import Preview from "./Preview";
+    import {rafThrottle} from "element-ui/src/utils/util";
+    import {off, on} from "element-ui/src/utils/dom";
     export default {
         name: "Browse",
         components: {Preview},
@@ -57,8 +80,10 @@
                 isShowPreview: false,  //是否显示大图预览
                 preview_list: [],  //初始的照片预览列表
                 preview_list_order: [],  //重新排序之后的照片预览列表
-                checkGroupList: [],
-                checkList: [],
+                checkGroupList: [],  //选中的分组列表
+                checkList: [],  //选中的照片列表
+                imgHeight: 200,  //照片的高度
+                lastSelectedIndex: null,  //最后一次选中的照片序号
             }
         },
         computed: {
@@ -72,16 +97,52 @@
         },
         mounted() {
             this.showPhotos()  //获取并显示照片列表
+            this.deviceSupportInstall()  //注册键盘按键支持
+            window.addEventListener('resize', this.listenResize)
+            this.setImgHeight()
+        },
+        beforeDestroy() {
+            this.deviceSupportUninstall()  //卸载键盘按键支持
+            window.removeEventListener('resize', this.listenResize)
         },
         watch: {
-            refresh_photo() {  //有其它组件发出刷新照片的指令
+            refresh_photo() {
+                //有其它组件发出刷新照片的指令
                 if (this.refresh_photo) {
                     this.showPhotos()
                 }
             },
         },
         methods: {
-            showPhotos() {  //获取并显示照片列表
+            deviceSupportInstall() {
+                //注册键盘按键支持
+                this._keyDownHandler = rafThrottle(e => {
+                    const keyCode = e.keyCode
+                    switch (keyCode) {
+                        case 27:  //ESC取消选择
+                            this.unselectPhoto()
+                            break
+                    }
+                })
+                on(document, 'keydown', this._keyDownHandler)
+            },
+            deviceSupportUninstall() {
+                //卸载键盘按键支持
+                off(document, 'keydown', this._keyDownHandler)
+                this._keyDownHandler = null
+            },
+            listenResize: function () {
+                //监听浏览器窗口大小变化的事件
+                this.setImgHeight()
+            },
+            setImgHeight() {
+                //浏览器窗口大小变化时改变照片的大小
+                this.imgHeight = document.documentElement.clientWidth / 8
+                this.imgHeight = this.imgHeight < 100 ? 100 : this.imgHeight
+                this.imgHeight = this.imgHeight > 200 ? 200 : this.imgHeight
+            },
+            showPhotos() {
+                //获取并显示照片列表
                 this.$http.get(this.api_url + '/api/photo_list').then(response => {
                     const res = JSON.parse(response.bodyText)
                     if (res.msg == 'success') {
@@ -96,7 +157,8 @@
                         }
                         // 将照片列表转换成时间线要求的格式
                         let dataMap = []
-                        for (let d of result) {
+                        for (let [index, d] of result.entries()) {
+                            d['index'] = index  //增加序号属性
                             let findData = dataMap.find(t=> t.timestamp == d['exif_datetime'].substring(0,10))
                             if (!findData)
                                 dataMap.push({'timestamp': d['exif_datetime'].substring(0, 10), 'list': [d]})
@@ -104,7 +166,7 @@
                                 findData.list.push(d)
                         }
                         this.photo_list = dataMap
-                        // 当没有照片时显示提示
+                        // 当没有照片时显示上传提示
                         this.isShowTips = this.photo_list.length == 0
                     } else {
                         this.$notify.error({
@@ -113,64 +175,119 @@
                             position: 'top-right'
                         })
                     }
+                    //照片读取完成后，将store.js中的refreshPhoto值重置为false
                     this.$store.commit('refreshPhoto', {show: false})
                 })
             },
-            showPreview(uuid) {  //显示大图预览
+            showPreview(uuid) {
+                //显示大图预览
+                let index = this.preview_list.findIndex(t => t.uuid == uuid)  //获取即将预览的照片索引
+                //根据索引对预览数组重新排序
+                this.preview_list_order = this.preview_list.slice(index).concat(this.preview_list.slice(0, index))
+                this.isShowPreview = true
+                this.deviceSupportUninstall()  //卸载键盘按键支持，防止与大图预览中的快捷键冲突
+            },
+            clickImage(index, uuid, timestamp) {
+                //点击照片时发生，按下shift等修饰键时不会触发单击事件
                 if (this.checkList.length > 0) {  //当前有照片被选中了
-                    let index = this.checkList.indexOf(uuid)
-                    if (index == -1)
+                    let idx = this.checkList.indexOf(uuid)
+                    if (idx == -1) {
                         this.checkList.push(uuid)
-                    else
-                        this.checkList.splice(index, 1)
-                    this.selectPhoto()  //触发照片选择事件
-                }
-                else {
-                    let index = this.preview_list.findIndex(t => t.uuid == uuid)  //获取即将预览的照片索引
-                    //根据索引对预览数组重新排序
-                    this.preview_list_order = this.preview_list.slice(index).concat(this.preview_list.slice(0, index))
-                    this.isShowPreview = true
-                }
-            },
-            closeViewer() {  //关闭大图预览
-                this.isShowPreview = false
-            },
-            selectPhotoGroup() {  //按组选择照片时
-                for (let i in this.photo_list) {  //对所有照片进行分组循环
-                    let timestamp = this.photo_list[i].timestamp
-                    let photos = this.photo_list[i].list
-                    for (let j in photos) {
-                        if (this.checkGroupList.indexOf(timestamp) != -1) {  //选中了该组
-                            if (this.checkList.indexOf(photos[j].uuid) == -1) {
-                                this.checkList.push(photos[j].uuid)
-                            }
-                        }
-                        else {
-                            let index = this.checkList.indexOf(photos[j].uuid)
-                            if (index != -1) {
-                                this.checkList.splice(index, 1)
-                            }
-                        }
-                    }
-                }
-            },
-            selectPhoto() {  //选择照片时
-                for (let i in this.photo_list) {  //对所有照片进行分组循环
-                    let timestamp = this.photo_list[i].timestamp
-                    let photos = this.photo_list[i].list
-                    let tmpArr = []
-                    for (let j in photos) {  //将当前组内的照片uuid存入一个新的数组
-                        tmpArr.push(photos[j].uuid)
-                    }
-                    let index = this.checkGroupList.indexOf(timestamp)
-                    if (this.common.isContain(this.checkList, tmpArr)) {  //判断当前组照片是否全被选中
-                        if (index == -1)
-                            this.checkGroupList.push(timestamp)
                     }
                     else {
-                        if (index != -1)
-                            this.checkGroupList.splice(index, 1)
+                        this.checkList.splice(idx, 1)
+                        this.lastSelectedIndex = null
                     }
+                    this.selectPhoto(index, uuid, timestamp)  //触发照片选择事件
+                }
+                else {  //没有照片被选中时，点击照片就是预览
+                    this.showPreview(uuid)
+                }
+            },
+            closeViewer() {
+                //关闭大图预览
+                this.isShowPreview = false
+                this.deviceSupportInstall()  //恢复键盘按键支持
+            },
+            selectPhotoGroup(timestamp) {
+                //按组选择照片时
+                let photoGroup = this.photo_list.find(t=> t.timestamp == timestamp)
+                let timeStamp = photoGroup.timestamp
+                let photos = photoGroup.list
+                for (let j in photos) {
+                    if (this.checkGroupList.indexOf(timeStamp) != -1) {  //选中了该组
+                        if (this.checkList.indexOf(photos[j].uuid) == -1) {
+                            this.checkList.push(photos[j].uuid)
+                        }
+                        //选中全组时，最后一次选中的序号即为该组最后一张照片的序号
+                        this.lastSelectedIndex = photos[j].index
+                    }
+                    else {
+                        let idx = this.checkList.indexOf(photos[j].uuid)
+                        if (idx != -1) {
+                            this.checkList.splice(idx, 1)
+                        }
+                        //取消选中全组时，清除最后一次选中的序号
+                        this.lastSelectedIndex = null
+                    }
+                }
+            },
+            selectPhoto(index, uuid, timestamp) {
+                //选择照片时，判断分组复选框是否勾选
+                let photoGroup = this.photo_list.find(t=> t.timestamp == timestamp)
+                let timeStamp = photoGroup.timestamp
+                let photos = photoGroup.list
+                let tmpArr = []
+                for (let j in photos) {  //将当前组内的照片uuid存入一个新的数组
+                    tmpArr.push(photos[j].uuid)
+                }
+                let idx = this.checkGroupList.indexOf(timeStamp)
+                if (this.common.isContain(this.checkList, tmpArr)) {  //判断当前组照片是否全被选中
+                    if (idx == -1)
+                        this.checkGroupList.push(timeStamp)
+                }
+                else {
+                    if (idx != -1)
+                        this.checkGroupList.splice(idx, 1)
+                }
+
+                if (this.checkList.indexOf(uuid) != -1)
+                    this.lastSelectedIndex = index  //记录最后一次选中照片的序号
+                else
+                    this.lastSelectedIndex = null  //清除最后一次选中照片的序号
+            },
+            unselectPhoto() {
+                //放弃选择
+                this.checkList = []
+                this.checkGroupList = []
+                this.lastSelectedIndex = null  //清除最后一次选中照片的序号
+            },
+            multiSelectPhotos(e, index, uuid, timestamp) {
+                //连续选择照片，当按下shift时才触发该事件
+                if (e.target.tagName == 'SPAN') return  //因为原生click事件会执行两次，第一次在label标签上，第二次在input标签上，故此处理
+                //当起始照片编号不存在时，不执行连续选择操作
+                if (this.lastSelectedIndex != null) {
+                    let startIndex = index > this.lastSelectedIndex ? this.lastSelectedIndex: index
+                    let endIndex = index > this.lastSelectedIndex ? index : this.lastSelectedIndex
+                    if (this.checkList.indexOf(uuid) == -1) {  //当前照片处于未选中状态，执行连续选中操作
+                        for (let i = startIndex;i <= endIndex; i++) {
+                            if (this.checkList.indexOf(this.preview_list[i].uuid) == -1)
+                                this.checkList.push(this.preview_list[i].uuid)
+                        }
+                        this.lastSelectedIndex = endIndex  //记录最后一次选中照片的序号
+                    }
+                    else {  //当前照片处于选中状态，执行连续取消选中操作
+                        for (let i = startIndex;i <= endIndex; i++) {
+                            let idx = this.checkList.indexOf(this.preview_list[i].uuid)
+                            if (idx != -1)
+                                this.checkList.splice(idx, 1)
+                        }
+                        this.lastSelectedIndex = null  //清除最后一次选中照片的序号
+                    }
+                }
+                else {  //当用户在照片上按住shift键单击时，映射到点击照片的动作
+                    if (e.target.tagName == 'IMG')
+                        this.clickImage(index, uuid, timestamp)
                 }
             },
         }
@@ -188,7 +305,7 @@
         text-align: center;
     }
 
-    .div-images {  /*瀑布流照片*/
+    .images-wrap, .div-images {  /*瀑布流照片*/
         display: flex;
         flex-wrap: wrap;
     }
@@ -272,7 +389,13 @@
         border-top: 0;
     }
 
-    .div-img:hover >>> .el-checkbox {  /*鼠标移上去时显示勾选控件*/
+    .div-images >>> .is-checked .el-checkbox__inner {
+        background-color: #409eff;
+        border-color: #409eff;
+    }
+
+    .div-img:hover >>> .el-checkbox,
+    .div-img:hover .btn-preview {  /*鼠标移上去时显示勾选控件和预览按钮*/
         visibility: visible;
     }
 
@@ -295,4 +418,52 @@
         visibility: visible;
     }
 
+    .btn-preview {  /*照片上浮现的预览按钮*/
+        visibility: hidden;
+        position: absolute;
+        right: 8px;
+        bottom: 8px;
+        padding: 5px;
+        z-index: 1;
+        color: rgba(255,255,255,.7);
+        background-color: rgba(0,0,0,.2);
+        font-size: 20px;
+        font-weight: bold;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+
+    .btn-preview:hover {
+        color: #fff;
+    }
+
+    .chk-toolbar {  /*选中照片后的工具栏*/
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 64px;
+        padding: 0 14px;
+        background-color: #fff;
+        box-shadow: 0 1px 2px 0 rgba(60,64,67,.30), 0 2px 6px 2px rgba(60,64,67,.15);
+    }
+
+    .chk-toolbar i {
+        margin-top: 12px;
+        margin-right: 5px;
+        width: 40px;
+        height: 40px;
+        color: #1a73e8;
+        font-size: 1.125rem;
+        font-weight: bold;
+        line-height: 40px;
+        text-align: center;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+
+    .chk-toolbar i:hover {
+        background-color: #F5F5F5;
+        border-radius: 50%;
+    }
 </style>

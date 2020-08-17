@@ -12,7 +12,7 @@ def photo_list(request):
     response = {}
     try:
         photos = Photo.objects.values('uuid', 'path', 'path_thumbnail', 'name', 'width', 'height',
-                                      'exif_datetime').order_by('-exif_datetime')
+                                      'exif_datetime').filter(deleted_flag=False).order_by('-exif_datetime')
         response['msg'] = 'success'
         response['list'] = json.loads(json.dumps(list(photos), cls=DateEncoder))
     except Exception as e:

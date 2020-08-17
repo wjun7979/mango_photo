@@ -4,6 +4,7 @@
             <el-col :span="12" class="status">0</el-col>
             <el-col :span="12" class="output" @click.native="openLogBox">
                 <i class="el-icon-chat-line-square" style="margin-right: 5px;"></i>
+                <span v-if="curr_log.time">{{ curr_log.time }} : </span>
                 <span :class="curr_log.type">{{ curr_log.msg }}</span>
             </el-col>
         </el-row>
@@ -24,7 +25,7 @@
                 </div>
                 <div id="card-contend">
                     <p v-for="(log, index) in logs" v-bind:key="index">
-                        <span>{{ log.time }} :</span>
+                        <span>{{ log.time }} : </span>
                         <span :class="log.type">{{ log.msg }}</span>
                     </p>
                 </div>
@@ -38,10 +39,16 @@
         name: "Footer",
         data() {
             return {
-                curr_log: this.$store.state.curr_log,  //当前日志信息
-                logs: this.$store.state.logs,  //日志列表
                 isShowLogBox: false,  //是否显示日志面板
                 logBoxWidth: 400,
+            }
+        },
+        computed: {
+            curr_log() {
+                return this.$store.state.curr_log  //当前日志信息
+            },
+            logs() {
+                return this.$store.state.logs  //日志列表
             }
         },
         watch: {
@@ -67,7 +74,7 @@
             },
             clearLogBox: function () {
                 //清空日志
-                this.logs = []
+                this.$store.commit('clearLog')
             }
         }
     }

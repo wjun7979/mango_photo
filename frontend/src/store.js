@@ -8,7 +8,7 @@ const store = new Vuex.Store({
         api_url: 'http://127.0.0.1:8000',  //后台api调用地址
         curr_log: {
             type: '',
-            msg: '',
+            msg: '欢迎使用芒果相册!',
             time: '',
         },  //当前日志信息
         logs: [],  //日志列表
@@ -23,7 +23,7 @@ const store = new Vuex.Store({
                 state.api_url = 'http://wlon.vicp.net:7080'
             }
         },
-        showLog(state, payload) {  // 更新当前日志
+        showLog(state, payload) {  //更新当前日志
             state.curr_log.type = payload.type
             state.curr_log.msg = payload.msg
             state.curr_log.time = payload.time
@@ -33,6 +33,9 @@ const store = new Vuex.Store({
             if (state.logs.length > 10000) {
                 state.logs.splice(0, 1)
             }
+        },
+        clearLog(state) {  //清空日志列表
+            state.logs = []
         },
         refreshPhoto(state, payload) {  //更改"是否刷新照片列表"的值
             state.refresh_photo = payload.show

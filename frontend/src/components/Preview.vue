@@ -14,7 +14,7 @@
                     <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
                     <i class="el-icon-star-off" title="收藏"></i>
                     <i class="el-icon-delete" title="删除"></i>
-                    <i class="el-icon-collection" title="添加到影集"></i>
+                    <i class="el-icon-plus" title="添加到影集"></i>
                 </div>
                 <!-- 上一张、下一张 -->
                 <template v-if="!isSingle">
@@ -147,7 +147,7 @@
                 this.deviceSupportUninstall();
                 this.onClose();
             },
-            deviceSupportInstall() {  //注册键盘按钮和鼠标滚动支持
+            deviceSupportInstall() {  //注册键盘按键和鼠标滚动支持
                 this._keyDownHandler = rafThrottle(e => {
                     const keyCode = e.keyCode;
                     switch (keyCode) {
@@ -188,7 +188,7 @@
                 on(document, 'keydown', this._keyDownHandler);
                 on(document, mousewheelEventName, this._mouseWheelHandler);
             },
-            deviceSupportUninstall() {  //卸载键盘按钮和鼠标滚动支持
+            deviceSupportUninstall() {  //卸载键盘按键和鼠标滚动支持
                 off(document, 'keydown', this._keyDownHandler);
                 off(document, mousewheelEventName, this._mouseWheelHandler);
                 this._keyDownHandler = null;
