@@ -1,31 +1,29 @@
 <template>
-    <div class="index-wrap">
-        <el-container style="height: 100%;">
-            <el-header height="72px" style="padding: 0">
-                <Header></Header>
-            </el-header>
-            <el-container>
-                <el-aside width="256px">
-                    <NavMenu></NavMenu>
-                </el-aside>
-                <el-main :style="{height: main_height}">
-                    <router-view></router-view>
-                </el-main>
-            </el-container>
-            <el-footer height="48px" style="padding: 0">
-                <Footer></Footer>
-            </el-footer>
+    <el-container style="height: 100%;">
+        <el-header height="72px" style="padding: 0">
+            <Header></Header>
+        </el-header>
+        <el-container>
+            <el-aside width="256px">
+                <NavMenu></NavMenu>
+            </el-aside>
+            <el-main :style="{height: main_height}">
+                <router-view></router-view>
+            </el-main>
         </el-container>
-    </div>
+        <el-footer height="48px" style="padding: 0">
+            <Footer></Footer>
+        </el-footer>
+    </el-container>
 </template>
 
 <script>
-    import Header from "../../components/Header";
-    import NavMenu from "../../components/NavMenu";
-    import Footer from "../../components/Footer";
+    import Header from "./Header";
+    import NavMenu from "./NavMenu";
+    import Footer from "./Footer";
 
     export default {
-        name: 'Index',
+        name: 'Main',
         data() {
             return {
                 main_height: document.documentElement.clientHeight - 72 - 48 + 'px',

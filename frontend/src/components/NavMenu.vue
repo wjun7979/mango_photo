@@ -1,7 +1,7 @@
 <template>
     <div class="div-container">
         <el-menu :default-active="$route.path" router>
-            <el-menu-item index="/">
+            <el-menu-item index="/photo">
                 <i class="el-icon-picture-outline"></i>
                 <span>照片</span>
             </el-menu-item>
