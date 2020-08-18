@@ -53,7 +53,7 @@
             beforeUpload(file) {
                 //文件上传之前进行文件类型和大小检查
                 //将文件的最后修改时间附加到上传参数中
-                let fileDate = this.common.date_format(file.lastModifiedDate, 'yyyy-MM-dd hh:mm:ss')
+                let fileDate = this.$common.date_format(file.lastModifiedDate, 'yyyy-MM-dd hh:mm:ss')
                 this.upload_data.dt = fileDate
             },
             submitUpload(){
@@ -63,7 +63,7 @@
             handleSuccess(response, file) {
                 //文件上传成功时
                 let newDate = new Date()
-                if (response.msg == 'success') {
+                if (response.msg === 'success') {
                     let msg = file.name + '上传成功'
                     this.$store.commit('showLog', {type: 'success', msg: msg, time: newDate.toLocaleTimeString()})
                 }
@@ -72,12 +72,12 @@
                 //文件状态改变时
                 this.fileList = fileList
                 let newDate = new Date()
-                if (file.status == 'ready') {  // 文件添加之后
+                if (file.status === 'ready') {  // 文件添加之后
                     //检查文件类型
                     //上传文件的扩展名
                     const extension_name = file.name.substring(file.name.lastIndexOf('.') + 1).toLowerCase()
                     const accept_list = ['jpg', 'jpeg', 'png', 'bmp']  //允许上传的文件类型列表
-                    const isImage = accept_list.indexOf(extension_name) != -1
+                    const isImage = accept_list.indexOf(extension_name) !== -1
                     if (!isImage) {
                         let msg = '不支持 ' + file.name + ' 的文件格式'
                         this.$store.commit('showLog', {type: 'error', msg: msg, time: newDate.toLocaleTimeString()})
@@ -97,8 +97,8 @@
                     }
                 }
                 //检查是否全部上传完毕
-                let readyList = this.fileList.filter(t => t.status == 'ready')
-                if (readyList.length == 0) {
+                let readyList = this.fileList.filter(t => t.status === 'ready')
+                if (readyList.length === 0) {
                     this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                     this.clearFiles()
                     this.show_upload_dialog = false  //关闭上传对话框

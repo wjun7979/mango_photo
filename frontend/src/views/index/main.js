@@ -10,7 +10,7 @@ import common from '../../common.js'
 
 Vue.use(ElementUI)  //前端UI
 Vue.use(VueResource)  //发起请求并处理响应
-Vue.prototype.common = common  //引入公共js方法
+Vue.prototype.$common = common  //引入公共js方法
 
 Vue.config.productionTip = false
 

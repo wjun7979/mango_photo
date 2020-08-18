@@ -212,8 +212,7 @@
                     this.transform.offsetY = offsetY + ev.pageY - startY;
                 });
                 on(document, 'mousemove', this._dragHandler);
-                // eslint-disable-next-line no-unused-vars
-                on(document, 'mouseup', ev => {
+                on(document, 'mouseup', () => {
                     off(document, 'mousemove', this._dragHandler);
                 });
 
