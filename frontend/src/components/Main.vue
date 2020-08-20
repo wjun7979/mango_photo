@@ -32,9 +32,6 @@
         components: {
             Footer, Header, NavMenu
         },
-        created() {
-            this.$store.commit('setApiUrl')  //根据客户端访问地址改变API请求地址
-        },
         mounted() {
             window.addEventListener('resize', this.listenResize)
         },

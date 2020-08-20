@@ -13,6 +13,7 @@
                            list-type="picture-card"
                            :show-file-list="true"
                            accept="image/*"
+                           :headers="headers"
                            :data="upload_data"
                            :auto-upload="false"
                            :on-change="handleChange"
@@ -37,7 +38,9 @@
         name: "UploadFile",
         data() {
             return {
+                headers: {userid: localStorage.getItem('userid'), token: localStorage.getItem('token')},
                 upload_data: {
+                    userid: localStorage.getItem('userid'),  //当前用户id
                     dt: ''  //上传时附带的参数，文件的最后修改时间
                 },
                 show_upload_dialog: false,  //是否显示上传对话框
@@ -63,10 +66,8 @@
             handleSuccess(response, file) {
                 //文件上传成功时
                 let newDate = new Date()
-                if (response.msg === 'success') {
-                    let msg = file.name + '上传成功'
-                    this.$store.commit('showLog', {type: 'success', msg: msg, time: newDate.toLocaleTimeString()})
-                }
+                let msg = file.name + '上传成功'
+                this.$store.commit('showLog', {type: 'success', msg: msg, time: newDate.toLocaleTimeString()})
             },
             handleChange(file, fileList) {
                 //文件状态改变时

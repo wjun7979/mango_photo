@@ -1,9 +1,30 @@
 from django.db import models
 
 
+class User(models.Model):
+    """用户"""
+    userid = models.CharField(primary_key=True, max_length=50)  # 用户ID
+    password = models.CharField(max_length=50)  # 登录密码
+    first_name = models.CharField(max_length=50)  # 姓
+    last_name = models.CharField(max_length=50)  # 名
+    mobile_number = models.CharField(unique=True, max_length=20)  # 移动电话
+    email = models.CharField(unique=True, max_length=50)  # 电子邮件
+    avatar = models.ImageField(null=True)  # 用户头像
+    last_login_time = models.DateTimeField(null=True, auto_now=True)  # 最后一次登录时间
+    last_login_ip = models.CharField(null=True, max_length=50)  # 最后一次登录IP
+    is_active = models.BooleanField(default=True)  # 有效标志
+
+    class Meta:
+        db_table = 'm_user'  # 指定数据库表名
+
+    def __str__(self):
+        return 'user:' + self.userid
+
+
 class Photo(models.Model):
     """照片"""
     uuid = models.CharField(primary_key=True, max_length=32)
+    userid = models.CharField(max_length=50)  # 所属用户
     path = models.CharField(max_length=500)  # 照片文件存储路径
     path_thumbnail = models.CharField(null=True, max_length=500)  # 缩略图存储路径
     path_original = models.CharField(null=True, max_length=500)  # 原始照片存储路径
@@ -25,7 +46,7 @@ class Photo(models.Model):
     exif_gpslongitude = models.CharField(null=True, max_length=500)  # GPS纬度
     exif_gpslongituderef = models.CharField(null=True, max_length=100)  # 东西半球标志
     comments = models.CharField(null=True, max_length=500)  # 备注
-    deleted_flag = models.BooleanField(default=False)  # 删除标志
+    is_deleted = models.BooleanField(default=False)  # 删除标志
     input_date = models.DateTimeField(auto_now_add=True)  # 录入时间
     update_date = models.DateTimeField(auto_now=True)  # 修改时间
 

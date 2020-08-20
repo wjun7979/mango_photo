@@ -42,5 +42,6 @@ const store = new Vuex.Store({
         },
     }
 })
+store.commit('setApiUrl')
 
 export default store

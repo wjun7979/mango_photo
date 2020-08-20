@@ -14,16 +14,18 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import path, re_path
 from django.views.generic import TemplateView, RedirectView
-from django.conf.urls import include
+from django.conf.urls import include, url
 from django.conf import settings
-from django.conf.urls.static import static
+from django.views.static import serve
 import backend_api.urls
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include(backend_api.urls)),
-    path('', TemplateView.as_view(template_name='index.html')),
-    path('favicon.ico', RedirectView.as_view(url='static/favicon.ico')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    path('api/', include(backend_api.urls)),  # 后端api
+    path('', TemplateView.as_view(template_name='index.html')),  # 默认页面
+    path('favicon.ico', RedirectView.as_view(url='static/favicon.ico')),  # 网站图标
+    url(r'^photos/(?P<path>.*)$', serve, {"document_root": settings.MEDIA_ROOT}),  # 上传的照片
+    re_path(r'.*', TemplateView.as_view(template_name='index.html')),  # 其他路由
+]

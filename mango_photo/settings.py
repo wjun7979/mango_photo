@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 """
 
 import os
+from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -39,6 +40,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'corsheaders',
     'backend_api.apps.BackendApiConfig',  # 后端API
 ]
 
@@ -51,9 +53,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'backend_api.middleware.LoginMiddleware',  # 用户自定义中间件，用于拦截未通过身份验证的请求
 ]
 
 CORS_ORIGIN_ALLOW_ALL = True  # 解决跨域问题
+CORS_ALLOW_HEADERS = '*'  # 允许自定义Header
 
 ROOT_URLCONF = 'mango_photo.urls'
 
@@ -132,3 +136,4 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "photos")  # 存放用户上传文件目录的绝对路径
 MEDIA_URL = '/photos/'
+

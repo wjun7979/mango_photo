@@ -11,11 +11,12 @@ def photo_list(request):
     """浏览照片"""
     response = {}
     try:
-        photos = Photo.objects.values('uuid', 'path', 'path_thumbnail', 'name', 'width', 'height',
-                                      'exif_datetime').filter(deleted_flag=False).order_by('-exif_datetime')
-        response['msg'] = 'success'
+        userid = request.GET.get('userid')
+        photos = Photo.objects.values('uuid', 'path', 'path_thumbnail', 'name', 'width', 'height', 'exif_datetime')\
+            .filter(userid=userid, is_deleted=False).order_by('-exif_datetime')
         response['list'] = json.loads(json.dumps(list(photos), cls=DateEncoder))
+        return JsonResponse(response, status=200)
     except Exception as e:
         traceback.print_exc()
         response['msg'] = str(e)
-    return JsonResponse(response)
+        return JsonResponse(response, status=500, json_dumps_params={'ensure_ascii': False})

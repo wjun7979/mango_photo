@@ -16,7 +16,7 @@ from backend_api.models import Photo, Address
 
 
 @require_http_methods(['POST'])  # django内置的视力装饰器，这行表示只能通过POST方法访问
-@transaction.atomic
+@transaction.atomic  # 数据库事务处理
 def upload_file(request):
     """上传文件"""
     save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
@@ -70,6 +70,7 @@ def upload_file(request):
         _uuid = str(uuid.uuid1()).replace('-', '')  # 生成照片唯一序列号
         photo = Photo()
         photo.uuid = _uuid
+        photo.userid = request.POST['userid']
         photo.path = file_path
         photo.path_thumbnail = thumbnail[0]
         photo.name = os.path.split(photo_fullpath)[1]
@@ -108,7 +109,7 @@ def upload_file(request):
             address.town = location['town']
             address.save()
 
-        response['msg'] = 'success'
+        return JsonResponse(response, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息
         transaction.savepoint_rollback(save_tag)  # 回滚数据库事务
@@ -118,7 +119,6 @@ def upload_file(request):
             os.remove(thumbnail_fullpath)
         response['msg'] = str(e)
         return JsonResponse(response, status=500, json_dumps_params={'ensure_ascii': False})
-    return JsonResponse(response)
 
 
 def __write_file(full_path, file):

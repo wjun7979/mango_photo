@@ -4,6 +4,7 @@ import Login from './components/Login'
 import Main from './components/Main'
 import Browse from "./components/Browse"
 import Trash from "./components/Trash"
+import NotFound from "./components/NotFound";
 
 //解决ElementUI导航栏中的vue-router重复点菜单报错问题
 const originalPush = VueRouter.prototype.push
@@ -35,6 +36,7 @@ const routes = [
             },
         ]
     },
+    {path: '*', component: NotFound},
 ]
 
 //实例化VueRouter并将routes添加进去
@@ -43,11 +45,19 @@ const router = new VueRouter({
     routes  //ES6简写，等于routes:routes
 })
 
-//动态改变页面的title值
+//路由拦截
 const defaultTitle = '芒果相册'
 router.beforeEach((to, from, next) => {
-    document.title = to.meta.title ? to.meta.title + ' - ' + defaultTitle : defaultTitle
-    next()
+    document.title = to.meta.title ? to.meta.title + ' - ' + defaultTitle : defaultTitle  //动态改变页面的title值
+    if (to.path == '/login') {
+        next();
+    } else {
+        if (localStorage.getItem('token')) {
+            next();
+        } else {
+            next('/login');
+        }
+    }
 })
 
 //抛出这个实例对象方便外部读取以及访问
