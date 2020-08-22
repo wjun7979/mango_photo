@@ -7,7 +7,7 @@
                    width="840px"
                    style="text-align: left">
             <div class="div-el-dialog">
-                <el-upload :action="api_url + '/api/upload_file'"
+                <el-upload :action="api_url + '/api/upload_photo'"
                            ref="upload"
                            :multiple="true"
                            list-type="picture-card"
@@ -54,7 +54,6 @@
         },
         methods: {
             beforeUpload(file) {
-                //文件上传之前进行文件类型和大小检查
                 //将文件的最后修改时间附加到上传参数中
                 let fileDate = this.$common.date_format(file.lastModifiedDate, 'yyyy-MM-dd hh:mm:ss')
                 this.upload_data.dt = fileDate

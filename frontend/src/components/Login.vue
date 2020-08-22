@@ -3,11 +3,13 @@
         <el-form ref="loginForm" :model="form" :rules="rules" label-width="80px" style="width: 460px; margin: 0 auto;">
             <el-form-item label="用户名" prop="userid">
                 <el-input v-model="form.userid" name="userid" placeholder="请输入用户名"
-                          prefix-icon="el-icon-user" :clearable="true"></el-input>
+                          prefix-icon="el-icon-user" :clearable="true" :autofocus="true"
+                          @keypress.enter.native="nextInput($event)"></el-input>
             </el-form-item>
             <el-form-item label="密码" prop="password">
-                <el-input type="password" v-model="form.password" name="password" placeholder="请输入密码"
-                          prefix-icon="el-icon-lock" :clearable="true" :show-password="true"></el-input>
+                <el-input type="password" ref="password" v-model="form.password" name="password" placeholder="请输入密码"
+                          prefix-icon="el-icon-lock" :clearable="true" :show-password="true"
+                          @keypress.enter.native="login"></el-input>
             </el-form-item>
             <el-form-item>
                 <el-button type="primary" @click="login">登录</el-button>
@@ -63,8 +65,14 @@
             resetForm() {
                 //重置表单
                 this.$refs['loginForm'].resetFields()
-            }
-            ,
+            },
+            nextInput(event) {
+                //密码框获得焦点
+                if (event) {
+                    event.target.blur()
+                    this.$refs.password.focus()
+                }
+            },
         }
     }
 </script>

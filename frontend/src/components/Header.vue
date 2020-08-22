@@ -1,7 +1,7 @@
 <template>
     <div class="div-container">
         <el-row type="flex">
-            <el-col :span="4">
+            <el-col style="width: 256px;">
                 <span class="span-title">芒果相册</span>
             </el-col>
             <el-col :span="10">
@@ -10,15 +10,21 @@
             <el-col :span="10" style="text-align: right">
                 <UploadFile></UploadFile>
             </el-col>
+            <el-col style="width: 60px; text-align: center;">
+                <UserCard></UserCard>
+            </el-col>
         </el-row>
+
     </div>
 </template>
 
 <script>
     import UploadFile from "./UploadFile";
+    import UserCard from "./UserCard";
+
     export default {
         name: "Header",
-        components: {UploadFile},
+        components: {UserCard, UploadFile},
         data () {
             return {
                 keyword: ''  //搜索关键字
@@ -28,12 +34,12 @@
 </script>
 
 <style scoped>
-    .div-container {
+    .div-container {  /*最外层容器*/
         height: 64px;
         padding: 12px;
         border-bottom: 1px solid #dadce0;
     }
-    .span-title {
+    .span-title {  /*logo标题*/
         padding-left: 35px;
         background-image: url("../assets/images/mango.png");
         background-size: 29px;

@@ -2,35 +2,31 @@
     <div class="footer">
         <el-row>
             <el-col :span="12" class="status">0</el-col>
-            <el-col :span="12" class="output" @click.native="openLogBox">
-                <i class="el-icon-chat-line-square" style="margin-right: 5px;"></i>
-                <span v-if="curr_log.time">{{ curr_log.time }} : </span>
-                <span :class="curr_log.type">{{ curr_log.msg }}</span>
-            </el-col>
+            <el-popover @show="openLogBox">
+                <el-card class="log-box" id="logBox" :body-style="{padding: '0'}">
+                    <div slot="header">
+                        <el-row>
+                            <el-col :span="12" style="line-height: 28px;">日志</el-col>
+                            <el-col :span="12" style="text-align: right">
+                                <el-button icon="el-icon-delete" type="text" size="mini" @click="clearLogBox"
+                                           title="清空日志"></el-button>
+                            </el-col>
+                        </el-row>
+                    </div>
+                    <div id="card-contend">
+                        <p v-for="(log, index) in logs" v-bind:key="index">
+                            <span>{{ log.time }} : </span>
+                            <span :class="log.type">{{ log.msg }}</span>
+                        </p>
+                    </div>
+                </el-card>
+                <el-col slot="reference" :span="12" class="output">
+                    <i class="el-icon-chat-line-square" style="margin-right: 5px;"></i>
+                    <span v-if="curr_log.time">{{ curr_log.time }} : </span>
+                    <span :class="curr_log.type">{{ curr_log.msg }}</span>
+                </el-col>
+            </el-popover>
         </el-row>
-        <!--日志面板-->
-        <el-collapse-transition>
-            <el-card v-show="isShowLogBox" class="log-box" id="logBox"
-                     :body-style="{padding: '0'}">
-                <div slot="header">
-                    <el-row>
-                        <el-col :span="12" style="line-height: 28px;">日志</el-col>
-                        <el-col :span="12" style="text-align: right">
-                            <el-button icon="el-icon-delete" type="text" size="mini" @click="clearLogBox"
-                                       title="清空日志"></el-button>
-                            <el-button icon="el-icon-close" type="text" size="mini" @click="closeLogBox"
-                                       title="关闭日志面板"></el-button>
-                        </el-col>
-                    </el-row>
-                </div>
-                <div id="card-contend">
-                    <p v-for="(log, index) in logs" v-bind:key="index">
-                        <span>{{ log.time }} : </span>
-                        <span :class="log.type">{{ log.msg }}</span>
-                    </p>
-                </div>
-            </el-card>
-        </el-collapse-transition>
     </div>
 </template>
 
@@ -38,10 +34,7 @@
     export default {
         name: "Footer",
         data() {
-            return {
-                isShowLogBox: false,  //是否显示日志面板
-                logBoxWidth: 400,
-            }
+            return {}
         },
         computed: {
             curr_log() {
@@ -65,12 +58,7 @@
             },
             openLogBox: function () {
                 //打开日志面板
-                this.isShowLogBox = !this.isShowLogBox
                 this.scrollToBottom()
-            },
-            closeLogBox: function () {
-                //关闭日志面板
-                this.isShowLogBox = false
             },
             clearLogBox: function () {
                 //清空日志
@@ -103,7 +91,6 @@
         bottom: 45px;
         width: 33%;
         height: 300px;
-        overflow: auto;
         font-size: 12px;
         overflow: visible;
     }

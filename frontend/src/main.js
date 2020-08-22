@@ -44,8 +44,10 @@ axios.interceptors.response.use(response => {
 		position: 'top-right'
 	})
 	if (err.response.status === 401) {  //未通过后台身份验证
-		localStorage.removeItem('userid')
-		localStorage.removeItem('token')
+		if (localStorage.getItem('userid')) {
+			localStorage.removeItem('userid')  //清除本地token
+			localStorage.removeItem('token')
+		}
 		router.push('/login')
 	}
 	return Promise.reject(err)

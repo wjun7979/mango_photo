@@ -53,7 +53,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'backend_api.middleware.LoginMiddleware',  # 用户自定义中间件，用于拦截未通过身份验证的请求
+    'backend_api.middleware.MyMiddleware',  # 用户自定义中间件
 ]
 
 CORS_ORIGIN_ALLOW_ALL = True  # 解决跨域问题

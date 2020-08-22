@@ -1,4 +1,3 @@
-import traceback
 import hashlib
 import json
 from django.http import JsonResponse
@@ -11,28 +10,23 @@ from backend_api.models import User
 def login(request):
     """用户登录"""
     response = {}
-    try:
-        request_data = json.loads(request.body)
-        userid = request_data.get('userid')
-        password = request_data.get('password')
-        user = User.objects.filter(userid=userid).first()
-        if not user:
-            response['msg'] = '用户不存在'
-            return JsonResponse(response, status=500, json_dumps_params={'ensure_ascii': False})
-        encrypt_pwd = hashlib.md5(password.join('Nhj10LyBc').encode("utf-8")).hexdigest()
-        if encrypt_pwd != user.password:
-            response['msg'] = '登录密码错误'
-            return JsonResponse(response, status=500, json_dumps_params={'ensure_ascii': False})
+    request_data = json.loads(request.body)
+    userid = request_data.get('userid')
+    password = request_data.get('password')
+    user = User.objects.filter(userid=userid).first()
+    if not user:
+        response['msg'] = '用户不存在'
+        return JsonResponse(response, status=500)
+    encrypt_pwd = hashlib.md5(password.join('Nhj10LyBc').encode("utf-8")).hexdigest()
+    if encrypt_pwd != user.password:
+        response['msg'] = '登录密码错误'
+        return JsonResponse(response, status=500)
 
-        user.last_login_ip = __get_ip_address(request)  # 记录最后一次登录IP
-        user.save()
-        response['userid'] = userid
-        response['token'] = Token.get_token(userid)
-        return JsonResponse(response, status=200)
-    except Exception as e:
-        traceback.print_exc()
-        response['msg'] = str(e)
-        return JsonResponse(response, status=500, json_dumps_params={'ensure_ascii': False})
+    user.last_login_ip = __get_ip_address(request)  # 记录最后一次登录IP
+    user.save()
+    response['userid'] = userid
+    response['token'] = Token.get_token(userid)
+    return JsonResponse(response, status=200)
 
 
 @require_http_methods(['POST'])

@@ -17,13 +17,14 @@ from backend_api.models import Photo, Address
 
 @require_http_methods(['POST'])  # django内置的视力装饰器，这行表示只能通过POST方法访问
 @transaction.atomic  # 数据库事务处理
-def upload_file(request):
+def upload_photo(request):
     """上传文件"""
     save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
     response = {}
     photo_fullpath = ''  # 照片的完整路径
     thumbnail_fullpath = ''  # 缩略图的完整路径
     try:
+        userid = request.POST['userid']  # 当前登录的用户id
         now = datetime.now()  # 当前时间，用于创建目录
         file = request.FILES['file']  # 前端上传的文件对象
 
@@ -32,10 +33,10 @@ def upload_file(request):
         photo = Photo.objects.filter(md5=file_md5)  # 表过滤
         if len(photo) > 0:
             response['msg'] = '照片已存在，跳过'
-            return JsonResponse(response, status=500, json_dumps_params={'ensure_ascii': False})
+            return JsonResponse(response, status=500)
 
-        # 根据当前日期创建文件夹 /photos/original/年/月/日
-        file_path = os.path.join('photos', 'current', now.strftime('%Y'), now.strftime('%m'),
+        # 根据当前日期创建文件夹 /photos/current/{userid}/年/月/日
+        file_path = os.path.join('photos', 'current', userid, now.strftime('%Y'), now.strftime('%m'),
                                  now.strftime('%d'))  # 相对路径
         real_path = os.path.join(settings.BASE_DIR, file_path)  # 物理路径
         if not os.path.exists(real_path):  # 如果目标文件夹不存在则创建
@@ -53,9 +54,8 @@ def upload_file(request):
         __write_file(photo_fullpath, file)
 
         # 创建缩略图
-        thumbnail = __create_thumbnail(photo_fullpath)
+        thumbnail = __create_thumbnail(userid, photo_fullpath)
         thumbnail_fullpath = thumbnail[1]
-        print(thumbnail_fullpath)
 
         # 获取照片的尺寸
         im = Image.open(photo_fullpath)  # 打开原始照片文件
@@ -70,7 +70,7 @@ def upload_file(request):
         _uuid = str(uuid.uuid1()).replace('-', '')  # 生成照片唯一序列号
         photo = Photo()
         photo.uuid = _uuid
-        photo.userid = request.POST['userid']
+        photo.userid = userid
         photo.path = file_path
         photo.path_thumbnail = thumbnail[0]
         photo.name = os.path.split(photo_fullpath)[1]
@@ -118,7 +118,7 @@ def upload_file(request):
         if thumbnail_fullpath and os.path.exists(thumbnail_fullpath):  # 出错时删除可能已经生成的缩略图
             os.remove(thumbnail_fullpath)
         response['msg'] = str(e)
-        return JsonResponse(response, status=500, json_dumps_params={'ensure_ascii': False})
+        return JsonResponse(response, status=500)
 
 
 def __write_file(full_path, file):
@@ -144,13 +144,13 @@ def __get_file_md5(file):
         return hashlib.md5(data).hexdigest()
 
 
-def __create_thumbnail(full_path):
+def __create_thumbnail(userid, full_path):
     """创建照片缩略图"""
     im = Image.open(full_path)  # 打开原始照片文件
     im.thumbnail((500, 500))  # 创建大小不超过指定值的缩略图
-    # 根据当前日期创建文件夹 /photos/thumbnail/年/月/日
+    # 根据当前日期创建文件夹 /photos/thumbnail/{userid}/年/月/日
     now = datetime.now()  # 当前时间，用于创建目录
-    file_path = os.path.join('photos', 'thumbnail', now.strftime('%Y'), now.strftime('%m'),
+    file_path = os.path.join('photos', 'thumbnail', userid, now.strftime('%Y'), now.strftime('%m'),
                              now.strftime('%d'))  # 相对路径
     real_path = os.path.join(settings.BASE_DIR, file_path)  # 物理路径
     if not os.path.exists(real_path):  # 如果目标文件夹不存在则创建

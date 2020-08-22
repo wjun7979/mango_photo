@@ -2,7 +2,7 @@
     <div>
         <!--当照片列表为空时显示一些提示信息-->
         <div v-if="isShowTips" style="text-align: center;">
-            <img src="../assets/images/upload-bg.png" alt="tips"/>
+            <img src="../assets/images/upload-bg.png" alt="tips" width="649" height="327"/>
             <div style="font-size: 32px; line-height: 50px; font-weight: 400; color: #202124">准备好添加一些照片了吗？</div>
             <div style="font-size: 16px; line-height: 40px; font-weight: 400; color: #3c4043">点击右上角的【上传】按钮上传照片</div>
         </div>
@@ -165,8 +165,7 @@
                         userid: localStorage.getItem('userid')
                     }
                 }).then(response => {
-                    const res = response.data
-                    let result = res.list
+                    const result = response.data
                     // 生成大图预览列表
                     this.preview_list = []
                     for (let item of result) {

@@ -9,7 +9,7 @@ class User(models.Model):
     last_name = models.CharField(max_length=50)  # 名
     mobile_number = models.CharField(unique=True, max_length=20)  # 移动电话
     email = models.CharField(unique=True, max_length=50)  # 电子邮件
-    avatar = models.ImageField(null=True)  # 用户头像
+    avatar = models.CharField(null=True, max_length=500)  # 用户头像
     last_login_time = models.DateTimeField(null=True, auto_now=True)  # 最后一次登录时间
     last_login_ip = models.CharField(null=True, max_length=50)  # 最后一次登录IP
     is_active = models.BooleanField(default=True)  # 有效标志
