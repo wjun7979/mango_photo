@@ -1,7 +1,6 @@
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 import json
-from django.core.serializers import serialize
 from backend_api.common.date_encoder import DateEncoder
 from backend_api.models import Photo
 

@@ -13,7 +13,7 @@ def get_user(request):
     userid = request.GET.get('userid')
     user = User.objects.get(userid=userid)
     response = model_to_dict(user)
-    return JsonResponse(response, status=200)
+    return JsonResponse(response, safe=False, status=200)
 
 
 def upload_avatar(request):
