@@ -1,6 +1,7 @@
 <template>
-    <div style="margin-right: 20px;">
-        <el-button icon="el-icon-upload2" @click="show_upload_dialog = true">上传</el-button>
+    <div>
+        <el-button icon="el-icon-upload2" size="small" type="primary"
+                   @click="show_upload_dialog = true">上传</el-button>
         <el-dialog title="上传"
                    :visible.sync="show_upload_dialog"
                    :close-on-click-modal="false"

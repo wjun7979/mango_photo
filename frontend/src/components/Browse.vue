@@ -8,45 +8,70 @@
         </div>
 
         <!--照片列表-->
-        <el-checkbox-group v-model="checkGroupList" class="images-wrap">
-            <el-row v-for="(photo, index) of photo_list" :key="index" style="margin-right: 28px;">
-                <el-checkbox class="chk-group" :label="photo.timestamp" @change="selectPhotoGroup(photo.timestamp)">
-                </el-checkbox>
-                <el-checkbox-group v-model="checkList">
-                    <!--瀑布流样式的照片列表-->
-                    <div class="div-images">
-                        <div v-for="img of photo.list"
-                             :key="img.uuid"
-                             class="div-img"
-                             :class="{'chk-checked': checkList.indexOf(img.uuid) !== -1,
+        <el-container>
+            <el-header class="mp-page-header" height="48px">
+                <el-col class="mp-page-header-title" :span="8">{{title}}</el-col>
+                <el-col :span="16" style="text-align: right">
+                    <el-form :inline="true">
+                        <el-form-item label="分组:">
+                            <el-radio-group v-model="groupType" size="small">
+                                <el-radio-button label="year">按年</el-radio-button>
+                                <el-radio-button label="month">按月</el-radio-button>
+                                <el-radio-button label="day">按天</el-radio-button>
+                            </el-radio-group>
+                        </el-form-item>
+                        <el-form-item label="尺寸:" style="margin-right: 20px">
+                            <el-slider v-model="imgHeight" :min="100" :max="200" style="width: 100px"></el-slider>
+                        </el-form-item>
+                        <el-form-item>
+                            <UploadFile></UploadFile>
+                        </el-form-item>
+                    </el-form>
+                </el-col>
+            </el-header>
+            <el-main :style="{height: main_height}">
+                <el-checkbox-group v-model="checkGroupList" class="images-wrap">
+                    <el-row v-for="(photo, index) of photo_list" :key="index" style="margin-right: 28px;">
+                        <el-checkbox class="chk-group" :label="photo.timestamp"
+                                     @change="selectPhotoGroup(photo.timestamp)">
+                        </el-checkbox>
+                        <el-checkbox-group v-model="checkList">
+                            <!--瀑布流样式的照片列表-->
+                            <div class="div-images">
+                                <div v-for="img of photo.list"
+                                     :key="img.uuid"
+                                     class="div-img"
+                                     :class="{'chk-checked': checkList.indexOf(img.uuid) !== -1,
                                       'chk-last-checked': lastSelectedUUID === img.uuid,
                                       'show-checkbox': checkList.length > 0}"
-                             :style="{'width': img.width * imgHeight / img.height + 'px',
+                                     :style="{'width': img.width * imgHeight / img.height + 'px',
                                       'flex-grow':img.width * imgHeight / img.height}">
-                            <i :style="{'padding-bottom': img.height / img.width * 100 + '%', 'display':'block'}"></i>
-                            <el-checkbox :label="img.uuid"
-                                         @change="selectPhoto(img.uuid, photo.timestamp)"
-                                         @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photo.timestamp)">
-                            </el-checkbox>
-                            <i class="el-icon-zoom-in btn-preview" @click="showPreview(img.uuid)"></i>
-                            <el-image :src="api_url + '/' + img.path_thumbnail + '/' + img.name"
-                                      lazy
-                                      :alt="img.name"
-                                      :title="img.name"
-                                      @click.exact="clickImage(img.uuid, photo.timestamp)"
-                                      @click.shift.exact="multiSelectPhotos($event, img.uuid, photo.timestamp)"
-                                      style="cursor: pointer;">
-                                <div slot="error">
-                                    <div class="image-slot">
-                                        <i class="el-icon-picture-outline"></i>
-                                    </div>
+                                    <i :style="{'padding-bottom': img.height / img.width * 100 + '%', 'display':'block'}"></i>
+                                    <el-checkbox :label="img.uuid"
+                                                 @change="selectPhoto(img.uuid, photo.timestamp)"
+                                                 @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photo.timestamp)">
+                                    </el-checkbox>
+                                    <i class="el-icon-zoom-in btn-preview" @click="showPreview(img.uuid)"></i>
+                                    <el-image :src="api_url + '/' + img.path_thumbnail + '/' + img.name"
+                                              lazy
+                                              :alt="img.name"
+                                              :title="img.name"
+                                              @click.exact="clickImage(img.uuid, photo.timestamp)"
+                                              @click.shift.exact="multiSelectPhotos($event, img.uuid, photo.timestamp)"
+                                              style="cursor: pointer;">
+                                        <div slot="error">
+                                            <div class="image-slot">
+                                                <i class="el-icon-picture-outline"></i>
+                                            </div>
+                                        </div>
+                                    </el-image>
                                 </div>
-                            </el-image>
-                        </div>
-                    </div>
+                            </div>
+                        </el-checkbox-group>
+                    </el-row>
                 </el-checkbox-group>
-            </el-row>
-        </el-checkbox-group>
+            </el-main>
+        </el-container>
 
         <!--大图预览-->
         <Preview v-if="isShowPreview" :url-list="preview_list_order" :on-close="closeViewer"></Preview>
@@ -68,15 +93,18 @@
 </template>
 
 <script>
+    import UploadFile from "./UploadFile";
     import Preview from "./Preview";
     import {rafThrottle} from "element-ui/src/utils/util";
     import {off, on} from "element-ui/src/utils/dom";
 
     export default {
         name: "Browse",
-        components: {Preview},
+        components: {UploadFile ,Preview},
         data() {
             return {
+                main_height: document.documentElement.clientHeight - 72 - 48 + 'px',
+                imgHeight: 200,  //照片的高度
                 photo_list: [],  //照片列表
                 isShowTips: false,  //是否显示上传提示
                 isShowPreview: false,  //是否显示大图预览
@@ -85,9 +113,14 @@
                 groupType: 'day',  //分组类型 day, month, year
                 checkGroupList: [],  //选中的分组列表
                 checkList: [],  //选中的照片列表
-                imgHeight: 200,  //照片的高度
                 lastSelectedUUID: null,  //最后一次选中的照片uuid
             }
+        },
+        props: {
+            title: {  //页头标题
+                type: String,
+                default: '照片'
+            },
         },
         computed: {
             //重要：vuex中定义的数据一定要在这里绑定，放在data()里视图不会更新
@@ -149,6 +182,7 @@
             listenResize: function () {
                 //监听浏览器窗口大小变化的事件
                 this.setImgHeight()
+                this.main_height = document.documentElement.clientHeight - 72 - 48 + 'px'
             },
             setImgHeight() {
                 //浏览器窗口大小变化时改变照片的大小

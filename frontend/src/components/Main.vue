@@ -7,7 +7,7 @@
             <el-aside width="256px">
                 <NavMenu></NavMenu>
             </el-aside>
-            <el-main :style="{height: main_height}">
+            <el-main style="padding: 0">
                 <router-view></router-view>
             </el-main>
         </el-container>
@@ -24,25 +24,9 @@
 
     export default {
         name: 'Main',
-        data() {
-            return {
-                main_height: document.documentElement.clientHeight - 72 - 48 + 'px',
-            }
-        },
         components: {
             Footer, Header, NavMenu
         },
-        mounted() {
-            window.addEventListener('resize', this.listenResize)
-        },
-        beforeDestroy() {
-            window.removeEventListener('resize', this.listenResize)
-        },
-        methods: {
-            listenResize: function () {
-                this.main_height = document.documentElement.clientHeight - 72 - 48 + 'px'
-            }
-        }
     }
 </script>
 

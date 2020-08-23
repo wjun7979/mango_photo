@@ -57,7 +57,7 @@
                             const res = response.data
                             localStorage.userid = res.userid  //存储token
                             localStorage.token = res.token
-                            this.$router.push('/photo')
+                            this.$router.push('/photos')
                         })
                     }
                 )

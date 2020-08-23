@@ -1,11 +1,11 @@
 <template>
     <div class="div-container">
         <el-menu :default-active="$route.path" router>
-            <el-menu-item index="/photo">
+            <el-menu-item index="/photos">
                 <i class="el-icon-picture-outline"></i>
                 <span>照片</span>
             </el-menu-item>
-            <el-menu-item index="2">
+            <el-menu-item index="/albums">
                 <i class="el-icon-collection"></i>
                 <span>影集</span>
             </el-menu-item>

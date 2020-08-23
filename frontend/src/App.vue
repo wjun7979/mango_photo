@@ -1,5 +1,5 @@
 <template>
-    <div class="index-wrap">
+    <div class="mp-index-wrap">
         <router-view></router-view>
     </div>
 </template>

@@ -1,30 +1,28 @@
 <template>
-    <div class="div-container">
-        <el-row type="flex">
-            <el-col style="width: 256px;">
-                <span class="span-title">芒果相册</span>
-            </el-col>
-            <el-col :span="10">
-                <el-input class="input-search" placeholder="搜索你的照片" v-model="keyword" prefix-icon="el-icon-search"></el-input>
-            </el-col>
-            <el-col :span="10" style="text-align: right">
-                <UploadFile></UploadFile>
-            </el-col>
-            <el-col style="width: 60px; text-align: center;">
-                <UserCard></UserCard>
-            </el-col>
-        </el-row>
-
-    </div>
+    <el-container class="div-container">
+        <el-aside width="256px" style="overflow:hidden">
+            <span class="span-title">芒果相册</span>
+        </el-aside>
+        <el-main style="overflow:hidden">
+            <el-row>
+                <el-col :span="14">
+                    <el-input class="input-search" placeholder="搜索你的照片" v-model="keyword"
+                              prefix-icon="el-icon-search"></el-input>
+                </el-col>
+                <el-col :span="10" style="text-align: right">
+                    <UserCard></UserCard>
+                </el-col>
+            </el-row>
+        </el-main>
+    </el-container>
 </template>
 
 <script>
-    import UploadFile from "./UploadFile";
     import UserCard from "./UserCard";
 
     export default {
         name: "Header",
-        components: {UserCard, UploadFile},
+        components: {UserCard},
         data () {
             return {
                 keyword: ''  //搜索关键字
@@ -35,15 +33,19 @@
 
 <style scoped>
     .div-container {  /*最外层容器*/
-        height: 64px;
-        padding: 12px;
+        height: 72px;
+        padding: 0;
         border-bottom: 1px solid #dadce0;
     }
     .span-title {  /*logo标题*/
+        display: block;
+        margin-left: 20px;
+        margin-top: 15px;
         padding-left: 35px;
         background-image: url("../assets/images/mango.png");
         background-size: 29px;
         background-repeat: no-repeat;
+        background-position-y: 5px;
         line-height: 40px;
         color: #5f6368;
         font-size: 20px;

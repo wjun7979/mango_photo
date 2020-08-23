@@ -2,7 +2,8 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Login from './components/Login'
 import Main from './components/Main'
-import Browse from "./components/Browse"
+import Photos from "./components/Photos"
+import Albums from "./components/Albums";
 import Trash from "./components/Trash"
 import NotFound from "./components/NotFound";
 
@@ -23,10 +24,15 @@ const routes = [
         }
     },
     {
-        path: '/photo', component: Main, children: [
+        path: '/photos', component: Main, children: [
             {
-                path: '/photo', component: Browse, meta: {
+                path: '/photos', component: Photos, meta: {
                     title: '照片'
+                }
+            },
+            {
+                path: '/albums', component: Albums, meta: {
+                    title: '影集'
                 }
             },
             {
