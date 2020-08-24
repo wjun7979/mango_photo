@@ -201,7 +201,8 @@
                 this.loading = false;
                 e.target.alt = '加载失败';
             },
-            handleMouseDown(e) {  //鼠标左键按下时，拖动图片
+            handleMouseDown(e) {
+                //鼠标左键按下时，拖动图片
                 if (this.loading || e.button !== 0) return;
 
                 const {offsetX, offsetY} = this.transform;
@@ -218,7 +219,8 @@
 
                 e.preventDefault();
             },
-            reset() {  //重置图片缩放比例和方向
+            reset() {
+                //重置图片缩放比例和方向
                 this.transform = {
                     scale: 1,
                     deg: 0,

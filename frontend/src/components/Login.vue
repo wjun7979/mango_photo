@@ -39,8 +39,8 @@
             }
         },
         computed: {
-            api_url() {
-                return this.$store.state.api_url  //从全局状态管理器中获取数据
+            apiUrl() {
+                return this.$store.state.apiUrl  //从全局状态管理器中获取数据
             },
         },
         methods: {
@@ -51,7 +51,7 @@
                             return false
                         this.$axios({
                             method: 'post',
-                            url: this.api_url + '/api/login',
+                            url: this.apiUrl + '/api/login',
                             data: this.form
                         }).then(response => {
                             const res = response.data

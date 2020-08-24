@@ -12,7 +12,7 @@
             <el-header class="mp-page-header" height="48px">
                 <el-col class="mp-page-header-title" :span="8">{{title}}</el-col>
                 <el-col :span="16" style="text-align: right">
-                    <el-form :inline="true">
+                    <el-form :inline="true" style="margin-top: 2px;">
                         <el-form-item label="分组:">
                             <el-radio-group v-model="groupType" size="small">
                                 <el-radio-button label="year">按年</el-radio-button>
@@ -29,9 +29,9 @@
                     </el-form>
                 </el-col>
             </el-header>
-            <el-main :style="{height: main_height}">
+            <el-main :style="{height: mainHeight, overflow: 'auto'}">
                 <el-checkbox-group v-model="checkGroupList" class="images-wrap">
-                    <el-row v-for="(photo, index) of photo_list" :key="index" style="margin-right: 28px;">
+                    <el-row v-for="(photo, index) of photoListGroup" :key="index" style="margin-right: 28px;">
                         <el-checkbox class="chk-group" :label="photo.timestamp"
                                      @change="selectPhotoGroup(photo.timestamp)">
                         </el-checkbox>
@@ -52,7 +52,7 @@
                                                  @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photo.timestamp)">
                                     </el-checkbox>
                                     <i class="el-icon-zoom-in btn-preview" @click="showPreview(img.uuid)"></i>
-                                    <el-image :src="api_url + '/' + img.path_thumbnail + '/' + img.name"
+                                    <el-image :src="apiUrl + '/' + img.path_thumbnail + '/' + img.name"
                                               lazy
                                               :alt="img.name"
                                               :title="img.name"
@@ -74,7 +74,7 @@
         </el-container>
 
         <!--大图预览-->
-        <Preview v-if="isShowPreview" :url-list="preview_list_order" :on-close="closeViewer"></Preview>
+        <Preview v-if="isShowPreview" :url-list="previewListOrder" :on-close="closeViewer"></Preview>
 
         <!--选中照片后的工具栏-->
         <el-row class="chk-toolbar" v-show="checkList.length > 0">
@@ -99,17 +99,17 @@
     import {off, on} from "element-ui/src/utils/dom";
 
     export default {
-        name: "Browse",
+        name: "PhotoList",
         components: {UploadFile ,Preview},
         data() {
             return {
-                main_height: document.documentElement.clientHeight - 72 - 48 + 'px',
                 imgHeight: 200,  //照片的高度
-                photo_list: [],  //照片列表
+                photoList: [],  //照片列表
+                photoListGroup: [],  //分组后的照片列表
                 isShowTips: false,  //是否显示上传提示
                 isShowPreview: false,  //是否显示大图预览
-                preview_list: [],  //初始的照片预览列表
-                preview_list_order: [],  //重新排序之后的照片预览列表
+                previewList: [],  //初始的照片预览列表
+                previewListOrder: [],  //重新排序之后的照片预览列表
                 groupType: 'day',  //分组类型 day, month, year
                 checkGroupList: [],  //选中的分组列表
                 checkList: [],  //选中的照片列表
@@ -121,20 +121,31 @@
                 type: String,
                 default: '照片'
             },
+            callMode: {  //调用模式
+                type: String,
+                default: 'photo'
+            },
+            albumUUID: {  //当调用模式为album时，必须指定影集uuid
+                type: String,
+                default: ''
+            }
         },
         computed: {
             //重要：vuex中定义的数据一定要在这里绑定，放在data()里视图不会更新
-            api_url() {
-                return this.$store.state.api_url  //从全局状态管理器中获取数据
+            apiUrl() {
+                return this.$store.state.apiUrl  //后台api调用地址
             },
-            refresh_photo() {
-                return this.$store.state.refresh_photo  //是否刷新照片列表
+            mainHeight() {
+                return this.$store.state.mainHeight  //主内容区的高度
+            },
+            refreshPhoto() {
+                return this.$store.state.refreshPhoto  //是否刷新照片列表
             }
         },
         watch: {
-            refresh_photo() {
+            refreshPhoto() {
                 //有其它组件发出刷新照片的指令
-                if (this.refresh_photo) {
+                if (this.refreshPhoto) {
                     this.showPhotos()
                 }
             },
@@ -148,7 +159,7 @@
             },
             groupType() {
                 //分组类型改变时重新载入照片
-                this.showPhotos()
+                this.creatPhotoGroup()
             }
         },
         mounted() {
@@ -182,7 +193,6 @@
             listenResize: function () {
                 //监听浏览器窗口大小变化的事件
                 this.setImgHeight()
-                this.main_height = document.documentElement.clientHeight - 72 - 48 + 'px'
             },
             setImgHeight() {
                 //浏览器窗口大小变化时改变照片的大小
@@ -194,42 +204,45 @@
                 //获取并显示照片列表
                 this.$axios({
                     method: 'get',
-                    url: this.api_url + '/api/photo_list',
+                    url: this.apiUrl + '/api/photo_list',
                     params: {
                         userid: localStorage.getItem('userid')
                     }
                 }).then(response => {
-                    const result = response.data
+                    this.photoList = response.data
                     // 生成大图预览列表
-                    this.preview_list = []
-                    for (let item of result) {
-                        this.preview_list.push({
+                    this.previewList = []
+                    for (let item of this.photoList) {
+                        this.previewList.push({
                             'uuid': item.uuid,
-                            'url': this.api_url + '/' + item.path + '/' + item.name,
+                            'url': this.apiUrl + '/' + item.path + '/' + item.name,
                             'timestamp': this.getGroupLabel(item['exif_datetime'])
                         })
                     }
-                    // 将照片列表转换成时间线要求的格式
-                    let dataMap = []
-                    for (let d of result) {
-                        let findData = dataMap.find(t => t.timestamp === this.getGroupLabel(d['exif_datetime']))
-                        if (!findData)
-                            dataMap.push({'timestamp': this.getGroupLabel(d['exif_datetime']), 'list': [d]})
-                        else
-                            findData.list.push(d)
-                    }
-                    this.photo_list = dataMap
+                    this.creatPhotoGroup()  //创建照片分组
                     // 当没有照片时显示上传提示
-                    this.isShowTips = this.photo_list.length === 0
+                    this.isShowTips = this.photoList.length === 0
                     //照片读取完成后，将store.js中的refreshPhoto值重置为false
                     this.$store.commit('refreshPhoto', {show: false})
                 })
             },
+            creatPhotoGroup() {
+                //将照片列表转换成时间线要求的分组格式
+                let dataMap = []
+                for (let d of this.photoList) {
+                    let findData = dataMap.find(t => t.timestamp === this.getGroupLabel(d['exif_datetime']))
+                    if (!findData)
+                        dataMap.push({'timestamp': this.getGroupLabel(d['exif_datetime']), 'list': [d]})
+                    else
+                        findData.list.push(d)
+                }
+                this.photoListGroup = dataMap
+            },
             showPreview(uuid) {
                 //显示大图预览
-                let index = this.preview_list.findIndex(t => t.uuid === uuid)  //获取即将预览的照片索引
+                let index = this.previewList.findIndex(t => t.uuid === uuid)  //获取即将预览的照片索引
                 //根据索引对预览数组重新排序
-                this.preview_list_order = this.preview_list.slice(index).concat(this.preview_list.slice(0, index))
+                this.previewListOrder = this.previewList.slice(index).concat(this.previewList.slice(0, index))
                 this.isShowPreview = true
                 this.deviceSupportUninstall()  //卸载键盘按键支持，防止与大图预览中的快捷键冲突
             },
@@ -272,7 +285,7 @@
             },
             selectPhotoGroup(timestamp) {
                 //按组选择照片时
-                let photoGroup = this.photo_list.find(t => t.timestamp === timestamp)
+                let photoGroup = this.photoListGroup.find(t => t.timestamp === timestamp)
                 let timeStamp = photoGroup.timestamp
                 let photos = photoGroup.list
                 for (let item of photos) {
@@ -290,7 +303,7 @@
             },
             selectPhoto(uuid, timestamp) {
                 //选择照片时，判断分组复选框是否勾选
-                let photoGroup = this.photo_list.find(t => t.timestamp === timestamp)
+                let photoGroup = this.photoListGroup.find(t => t.timestamp === timestamp)
                 let timeStamp = photoGroup.timestamp
                 let photos = photoGroup.list
                 let tmpArr = []
@@ -316,23 +329,23 @@
                 if (e.target.tagName === 'SPAN') return  //因为原生click事件会执行两次，第一次在label标签上，第二次在input标签上，故此处理
                 //当起始照片uuid不存在时，不执行连续选择操作
                 if (this.lastSelectedUUID != null) {
-                    let startIdx = this.preview_list.findIndex(t => t.uuid === this.lastSelectedUUID)
-                    let endIdx = this.preview_list.findIndex(t => t.uuid === uuid)
+                    let startIdx = this.previewList.findIndex(t => t.uuid === this.lastSelectedUUID)
+                    let endIdx = this.previewList.findIndex(t => t.uuid === uuid)
                     let startIndex = endIdx > startIdx ? startIdx : endIdx
                     let endIndex = endIdx > startIdx ? endIdx : startIdx
                     if (this.checkList.indexOf(uuid) === -1) {  //当前照片处于未选中状态，执行连续选中操作
                         for (let i = startIndex; i <= endIndex; i++) {
-                            if (this.checkList.indexOf(this.preview_list[i].uuid) === -1) {
-                                this.checkList.push(this.preview_list[i].uuid)
-                                this.selectPhoto(this.preview_list[i].uuid, this.preview_list[i].timestamp)  //触发照片选择事件
+                            if (this.checkList.indexOf(this.previewList[i].uuid) === -1) {
+                                this.checkList.push(this.previewList[i].uuid)
+                                this.selectPhoto(this.previewList[i].uuid, this.previewList[i].timestamp)  //触发照片选择事件
                             }
                         }
                     } else {  //当前照片处于选中状态，执行连续取消选中操作
                         for (let i = startIndex; i <= endIndex; i++) {
-                            let idx = this.checkList.indexOf(this.preview_list[i].uuid)
+                            let idx = this.checkList.indexOf(this.previewList[i].uuid)
                             if (idx !== -1) {
                                 this.checkList.splice(idx, 1)
-                                this.selectPhoto(this.preview_list[i].uuid, this.preview_list[i].timestamp)  //触发照片选择事件
+                                this.selectPhoto(this.previewList[i].uuid, this.previewList[i].timestamp)  //触发照片选择事件
                             }
                         }
                     }

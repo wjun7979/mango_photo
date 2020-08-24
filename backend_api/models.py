@@ -46,6 +46,7 @@ class Photo(models.Model):
     exif_gpslongitude = models.CharField(null=True, max_length=500)  # GPS纬度
     exif_gpslongituderef = models.CharField(null=True, max_length=100)  # 东西半球标志
     comments = models.CharField(null=True, max_length=500)  # 备注
+    is_favorited = models.BooleanField(default=False)  # 收藏标志
     is_deleted = models.BooleanField(default=False)  # 删除标志
     input_date = models.DateTimeField(auto_now_add=True)  # 录入时间
     update_date = models.DateTimeField(auto_now=True)  # 修改时间
@@ -74,3 +75,31 @@ class Address(models.Model):
 
     def __str__(self):
         return 'address:' + self.uuid
+
+
+class Album(models.Model):
+    """影集"""
+    uuid = models.CharField(primary_key=True, max_length=32)
+    userid = models.CharField(max_length=50)  # 所属用户
+    name = models.CharField(max_length=200)  # 影集名称
+    cover = models.CharField(max_length=32)  # 封面
+    parent_uuid = models.CharField(null=True, max_length=32)  # 上级影集uuid
+    photos = models.IntegerField(default=0)  # 照片的数量
+    input_date = models.DateTimeField(auto_now_add=True)  # 创建时间
+    update_date = models.DateTimeField(auto_now=True)  # 修改时间
+
+    class Meta:
+        db_table = 'm_album'
+
+    def __str__(self):
+        return 'album:' + self.uuid
+
+
+class AlbumPhoto(models.Model):
+    """影集中的照片"""
+    album_uuid = models.CharField(max_length=32)  # 影集uuid
+    photo_uuid = models.CharField(max_length=32)  # 照片uuid
+    input_date = models.DateTimeField(auto_now_add=True)  # 添加时间
+
+    class Meta:
+        db_table = 'm_album_photo'

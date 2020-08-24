@@ -26,7 +26,7 @@ axios.interceptors.response.use(response => {
 	if (localStorage.getItem('userid') && path.indexOf('/api/refresh_token') === -1) {
 		axios({
 			method: 'post',
-			url: store.state.api_url + '/api/refresh_token',
+			url: store.state.apiUrl + '/api/refresh_token',
 			data: {
 				userid: localStorage.getItem('userid')
 			}

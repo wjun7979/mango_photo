@@ -8,7 +8,7 @@ from PIL import Image
 from backend_api.models import User
 
 
-def get_user(request):
+def user_getinfo(request):
     """获取指定用户的基本信息"""
     userid = request.GET.get('userid')
     user = User.objects.get(userid=userid)
@@ -16,7 +16,7 @@ def get_user(request):
     return JsonResponse(response, safe=False, status=200)
 
 
-def upload_avatar(request):
+def user_upload_avatar(request):
     """上传用户头像"""
     save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
     response = {}

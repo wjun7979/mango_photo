@@ -14,7 +14,7 @@
                         {{userInfo.last_name}}
                     </el-avatar>
                     <el-upload class="upload-avatar"
-                               :action="api_url + '/api/upload_avatar'"
+                               :action="apiUrl + '/api/user_upload_avatar'"
                                accept="image/*"
                                :show-file-list="false"
                                :headers="headers"
@@ -73,8 +73,8 @@
         },
         computed: {
             //重要：vuex中定义的数据一定要在这里绑定，放在data()里视图不会更新
-            api_url() {
-                return this.$store.state.api_url  //从全局状态管理器中获取数据
+            apiUrl() {
+                return this.$store.state.apiUrl  //后台api调用地址
             },
         },
         mounted() {
@@ -85,13 +85,13 @@
                 //获取当前用户信息
                 this.$axios({
                     method: 'get',
-                    url: this.api_url + '/api/get_user',
+                    url: this.apiUrl + '/api/user_getinfo',
                     params: {
                         userid: localStorage.getItem('userid')
                     }
                 }).then(response => {
                     this.userInfo = response.data
-                    this.userInfo.avatar = this.api_url + '/' + this.userInfo.avatar
+                    this.userInfo.avatar = this.apiUrl + '/' + this.userInfo.avatar
                 })
             },
             beforeUpload(file) {
@@ -129,7 +129,7 @@
             },
             handleSuccess(response) {
                 //文件上传成功时
-                this.userInfo.avatar = this.api_url + '/' + response.path
+                this.userInfo.avatar = this.apiUrl + '/' + response.path
                 let msg = '用户头像修改成功'
                 let newDate = new Date()
                 this.$store.commit('showLog', {type: 'success', msg: msg, time: newDate.toLocaleTimeString()})

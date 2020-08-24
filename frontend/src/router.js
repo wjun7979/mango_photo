@@ -4,6 +4,7 @@ import Login from './components/Login'
 import Main from './components/Main'
 import Photos from "./components/Photos"
 import Albums from "./components/Albums";
+import Album from "./components/Album";
 import Trash from "./components/Trash"
 import NotFound from "./components/NotFound";
 
@@ -19,24 +20,29 @@ Vue.use(VueRouter)
 const routes = [
     {path: '', redirect: '/login'},
     {
-        path: '/login', component: Login, meta: {
+        path: '/login', name: 'login', component: Login, meta: {
             title: '登录'
         }
     },
     {
         path: '/photos', component: Main, children: [
             {
-                path: '/photos', component: Photos, meta: {
+                path: '/photos', name: 'photos', component: Photos, meta: {
                     title: '照片'
                 }
             },
             {
-                path: '/albums', component: Albums, meta: {
+                path: '/albums', name: 'albums', component: Albums, meta: {
                     title: '影集'
                 }
             },
             {
-                path: '/trash', component: Trash, meta: {
+                path: '/album/:uuid', name: 'album', component: Album, meta: {
+                    title: '影集'
+                }
+            },
+            {
+                path: '/trash', name: 'trash', component: Trash, meta: {
                     title: '回收站'
                 }
             },

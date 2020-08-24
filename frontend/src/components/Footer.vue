@@ -22,8 +22,8 @@
                 </el-card>
                 <el-col slot="reference" :span="12" class="output">
                     <i class="el-icon-chat-line-square" style="margin-right: 5px;"></i>
-                    <span v-if="curr_log.time">{{ curr_log.time }} : </span>
-                    <span :class="curr_log.type">{{ curr_log.msg }}</span>
+                    <span v-if="currLog.time">{{ currLog.time }} : </span>
+                    <span :class="currLog.type">{{ currLog.msg }}</span>
                 </el-col>
             </el-popover>
         </el-row>
@@ -37,8 +37,8 @@
             return {}
         },
         computed: {
-            curr_log() {
-                return this.$store.state.curr_log  //当前日志信息
+            currLog() {
+                return this.$store.state.currLog  //当前日志信息
             },
             logs() {
                 return this.$store.state.logs  //日志列表

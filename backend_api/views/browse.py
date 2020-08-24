@@ -8,7 +8,6 @@ from backend_api.models import Photo
 @require_http_methods(['GET'])
 def photo_list(request):
     """浏览照片"""
-    response = {}
     userid = request.GET.get('userid')
     photos = Photo.objects.filter(userid=userid, is_deleted=False).order_by('-exif_datetime')\
         .values('uuid', 'path', 'path_thumbnail', 'name', 'width', 'height', 'exif_datetime')

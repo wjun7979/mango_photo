@@ -67,9 +67,9 @@ def upload_photo(request):
         # pprint.pprint(exif)
 
         # 写入照片数据库
-        _uuid = str(uuid.uuid1()).replace('-', '')  # 生成照片唯一序列号
+        photo_uuid = str(uuid.uuid1()).replace('-', '')  # 生成照片唯一序列号
         photo = Photo()
-        photo.uuid = _uuid
+        photo.uuid = photo_uuid
         photo.userid = userid
         photo.path = file_path
         photo.path_thumbnail = thumbnail[0]
@@ -96,9 +96,9 @@ def upload_photo(request):
         if exif['GPSLatitude'] and exif['GPSLongitude']:
             location = __get_address_from_gps(exif['GPSLatitude'], exif['GPSLatitudeRef'], exif['GPSLongitude'],
                                               exif['GPSLongitudeRef'])
-            Address.objects.filter(uuid=_uuid).delete()  # 先删除再插入
+            Address.objects.filter(uuid=photo_uuid).delete()  # 先删除再插入
             address = Address()
-            address.uuid = _uuid
+            address.uuid = photo_uuid
             address.lat = location['lat']
             address.lng = location['lng']
             address.address = location['formatted_address']

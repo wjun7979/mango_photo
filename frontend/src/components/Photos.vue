@@ -1,13 +1,13 @@
 <template>
-    <Browse title="照片"></Browse>
+    <PhotoList title="照片"></PhotoList>
 </template>
 
 <script>
-    import Browse from "./Browse";
+    import PhotoList from "./PhotoList";
 
     export default {
         name: "Photos",
-        components: {Browse},
+        components: {PhotoList},
     }
 </script>
 

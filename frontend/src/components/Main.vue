@@ -7,7 +7,7 @@
             <el-aside width="256px">
                 <NavMenu></NavMenu>
             </el-aside>
-            <el-main style="padding: 0">
+            <el-main style="padding: 0 0 0 10px">
                 <router-view></router-view>
             </el-main>
         </el-container>

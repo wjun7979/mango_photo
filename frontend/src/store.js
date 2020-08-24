@@ -5,28 +5,30 @@ Vue.use(Vuex)  //全局状态管理
 
 const store = new Vuex.Store({
     state: {
-        api_url: 'http://127.0.0.1:8000',  //后台api调用地址
-        curr_log: {
+        apiUrl: 'http://127.0.0.1:8000',  //后台api调用地址
+        currLog: {
             type: '',
             msg: '欢迎使用芒果相册!',
             time: '',
         },  //当前日志信息
         logs: [],  //日志列表
-        refresh_photo: false,  //是否刷新照片列表
+        mainHeight: document.documentElement.clientHeight - 72 - 48 - 48 + 'px',  //主内容区的高度
+        refreshPhoto: false,  //是否刷新照片列表
+        refreshAlbum: false,  //是否刷新影集列表
     },
     mutations: {
         setApiUrl(state) {  //根据客户端访问地址改变API请求地址
             if (window.location.href.indexOf('localhost') > -1) {
-                state.api_url = 'http://127.0.0.1:8000'
+                state.apiUrl = 'http://127.0.0.1:8000'
             }
             else {
-                state.api_url = 'http://wlon.vicp.net:7080'
+                state.apiUrl = 'http://wlon.vicp.net:7080'
             }
         },
         showLog(state, payload) {  //更新当前日志
-            state.curr_log.type = payload.type
-            state.curr_log.msg = payload.msg
-            state.curr_log.time = payload.time
+            state.currLog.type = payload.type
+            state.currLog.msg = payload.msg
+            state.currLog.time = payload.time
             //加入日志面板
             state.logs.push({'type': payload.type, 'msg': payload.msg, 'time': payload.time})
             // 只保留最新的10000条日志信息
@@ -37,8 +39,14 @@ const store = new Vuex.Store({
         clearLog(state) {  //清空日志列表
             state.logs = []
         },
+        setMainHeight(state) {  //设置主内容区的高度
+            state.mainHeight = document.documentElement.clientHeight - 72 - 48 - 48 + 'px'
+        },
         refreshPhoto(state, payload) {  //更改"是否刷新照片列表"的值
-            state.refresh_photo = payload.show
+            state.refreshPhoto = payload.show
+        },
+        refreshAlbum(state, payload) {  //更改"是否刷新影集列表"的值
+            state.refreshAlbum = payload.show
         },
     }
 })

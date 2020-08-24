@@ -12,7 +12,7 @@ class MyMiddleware(MiddlewareMixin):
         """产生request对象之后，url匹配之前调用"""
         response = {}
         try:
-            return None  # 临时放开验证
+            # return None  # 临时放开验证
             path = request.path
             if path == '/api/login' or path == '/api/refresh_token':
                 return None

@@ -1,21 +1,21 @@
 <template>
     <div>
-        <el-button icon="el-icon-upload2" size="small" type="primary"
-                   @click="show_upload_dialog = true">上传</el-button>
+        <el-button icon="el-icon-upload2" size="small"
+                   @click="showUploadDialog = true">上传</el-button>
         <el-dialog title="上传"
-                   :visible.sync="show_upload_dialog"
+                   :visible.sync="showUploadDialog"
                    :close-on-click-modal="false"
                    width="840px"
                    style="text-align: left">
             <div class="div-el-dialog">
-                <el-upload :action="api_url + '/api/upload_photo'"
+                <el-upload :action="apiUrl + '/api/upload_photo'"
                            ref="upload"
                            :multiple="true"
                            list-type="picture-card"
                            :show-file-list="true"
                            accept="image/*"
                            :headers="headers"
-                           :data="upload_data"
+                           :data="uploadData"
                            :auto-upload="false"
                            :on-change="handleChange"
                            :before-upload="beforeUpload"
@@ -27,7 +27,7 @@
             <span slot="footer" class="dialog-footer">
                 <el-button @click="clearFiles">清 空</el-button>
                 <el-button @click="submitUpload">提 交</el-button>
-                <el-button @click="show_upload_dialog = false">关 闭</el-button>
+                <el-button @click="showUploadDialog = false">关 闭</el-button>
             </span>
         </el-dialog>
 
@@ -40,24 +40,24 @@
         data() {
             return {
                 headers: {userid: localStorage.getItem('userid'), token: localStorage.getItem('token')},
-                upload_data: {
+                uploadData: {
                     userid: localStorage.getItem('userid'),  //当前用户id
                     dt: ''  //上传时附带的参数，文件的最后修改时间
                 },
-                show_upload_dialog: false,  //是否显示上传对话框
+                showUploadDialog: false,  //是否显示上传对话框
                 fileList: [],
             }
         },
         computed: {
-            api_url() {
-                return this.$store.state.api_url  //从全局状态管理器中获取数据
+            apiUrl() {
+                return this.$store.state.apiUrl  //后台api调用地址
             },
         },
         methods: {
             beforeUpload(file) {
                 //将文件的最后修改时间附加到上传参数中
                 let fileDate = this.$common.date_format(file.lastModifiedDate, 'yyyy-MM-dd hh:mm:ss')
-                this.upload_data.dt = fileDate
+                this.uploadData.dt = fileDate
             },
             submitUpload(){
                 //提交
@@ -102,7 +102,7 @@
                 if (readyList.length === 0) {
                     this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                     this.clearFiles()
-                    this.show_upload_dialog = false  //关闭上传对话框
+                    this.showUploadDialog = false  //关闭上传对话框
                 }
             },
             handleError(err, file) {
