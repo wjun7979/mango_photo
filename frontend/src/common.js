@@ -1,5 +1,5 @@
 export default {
-    date_format(dt, fmt) {  //将datetime对象格式化成指定格式的字符串
+    dateFormat(dt, fmt) {  //将datetime对象格式化成指定格式的字符串
         if (typeof dt == 'string') {
             dt = new Date(Date.parse(dt.replace(/-/g, "/")))
         }

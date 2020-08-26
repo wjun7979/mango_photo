@@ -42,11 +42,23 @@
                 headers: {userid: localStorage.getItem('userid'), token: localStorage.getItem('token')},
                 uploadData: {
                     userid: localStorage.getItem('userid'),  //当前用户id
+                    call_mode: this.callMode,
+                    album_uuid: this.albumUUID,
                     dt: ''  //上传时附带的参数，文件的最后修改时间
                 },
                 showUploadDialog: false,  //是否显示上传对话框
                 fileList: [],
             }
+        },
+        props: {
+            callMode: {  //调用模式
+                type: String,
+                default: 'photo'
+            },
+            albumUUID: {  //当调用模式为album时，必须指定影集uuid
+                type: String,
+                default: ''
+            },
         },
         computed: {
             apiUrl() {
@@ -56,7 +68,7 @@
         methods: {
             beforeUpload(file) {
                 //将文件的最后修改时间附加到上传参数中
-                let fileDate = this.$common.date_format(file.lastModifiedDate, 'yyyy-MM-dd hh:mm:ss')
+                let fileDate = this.$common.dateFormat(file.lastModifiedDate, 'yyyy-MM-dd hh:mm:ss')
                 this.uploadData.dt = fileDate
             },
             submitUpload(){

@@ -1,5 +1,5 @@
 <template>
-    <PhotoList :title="'影集 - ' + albumName" callMode="album" :albumUUID="albumUUID"></PhotoList>
+    <PhotoList :title="albumName" callMode="album" :albumUUID="albumUUID"></PhotoList>
 </template>
 
 <script>

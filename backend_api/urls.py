@@ -1,7 +1,7 @@
 from django.urls import path
 from backend_api.views.login import *
 from backend_api.views.upload_file import *
-from backend_api.views.browse import *
+from backend_api.views.photo import *
 from backend_api.views.user import *
 from backend_api.views.album import *
 
@@ -15,6 +15,7 @@ urlpatterns = [
     path('album_list', album_list),  # 获取影集列表
     path('album_get', album_get),  # 获取指定的影集信息
     path('album_new', album_new),  # 创建影集
+    path('album_addphoto', album_addphoto),  # 添加照片到影集
     path('album_remove', album_remove),  # 删除影集
     path('album_rename', album_rename),  # 重命名影集
 ]

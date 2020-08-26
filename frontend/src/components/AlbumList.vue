@@ -1,27 +1,31 @@
 <template>
-    <el-row :gutter="20">
-        <el-col :span="4" v-for="album of albumList" :key="album.uuid" style="position: relative">
-            <div class="album-wrap" @click="showAlbum(album.uuid)">
-                <div class="album-cover" style="position: relative"></div>
-                <p class="album-name">{{album.name}}</p>
-                <p class="album-photos" v-if="album.photos === 0">没有内容</p>
-                <p class="album-photos" v-else>{{album.photos}}项</p>
-            </div>
-            <!--下拉菜单-->
-            <el-dropdown class="btn-dropdown" trigger="click" placement="bottom-start"
-                         @command="handCommand">
-                <i class="el-icon-more btn-menu"></i>
-                <el-dropdown-menu slot="dropdown">
-                    <el-dropdown-item icon="el-icon-edit"
-                                      :command="beforeHandleCommand(album.uuid, album.name, 'rename')">重命名影集
-                    </el-dropdown-item>
-                    <el-dropdown-item icon="el-icon-delete"
-                                      :command="beforeHandleCommand(album.uuid, album.name, 'remove')">删除影集
-                    </el-dropdown-item>
-                </el-dropdown-menu>
-            </el-dropdown>
-        </el-col>
-    </el-row>
+    <div>
+        <el-row :gutter="20">
+            <el-col :span="4" v-for="album of albumList" :key="album.uuid" style="position: relative">
+                <div class="album-wrap" @click="showAlbum(album.uuid)">
+                    <div class="album-cover"
+                         :style="{'background-image':'url('+apiUrl+'/'+album.cover_path+'/'+album.cover_name+')'}"></div>
+                    <p class="album-name">{{album.name}}</p>
+                    <p class="album-photos" v-if="album.photos === 0">没有内容</p>
+                    <p class="album-photos" v-else>{{album.photos}}项</p>
+                </div>
+                <!--下拉菜单-->
+                <el-dropdown class="btn-dropdown" trigger="click" placement="bottom-start"
+                             @command="handCommand">
+                    <i class="el-icon-more btn-menu"></i>
+                    <el-dropdown-menu slot="dropdown">
+                        <el-dropdown-item icon="el-icon-edit"
+                                          :command="beforeHandleCommand(album.uuid, album.name, 'rename')">重命名影集
+                        </el-dropdown-item>
+                        <el-dropdown-item icon="el-icon-delete"
+                                          :command="beforeHandleCommand(album.uuid, album.name, 'remove')">删除影集
+                        </el-dropdown-item>
+                    </el-dropdown-menu>
+                </el-dropdown>
+            </el-col>
+        </el-row>
+        <el-divider v-if="parentUUID!=='' && albumList.length>0"></el-divider>
+    </div>
 </template>
 
 <script>
@@ -31,6 +35,12 @@
             return {
                 albumList: [],  //影集列表
             }
+        },
+        props: {
+            parentUUID: {  //上级影集uuid
+                type: String,
+                default: ''
+            },
         },
         computed: {
             apiUrl() {
@@ -58,7 +68,8 @@
                     method: 'get',
                     url: this.apiUrl + '/api/album_list',
                     params: {
-                        userid: localStorage.getItem('userid')
+                        parent_uuid: this.parentUUID,
+                        userid: localStorage.getItem('userid'),
                     }
                 }).then(response => {
                     const result = response.data
@@ -74,7 +85,6 @@
                 }
             },
             handCommand(command) {
-                console.log('command...')
                 switch (command.command) {
                     case 'rename':  //重命名
                         this.$prompt('请输入影集标题', {
@@ -105,7 +115,7 @@
                         });
                         break
                     case 'remove':  //删除
-                        this.$confirm('影集一经删除便无法恢复。不过，已删除影集中的照片仍会保留在您的相册中。', '要删除影集吗？', {
+                        this.$confirm('即将删除影集和所有的子影集。影集一经删除便无法恢复。不过，已删除影集中的照片仍会保留在您的相册中。', '要删除影集吗？', {
                             confirmButtonText: '删除',
                             cancelButtonText: '保留影集',
                             type: 'warning'
@@ -117,7 +127,8 @@
                                     uuid: command.uuid
                                 }
                             }).then(() => {
-                                this.showAlbums()
+                                this.showAlbums()  //刷新影集列表
+                                this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                                 this.$store.commit('showLog', {
                                     type: 'success',
                                     msg: '影集 [' + command.name + '] 删除成功',
@@ -146,8 +157,12 @@
     }
 
     .album-cover { /*影集封面*/
+        position: relative;
         padding-top: 100%;
         background-color: #80868b;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
         border-radius: 8px;
     }
 

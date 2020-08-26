@@ -12,7 +12,7 @@ from django.views.decorators.http import require_http_methods
 from django.db import transaction
 from PIL import Image  # 图像处理
 import exifread  # 读取exif信息
-from backend_api.models import Photo, Address
+from backend_api.models import Photo, Address, Album, AlbumPhoto
 
 
 @require_http_methods(['POST'])  # django内置的视力装饰器，这行表示只能通过POST方法访问
@@ -66,7 +66,7 @@ def upload_photo(request):
         exif = __get_exif(photo_fullpath, request.POST['dt'])
         # pprint.pprint(exif)
 
-        # 写入照片数据库
+        # 写入照片数据表
         photo_uuid = str(uuid.uuid1()).replace('-', '')  # 生成照片唯一序列号
         photo = Photo()
         photo.uuid = photo_uuid
@@ -98,7 +98,7 @@ def upload_photo(request):
                                               exif['GPSLongitudeRef'])
             Address.objects.filter(uuid=photo_uuid).delete()  # 先删除再插入
             address = Address()
-            address.uuid = photo_uuid
+            address.uuid = Photo.objects.get(uuid=photo_uuid)
             address.lat = location['lat']
             address.lng = location['lng']
             address.address = location['formatted_address']
@@ -109,6 +109,32 @@ def upload_photo(request):
             address.town = location['town']
             address.save()
 
+        # 写入影集数据表
+        call_mode = request.POST['call_mode']
+        album_uuid = request.POST['album_uuid']
+        if call_mode == 'album':
+            album_photo = AlbumPhoto()
+            album_photo.uuid = str(uuid.uuid1()).replace('-', '')
+            album_photo.album_uuid = Album.objects.get(uuid=album_uuid)
+            album_photo.photo_uuid = Photo.objects.get(uuid=photo_uuid)
+            album_photo.save()
+
+            # 写入封面，遍历从该影集开始的所有上级，如果封面是由系统自动产生的，则替换它，否则保留原封面
+            albums = Album.objects.raw('''
+                SELECT t2.uuid, t2.cover, t2.cover_from FROM (
+                    SELECT @r AS _id,
+                        (SELECT @r := parent_uuid FROM m_album WHERE uuid = _id ) AS parent_uuid,
+                        @l:=@l+1 AS lvl
+                    FROM (select @r:=%s, @l:=0) vars, m_album 
+                    WHERE @r<>'' AND parent_uuid <>''
+                ) t1 JOIN m_album t2 on t1._id = t2.uuid 
+                ORDER BY t1.lvl DESC
+            ''', [album_uuid])
+            for item in albums:
+                if item.cover_from == 'auto':
+                    album = Album.objects.get(uuid=item.uuid)
+                    album.cover = Photo.objects.get(uuid=photo_uuid)
+                    album.save()
         return JsonResponse(response, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息

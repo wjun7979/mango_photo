@@ -8,7 +8,7 @@
                 <NavMenu></NavMenu>
             </el-aside>
             <el-main style="padding: 0 0 0 10px">
-                <router-view></router-view>
+                <router-view :key="$route.fullPath"></router-view>
             </el-main>
         </el-container>
         <el-footer height="48px" style="padding: 0">

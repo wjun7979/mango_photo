@@ -3,11 +3,13 @@ import traceback
 from django.conf import settings
 from django.db import transaction
 from django.forms import model_to_dict
+from django.views.decorators.http import require_http_methods
 from django.http import JsonResponse
 from PIL import Image
 from backend_api.models import User
 
 
+@require_http_methods(['GET'])
 def user_getinfo(request):
     """获取指定用户的基本信息"""
     userid = request.GET.get('userid')
@@ -16,6 +18,8 @@ def user_getinfo(request):
     return JsonResponse(response, safe=False, status=200)
 
 
+@require_http_methods(['POST'])
+@transaction.atomic  # 数据库事务处理
 def user_upload_avatar(request):
     """上传用户头像"""
     save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚

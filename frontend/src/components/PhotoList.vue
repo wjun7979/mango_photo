@@ -1,35 +1,43 @@
 <template>
     <div>
-        <!--当照片列表为空时显示一些提示信息-->
-        <div v-if="isShowTips" style="text-align: center;">
-            <img src="../assets/images/upload-bg.png" alt="tips" width="649" height="327"/>
-            <div style="font-size: 32px; line-height: 50px; font-weight: 400; color: #202124">准备好添加一些照片了吗？</div>
-            <div style="font-size: 16px; line-height: 40px; font-weight: 400; color: #3c4043">点击右上角的【上传】按钮上传照片</div>
-        </div>
-
-        <!--照片列表-->
         <el-container>
             <el-header class="mp-page-header" height="48px">
-                <el-col class="mp-page-header-title" :span="8">{{title}}</el-col>
+                <el-col class="mp-page-header-title" :span="8">
+                    <i v-if="callMode==='album'" class="el-icon-back alumb-back" @click="$router.back()"></i>
+                    <span>{{title}}</span>
+                </el-col>
                 <el-col :span="16" style="text-align: right">
                     <el-form :inline="true" style="margin-top: 2px;">
-                        <el-form-item label="分组:">
+                        <el-form-item v-if="!isShowTips" label="分组:">
                             <el-radio-group v-model="groupType" size="small">
                                 <el-radio-button label="year">按年</el-radio-button>
                                 <el-radio-button label="month">按月</el-radio-button>
                                 <el-radio-button label="day">按天</el-radio-button>
                             </el-radio-group>
                         </el-form-item>
-                        <el-form-item label="尺寸:" style="margin-right: 20px">
+                        <el-form-item v-if="!isShowTips" label="尺寸:" style="margin-right: 20px">
                             <el-slider v-model="imgHeight" :min="100" :max="200" style="width: 100px"></el-slider>
                         </el-form-item>
+                        <el-form-item v-if="callMode==='album'">
+                            <CreateAlbum title="创建子影集" :parentUUID="albumUUID"></CreateAlbum>
+                        </el-form-item>
                         <el-form-item>
-                            <UploadFile></UploadFile>
+                            <UploadFile callMode="album" :albumUUID="albumUUID"></UploadFile>
                         </el-form-item>
                     </el-form>
                 </el-col>
             </el-header>
             <el-main :style="{height: mainHeight, overflow: 'auto'}">
+                <!--子影集列表-->
+                <AlbumList v-if="callMode==='album'" :parentUUID="albumUUID"></AlbumList>
+                <!--当照片列表为空时显示一些提示信息-->
+                <div v-if="isShowTips" style="text-align: center;">
+                    <img src="../assets/images/upload-bg.png" alt="tips" width="649" height="327"/>
+                    <div style="font-size: 32px; line-height: 50px; font-weight: 400; color: #202124">准备好添加一些照片了吗？</div>
+                    <div style="font-size: 16px; line-height: 40px; font-weight: 400; color: #3c4043">点击右上角的【上传】按钮上传照片
+                    </div>
+                </div>
+                <!--照片列表-->
                 <el-checkbox-group v-model="checkGroupList" class="images-wrap">
                     <el-row v-for="(photo, index) of photoListGroup" :key="index" style="margin-right: 28px;">
                         <el-checkbox class="chk-group" :label="photo.timestamp"
@@ -82,25 +90,49 @@
                 <i class="el-icon-close" style="color: #202124;" @click="unselectPhoto"></i>
                 <span style="font-size: 1.125rem; padding-left: 7px;">选择了 {{checkList.length}} 张照片</span>
             </el-col>
-            <el-col :span="12" style="text-align: right">
-                <i class="el-icon-plus" title="添加到影集"></i>
+            <el-col v-if="callMode==='photo'" :span="12" style="text-align: right">
+                <i class="el-icon-plus" title="添加到影集" @click="isShowAddToAlbumDialog = true"></i>
+                <i class="el-icon-star-off" title="收藏"></i>
+                <i class="el-icon-delete" title="删除"></i>
+                <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
+            </el-col>
+            <el-col v-else-if="callMode==='album'" :span="12" style="text-align: right">
+                <i class="el-icon-minus" title="从影集中移除"></i>
                 <i class="el-icon-star-off" title="收藏"></i>
                 <i class="el-icon-delete" title="删除"></i>
                 <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
             </el-col>
         </el-row>
+
+        <!--添加到影集对话框-->
+        <el-dialog class="album-dialog" title="添加到影集"
+                   :visible.sync="isShowAddToAlbumDialog"
+                   width="400px"
+                   :close-on-click-modal="false">
+            <el-tree class="album-tree" ref="albumTree" :lazy="true" :load="loadAlbumTree" node-key="uuid"
+                     :props="{label:'name'}"
+                     :default-expand-all="false"
+                     :expand-on-click-node="true"
+                     :highlight-current="true"></el-tree>
+            <span slot="footer">
+                <el-button @click="isShowAddToAlbumDialog = false" size="small">取消</el-button>
+                <el-button type="primary" size="small" @click="addToAlbum">确定</el-button>
+            </span>
+        </el-dialog>
     </div>
 </template>
 
 <script>
     import UploadFile from "./UploadFile";
+    import CreateAlbum from "./CreateAlbum";
+    import AlbumList from "./AlbumList";
     import Preview from "./Preview";
     import {rafThrottle} from "element-ui/src/utils/util";
     import {off, on} from "element-ui/src/utils/dom";
 
     export default {
         name: "PhotoList",
-        components: {UploadFile ,Preview},
+        components: {UploadFile, Preview, CreateAlbum, AlbumList},
         data() {
             return {
                 imgHeight: 200,  //照片的高度
@@ -114,6 +146,7 @@
                 checkGroupList: [],  //选中的分组列表
                 checkList: [],  //选中的照片列表
                 lastSelectedUUID: null,  //最后一次选中的照片uuid
+                isShowAddToAlbumDialog: false,  //是否显示添加到影集对话框
             }
         },
         props: {
@@ -128,7 +161,7 @@
             albumUUID: {  //当调用模式为album时，必须指定影集uuid
                 type: String,
                 default: ''
-            }
+            },
         },
         computed: {
             //重要：vuex中定义的数据一定要在这里绑定，放在data()里视图不会更新
@@ -196,7 +229,7 @@
             },
             setImgHeight() {
                 //浏览器窗口大小变化时改变照片的大小
-                this.imgHeight = document.documentElement.clientWidth / 8
+                this.imgHeight = parseInt((document.documentElement.clientWidth / 8).toString())
                 this.imgHeight = this.imgHeight < 100 ? 100 : this.imgHeight
                 this.imgHeight = this.imgHeight > 200 ? 200 : this.imgHeight
             },
@@ -206,7 +239,9 @@
                     method: 'get',
                     url: this.apiUrl + '/api/photo_list',
                     params: {
-                        userid: localStorage.getItem('userid')
+                        userid: localStorage.getItem('userid'),
+                        call_mode: this.callMode,
+                        album_uuid: this.albumUUID,
                     }
                 }).then(response => {
                     this.photoList = response.data
@@ -270,13 +305,13 @@
                 let groupLabel
                 switch (this.groupType) {
                     case 'year':
-                        groupLabel = this.$common.date_format(val, 'yyyy年')
+                        groupLabel = this.$common.dateFormat(val, 'yyyy年')
                         break
                     case 'month':
-                        groupLabel = this.$common.date_format(val, 'yyyy年M月')
+                        groupLabel = this.$common.dateFormat(val, 'yyyy年M月')
                         break
                     case 'day':
-                        groupLabel = this.$common.date_format(val, 'yyyy年M月d日 周w')
+                        groupLabel = this.$common.dateFormat(val, 'yyyy年M月d日 周w')
                         break
                     default:
                         groupLabel = val
@@ -353,6 +388,61 @@
                     if (e.target.tagName === 'IMG')
                         this.clickImage(uuid, timestamp)
                 }
+            },
+            loadAlbumTree(node, resolve) {
+                //加载影集树
+                let parent_uuid = ''
+                if (node.level !== 0) {
+                    parent_uuid = node.data.uuid
+                }
+                this.$axios({
+                    method: 'get',
+                    url: this.apiUrl + '/api/album_list',
+                    params: {
+                        parent_uuid: parent_uuid,
+                        userid: localStorage.getItem('userid'),
+                    }
+                }).then(response => {
+                    const result = response.data
+                    return resolve(result)
+                })
+            },
+            addToAlbum() {
+                //将照片添加到影集
+                let album_uuid = this.$refs.albumTree.getCurrentKey()
+                let album_name = this.$refs.albumTree.getCurrentNode().name
+                if (!album_uuid) {
+                    this.$notify({
+                        type: 'error',
+                        title: '提示',
+                        message: '请选择要添加照片的影集',
+                        position: 'top-right'
+                    })
+                    return false
+                }
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/album_addphoto',
+                    data: {
+                        album_uuid: album_uuid,
+                        photo_list: this.checkList
+                    }
+                }).then(() => {
+                    let msg = this.checkList.length + ' 张照片成功添加到影集 [' + album_name + '] 中'
+                    this.unselectPhoto()
+                    this.isShowAddToAlbumDialog = false
+                    this.$notify({
+                        type: 'success',
+                        title: '成功',
+                        message: msg,
+                        position: 'top-right'
+                    })
+                    this.$store.commit('showLog', {
+                        type: 'success',
+                        msg: msg,
+                        time: new Date().toLocaleTimeString()
+                    })
+                })
             },
         }
     }
@@ -533,5 +623,23 @@
     .chk-toolbar i:hover {
         background-color: #e5e5e5;
         border-radius: 50%;
+    }
+
+    .alumb-back {  /*影集页头的返回按钮*/
+        padding: 8px;
+        margin-right: 10px;
+        color: #5f6368;
+        cursor: pointer;
+    }
+    .alumb-back:hover {
+        background-color: #e5e5e5;
+        border-radius: 50%;
+    }
+
+    .album-tree {  /*影集树*/
+        height: 300px;
+    }
+    .album-dialog >>> .el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content {
+        color: #f56c6c;  /*影集树选中的节点*/
     }
 </style>

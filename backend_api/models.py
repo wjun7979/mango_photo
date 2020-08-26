@@ -60,7 +60,7 @@ class Photo(models.Model):
 
 class Address(models.Model):
     """位置"""
-    uuid = models.CharField(primary_key=True, max_length=32)
+    uuid = models.OneToOneField('Photo', on_delete=models.CASCADE, primary_key=True, db_column='uuid')
     lat = models.CharField(max_length=100)  # 纬度
     lng = models.CharField(max_length=100)  # 经度
     address = models.CharField(max_length=500)  # 结构化地址信息
@@ -82,9 +82,9 @@ class Album(models.Model):
     uuid = models.CharField(primary_key=True, max_length=32)
     userid = models.CharField(max_length=50)  # 所属用户
     name = models.CharField(max_length=200)  # 影集名称
-    cover = models.CharField(max_length=32)  # 封面
+    cover = models.ForeignKey('Photo', null=True, on_delete=models.CASCADE, db_column='cover')  # 封面
+    cover_from = models.CharField(default='auto', max_length=10)  # 封面产生的方式:auto自动产生,user用户指定
     parent_uuid = models.CharField(null=True, max_length=32)  # 上级影集uuid
-    photos = models.IntegerField(default=0)  # 照片的数量
     input_date = models.DateTimeField(auto_now_add=True)  # 创建时间
     update_date = models.DateTimeField(auto_now=True)  # 修改时间
 
@@ -97,9 +97,13 @@ class Album(models.Model):
 
 class AlbumPhoto(models.Model):
     """影集中的照片"""
-    album_uuid = models.CharField(max_length=32)  # 影集uuid
-    photo_uuid = models.CharField(max_length=32)  # 照片uuid
+    uuid = models.CharField(primary_key=True, max_length=32)
+    album_uuid = models.ForeignKey('Album', on_delete=models.CASCADE, db_column='album_uuid')  # 影集uuid
+    photo_uuid = models.ForeignKey('Photo', on_delete=models.CASCADE, db_column='photo_uuid')  # 照片uuid
     input_date = models.DateTimeField(auto_now_add=True)  # 添加时间
 
     class Meta:
         db_table = 'm_album_photo'
+
+    def __str__(self):
+        return 'album_photo:' + self.uuid
