@@ -3,8 +3,9 @@
         <el-header class="mp-page-header" height="56px">
             <el-col class="mp-page-header-title" :span="8">
                 <i class="el-icon-close pick-close" @click="onClose"></i>
-                <span v-if="addList.length===0 && removeList.length===0">添加到影集{{albumName}}</span>
+                <span v-if="addList.length===0 && removeList.length===0">添加到影集：{{albumName}}</span>
                 <span v-if="addList.length>0" style="padding-left: 7px;">添加了 {{addList.length}} 张照片</span>
+                <span v-if="addList.length>0 && removeList.length>0" style="padding-left: 7px;">，</span>
                 <span v-if="removeList.length>0" style="padding-left: 7px;">移除了 {{removeList.length}} 张照片</span>
             </el-col>
             <el-col :span="16" style="text-align: right">

@@ -67,7 +67,8 @@
         </el-checkbox-group>
 
         <!--大图预览-->
-        <Preview v-if="isShowPreview" :url-list="previewListOrder" :on-close="closeViewer"></Preview>
+        <Preview v-if="isShowPreview" :url-list="previewListOrder" :callMode="callMode" :albumUUID="albumUUID"
+                 :albumName="albumName" :on-close="closeViewer"></Preview>
 
         <!--选中照片后的工具栏-->
         <el-row class="chk-toolbar" v-show="callMode!=='pick' && checkList.length>0">
@@ -76,24 +77,40 @@
                 <span style="font-size: 1.125rem; padding-left: 7px;">选择了 {{checkList.length}} 张照片</span>
             </el-col>
             <el-col :span="12" style="text-align: right">
-                <i v-if="callMode==='photo'" class="el-icon-plus" title="添加到影集"
-                   @click="isShowAddToAlbumDialog = true"></i>
-                <i v-if="callMode==='album'" class="el-icon-minus" title="从影集中移除" @click="removeFromAlbum"></i>
-                <i v-if="callMode!=='trash'" class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
-                <i v-if="callMode!=='trash'" class="el-icon-delete" title="删除" @click="trashPhoto"></i>
-                <el-dropdown v-if="callMode!=='trash'" trigger="click" @command="handCommand" placement="bottom-end">
-                    <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
-                    <el-dropdown-menu slot="dropdown">
-                        <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
-                        <el-dropdown-item icon="el-icon-date" command="modify_datetime">修改日期和时间</el-dropdown-item>
-                        <el-dropdown-item icon="el-icon-location-outline" command="modify_location">修改位置信息
-                        </el-dropdown-item>
-                    </el-dropdown-menu>
-                </el-dropdown>
-                <el-button class="btn-toolbar" v-if="callMode==='trash'" type="text" @click="restorePhoto">恢复
-                </el-button>
-                <el-button class="btn-toolbar" v-if="callMode==='trash'" type="text" @click="removePhoto">永久删除
-                </el-button>
+                <div v-if="callMode==='photo'">
+                    <i class="el-icon-plus" title="添加到影集" @click="isShowAddToAlbumDialog = true"></i>
+                    <i class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
+                    <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
+                    <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
+                        <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
+                        <el-dropdown-menu slot="dropdown">
+                            <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-date" command="modify_datetime">修改日期和时间</el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-location-outline" command="modify_location">修改位置信息
+                            </el-dropdown-item>
+                        </el-dropdown-menu>
+                    </el-dropdown>
+                </div>
+                <div v-if="callMode==='album'">
+                    <i class="el-icon-remove-outline" title="从影集中移除" @click="removeFromAlbum"></i>
+                    <i class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
+                    <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
+                    <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
+                        <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
+                        <el-dropdown-menu slot="dropdown">
+                            <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-date" command="modify_datetime">修改日期和时间</el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-location-outline" command="modify_location">修改位置信息
+                            </el-dropdown-item>
+                        </el-dropdown-menu>
+                    </el-dropdown>
+                </div>
+                <div v-if="callMode==='trash'">
+                    <el-button class="btn-toolbar" v-if="callMode==='trash'" type="text" @click="restorePhoto">恢复
+                    </el-button>
+                    <el-button class="btn-toolbar" v-if="callMode==='trash'" type="text" @click="removePhoto">永久删除
+                    </el-button>
+                </div>
             </el-col>
         </el-row>
 
@@ -318,8 +335,14 @@
                         this.checkList.splice(idx, 1)
                     }
                     this.selectPhoto(uuid, timestamp)  //触发照片选择事件
-                } else {  //没有照片被选中时，点击照片就是预览
-                    this.showPreview(uuid)
+                } else {
+                    if (this.callMode === 'pick') {
+                        this.checkList.push(uuid)
+                        this.selectPhoto(uuid, timestamp)  //触发照片选择事件
+                    }
+                    else {  //没有照片被选中时，点击照片就是预览
+                        this.showPreview(uuid)
+                    }
                 }
             },
             closeViewer() {

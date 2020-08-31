@@ -9,7 +9,7 @@
             </el-col>
         </el-header>
         <el-main :style="{height: mainHeight, overflow: 'auto', padding: 0}">
-            <PhotoList title="照片"></PhotoList>
+            <PhotoList></PhotoList>
         </el-main>
     </el-container>
 </template>

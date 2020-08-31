@@ -9,7 +9,7 @@
             </el-col>
         </el-header>
         <el-main :style="{height: mainHeight, overflow: 'auto', padding: 0}">
-            <PhotoList title="回收站" callMode="trash"></PhotoList>
+            <PhotoList callMode="trash"></PhotoList>
         </el-main>
     </el-container>
 </template>
@@ -31,6 +31,7 @@
         methods: {
             emptyTrash() {
                 //清空回收站
+                this.$store.commit('cancelSelectPhoto', {action: true})  //取消已选中的照片
                 this.$confirm('所有内容将被永久删除，且此操作无法撤消', '要清空回收站吗？', {
                     confirmButtonText: '清空回收站',
                     cancelButtonText: '取消',

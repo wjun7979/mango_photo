@@ -1,12 +1,12 @@
 <template>
-    <el-button icon="el-icon-circle-plus-outline" size="small" @click="newAlbum">{{title}}</el-button>
+    <el-button icon="el-icon-circle-plus-outline" size="small" @click="newAlbum">{{buttonText}}</el-button>
 </template>
 
 <script>
     export default {
         name: "CreateAlbum",
         props: {
-            title: {  //按钮标题
+            buttonText: {  //按钮标题
                 type: String,
                 default: '创建影集'
             },

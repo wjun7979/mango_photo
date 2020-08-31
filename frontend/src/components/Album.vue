@@ -8,7 +8,7 @@
             <el-col :span="16" style="text-align: right">
                 <el-form :inline="true" style="margin-top: 2px;">
                     <el-form-item>
-                        <CreateAlbum title="创建子影集" :parentUUID="albumUUID"></CreateAlbum>
+                        <CreateAlbum buttonText="创建子影集" :parentUUID="albumUUID"></CreateAlbum>
                     </el-form-item>
                     <el-form-item>
                         <el-button icon="el-icon-document-add" size="small" @click="openPick">添加照片

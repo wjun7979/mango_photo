@@ -10,11 +10,41 @@
                 </span>
                 <!--工具栏-->
                 <div class="viewer-toolbar">
-                    <i class="el-icon-s-operation" title="修改" @click="showModify"></i>
-                    <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
-                    <i class="el-icon-star-off" title="收藏"></i>
-                    <i class="el-icon-delete" title="删除"></i>
-                    <i class="el-icon-plus" title="添加到影集"></i>
+                    <div v-if="callMode === 'photo'">
+                        <i class="el-icon-s-operation" title="修改" @click="showModify"></i>
+                        <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
+                        <i class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
+                        <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
+                            <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
+                            <el-dropdown-menu slot="dropdown">
+                                <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-plus" command="add_to_album">添加到影集</el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-delete" command="trash_photo">移到回收站</el-dropdown-item>
+                            </el-dropdown-menu>
+                        </el-dropdown>
+                    </div>
+                    <div v-if="callMode === 'album'">
+                        <i class="el-icon-s-operation" title="修改" @click="showModify"></i>
+                        <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
+                        <i class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
+                        <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
+                            <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
+                            <el-dropdown-menu slot="dropdown">
+                                <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-remove-outline" command="remove_from_album">从影集中移除</el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-notebook-1" command="set_album_cover">设为影集封面</el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-delete" command="trash_photo">移到回收站</el-dropdown-item>
+                            </el-dropdown-menu>
+                        </el-dropdown>
+                    </div>
+                    <div v-if="callMode === 'pick'">
+                        <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
+                    </div>
+                    <div v-if="callMode === 'trash'">
+                        <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
+                        <i class="el-icon-delete" title="永久删除" @click="removePhoto"></i>
+                        <i class="el-icon-time" title="恢复" @click="restorePhoto"></i>
+                    </div>
                 </div>
                 <!-- 上一张、下一张 -->
                 <template v-if="!isSingle">
@@ -62,8 +92,8 @@
 </template>
 
 <script>
-    import { on, off } from 'element-ui/src/utils/dom';
-    import { rafThrottle, isFirefox } from 'element-ui/src/utils/util';
+    import {on, off} from 'element-ui/src/utils/dom';
+    import {rafThrottle, isFirefox} from 'element-ui/src/utils/util';
 
     const Mode = {
         CONTAIN: {
@@ -97,10 +127,29 @@
                 viewerWrapperMargin: '0px',  //最外层容器右边距
             }
         },
-        props: [
-            'urlList',
-            'onClose',
-        ],
+        props: {
+            callMode: {  //调用模式
+                type: String,
+                default: 'photo'  //photo:照片; album:影集; pick:挑选照片到影集
+            },
+            albumUUID: {  //当调用模式为album时，必须指定影集uuid
+                type: String,
+                default: ''
+            },
+            albumName: {  //影集标题
+                type: String,
+                default: ''
+            },
+            urlList: {  //大图预览列表
+                type: Array,
+                default: () => []
+            },
+            onClose: {  //关闭预览窗口后的回调
+                type: Function,
+                default: () => {
+                }
+            },
+        },
         watch: {
             index: {
                 handler: function () {
@@ -276,7 +325,7 @@
             },
             showModify() {  //显示修改侧边栏
                 this.isShowInfoSide = false
-                this.isShowModifySide = ! this.isShowModifySide
+                this.isShowModifySide = !this.isShowModifySide
                 this.viewerWrapperMargin = this.isShowModifySide ? '360px' : '0px'
             },
             closeModify() {  //关闭修改侧边栏
@@ -291,6 +340,58 @@
             closeInfo() {  //关闭信息侧边栏
                 this.isShowInfoSide = false
                 this.viewerWrapperMargin = '0px'
+            },
+            addToFavorites() {
+                //收藏
+                this.$message('收藏功能还没做好呢:-)')
+            },
+            handCommand(command) {
+                //更多选项
+                switch (command) {
+                    case 'download':
+                        this.downloadPhoto()
+                        break
+                    case 'add_to_album':
+                        this.addToAlbum()
+                        break
+                    case 'remove_from_album':
+                        this.removeFromAlbum()
+                        break
+                    case 'trash_photo':
+                        this.trashPhoto()
+                        break
+                    case 'set_album_cover':
+                        this.setAlbumCover()
+                        break
+                }
+            },
+            downloadPhoto() {
+                //下载
+                this.$message('下载功能还没做好呢:-)')
+            },
+            addToAlbum() {
+                //将照片添加到影集
+                this.$message('将照片添加到影集功能还没做好呢:-)')
+            },
+            removeFromAlbum() {
+                //从影集中移除照片
+                this.$message('从影集中移除照片功能还没做好呢:-)')
+            },
+            trashPhoto() {
+                //将照片移到回收站
+                this.$message('将照片移到回收站功能还没做好呢:-)')
+            },
+            setAlbumCover() {
+                //设为影集封面
+                this.$message('设为影集封面功能还没做好呢:-)')
+            },
+            removePhoto() {
+                //永久删除照片
+                this.$message('永久删除功能还没做好呢:-)')
+            },
+            restorePhoto() {
+                //将照片从回收站恢复
+                this.$message('将照片从回收站恢复功能还没做好呢:-)')
             },
         }
     }
@@ -349,7 +450,7 @@
         width: 40px;
         height: 40px;
         font-size: 23px;
-        background-color: rgba(0,0,0,0.1);
+        background-color: rgba(0, 0, 0, 0.1);
         color: #fff;
     }
 
@@ -361,7 +462,7 @@
         height: 44px;
         font-size: 23px;
         color: #fff;
-        background-color: rgba(0,0,0,0.1);
+        background-color: rgba(0, 0, 0, 0.1);
         border-color: #fff;
     }
 
@@ -372,6 +473,7 @@
     .viewer-next {
         right: 40px;
     }
+
     /*动作按钮*/
     .viewer-actions {
         left: 50%;
@@ -380,7 +482,7 @@
         width: 282px;
         height: 44px;
         padding: 0 23px;
-        background-color: rgba(0,0,0,0.3);
+        background-color: rgba(0, 0, 0, 0.3);
         border-color: #fff;
         border-radius: 22px;
     }
@@ -405,6 +507,7 @@
         top: 20px;
         right: 30px;
     }
+
     .viewer-toolbar i {
         margin-right: 10px;
         width: 44px;
@@ -413,14 +516,16 @@
         font-size: 24px;
         line-height: 44px;
         text-align: center;
-        background-color: rgba(0,0,0,0.1);
+        background-color: rgba(0, 0, 0, 0.1);
         border-radius: 50%;
         cursor: pointer;
     }
+
     .viewer-toolbar i:hover {
         background-color: #454749;
         border-radius: 50%;
     }
+
     /*侧边栏*/
     .viewer-side {
         position: fixed;
@@ -432,6 +537,7 @@
         height: 100%;
         background-color: #202124;
     }
+
     /*侧边栏的关闭按钮*/
     .viewer-side-btn-close {
         width: 44px;
@@ -442,6 +548,7 @@
         font-size: 23px;
         cursor: pointer;
     }
+
     .viewer-side-btn-close:hover {
         background-color: #454749;
         border-radius: 50%;
