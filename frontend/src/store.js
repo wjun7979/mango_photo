@@ -12,9 +12,11 @@ const store = new Vuex.Store({
             time: '',
         },  //当前日志信息
         logs: [],  //日志列表
-        mainHeight: document.documentElement.clientHeight - 72 - 48 - 48 + 'px',  //主内容区的高度
+        mainHeight: document.documentElement.clientHeight - 72 - 56 - 48 + 'px',  //主内容区的高度
         refreshPhoto: false,  //是否刷新照片列表
         refreshAlbum: false,  //是否刷新影集列表
+        refreshPhotoStatistics: false,  //是否刷新照片库统计信息
+        cancelSelectPhoto: false,  //是否取消已选中的照片
     },
     mutations: {
         setApiUrl(state) {  //根据客户端访问地址改变API请求地址
@@ -40,13 +42,19 @@ const store = new Vuex.Store({
             state.logs = []
         },
         setMainHeight(state) {  //设置主内容区的高度
-            state.mainHeight = document.documentElement.clientHeight - 72 - 48 - 48 + 'px'
+            state.mainHeight = document.documentElement.clientHeight - 72 - 56 - 48 + 'px'
         },
         refreshPhoto(state, payload) {  //更改"是否刷新照片列表"的值
             state.refreshPhoto = payload.show
         },
         refreshAlbum(state, payload) {  //更改"是否刷新影集列表"的值
             state.refreshAlbum = payload.show
+        },
+        refreshPhotoStatistics(state, payload) {  //更改“是否刷新照片库统计信息”的值
+            state.refreshPhotoStatistics = payload.show
+        },
+        cancelSelectPhoto(state, payload) {  //更改“是否取消已选中的照片”的值
+            state.cancelSelectPhoto = payload.action
         },
     }
 })

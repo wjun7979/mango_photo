@@ -3,7 +3,7 @@ import traceback
 import uuid
 
 from django.db import transaction
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.db.models import F
 from django.forms import model_to_dict
 from django.http import JsonResponse
@@ -20,7 +20,8 @@ def album_list(request):
     albums = Album.objects.filter(userid=userid, parent_uuid=parent_uuid)
     albums = albums.values('uuid', 'name', cover_path=F('cover__path_thumbnail'),
                            cover_name=F('cover__name'))  # 通过外键关联查询封面路径
-    albums = albums.annotate(photos=Count('albumphoto'))  # 影集中的照片数量通过外键表获取
+    # 影集中的照片数量通过外键表获取
+    albums = albums.annotate(photos=Count('albumphoto', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
     albums = albums.order_by('name')
 
     response = json.loads(json.dumps(list(albums)))
@@ -58,7 +59,7 @@ def album_new(request):
 
 @require_http_methods(['POST'])
 @transaction.atomic  # 数据库事务处理
-def album_addphoto(request):
+def album_add_photo(request):
     """添加照片到影集"""
     save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
     response = {}
@@ -73,24 +74,61 @@ def album_addphoto(request):
             album_photo.album_uuid = Album.objects.get(uuid=album_uuid)
             album_photo.photo_uuid = Photo.objects.get(uuid=item)
             album_photo.save()
+        album_auto_cover(album_uuid)  # 设置影集封面
+        return JsonResponse(response, status=200)
+    except Exception as e:
+        traceback.print_exc()  # 输出详细的错误信息
+        transaction.savepoint_rollback(save_tag)  # 回滚数据库事务
+        response['msg'] = str(e)
+        return JsonResponse(response, status=500)
 
-        # 写入封面，遍历从该影集开始的所有上级，如果封面是由系统自动产生的，则替换它，否则保留原封面
-        last_photo_uuid = photo_list[-1]  # 将本次添加的最后一张照片作为封面
-        albums = Album.objects.raw('''
-            SELECT t2.uuid, t2.cover, t2.cover_from FROM (
-                SELECT @r AS _id,
-                    (SELECT @r := parent_uuid FROM m_album WHERE uuid = _id ) AS parent_uuid,
-                    @l:=@l+1 AS lvl
-                FROM (select @r:=%s, @l:=0) vars, m_album 
-                WHERE @r<>'' AND parent_uuid <>''
-            ) t1 JOIN m_album t2 on t1._id = t2.uuid 
-            ORDER BY t1.lvl DESC
-        ''', [album_uuid])
-        for item in albums:
-            if item.cover_from == 'auto':
-                album = Album.objects.get(uuid=item.uuid)
-                album.cover = Photo.objects.get(uuid=last_photo_uuid)
-                album.save()
+
+@require_http_methods(['POST'])
+@transaction.atomic  # 数据库事务处理
+def album_remove_photo(request):
+    """从影集中移除照片"""
+    save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
+    response = {}
+    try:
+        request_data = json.loads(request.body)
+        album_uuid = request_data.get('album_uuid')
+        photo_list = request_data.get('photo_list')
+        AlbumPhoto.objects.filter(album_uuid=album_uuid, photo_uuid__in=photo_list).delete()
+        # 如果该影集使用了即将被移除的照片作为封面，则首先将其取消
+        Album.objects.filter(uuid=album_uuid, cover__in=photo_list, cover_from='user').update(cover=None,
+                                                                                              cover_from='auto')
+        album_auto_cover(album_uuid)  # 设置影集封面
+        return JsonResponse(response, status=200)
+    except Exception as e:
+        traceback.print_exc()  # 输出详细的错误信息
+        transaction.savepoint_rollback(save_tag)  # 回滚数据库事务
+        response['msg'] = str(e)
+        return JsonResponse(response, status=500)
+
+
+@require_http_methods(['POST'])
+@transaction.atomic  # 数据库事务处理
+def album_pick_photo(request):
+    """选择照片到影集，包括添加和移除"""
+    save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
+    response = {}
+    try:
+        request_data = json.loads(request.body)
+        album_uuid = request_data.get('album_uuid')
+        add_list = request_data.get('add_list')
+        remove_list = request_data.get('remove_list')
+        for item in add_list:
+            AlbumPhoto.objects.filter(album_uuid=album_uuid, photo_uuid=item).delete()  # 先删除再添加
+            album_photo = AlbumPhoto()
+            album_photo.uuid = str(uuid.uuid1()).replace('-', '')
+            album_photo.album_uuid = Album.objects.get(uuid=album_uuid)
+            album_photo.photo_uuid = Photo.objects.get(uuid=item)
+            album_photo.save()
+        AlbumPhoto.objects.filter(album_uuid=album_uuid, photo_uuid__in=remove_list).delete()
+        # 如果该影集使用了即将被移除的照片作为封面，则首先将其取消
+        Album.objects.filter(uuid=album_uuid, cover__in=remove_list, cover_from='user').update(cover=None,
+                                                                                               cover_from='auto')
+        album_auto_cover(album_uuid)  # 设置影集封面
         return JsonResponse(response, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息
@@ -136,3 +174,38 @@ def album_rename(request):
     album.name = name
     album.save()
     return JsonResponse({}, status=200)
+
+
+def album_auto_cover(album_uuid):
+    """自动设置指定影集及其父集的封面"""
+    # 写入封面，遍历从该影集开始的所有上级，如果封面是由系统自动产生的，则替换它，否则保留原封面
+    albums = Album.objects.raw('''
+        SELECT t2.uuid, t2.cover, t2.cover_from FROM (
+            SELECT @r AS _id,
+                (SELECT @r := parent_uuid FROM m_album WHERE uuid = _id ) AS parent_uuid,
+                @l:=@l+1 AS lvl
+            FROM (select @r:=%s, @l:=0) vars, m_album 
+            WHERE @r<>''
+        ) t1 JOIN m_album t2 on t1._id = t2.uuid 
+        ORDER BY t1.lvl DESC
+    ''', [album_uuid])
+    for item in albums:
+        if item.cover_from != 'user':
+            # 以该影集及其子集中最后一次添加的照片作为封面
+            albums = Album.objects.raw('''
+                WITH RECURSIVE tmp_albums AS (
+                    SELECT uuid AS rootId FROM m_album WHERE uuid= %s
+                    UNION ALL
+                    SELECT uuid FROM m_album a,tmp_albums b WHERE a.parent_uuid = b.rootId
+                )
+                SELECT uuid FROM m_album WHERE EXISTS(SELECT uuid FROM tmp_albums WHERE rootId = uuid)
+            ''', [item.uuid])
+            album_photo = AlbumPhoto.objects.filter(album_uuid__in=albums, photo_uuid__is_deleted=False).order_by(
+                '-input_date').first()
+            # 设置封面，如果影集和子集中没有任何照片时，则将封面设置为空
+            album = Album.objects.get(uuid=item.uuid)
+            if album_photo:
+                album.cover = album_photo.photo_uuid
+            else:
+                album.cover = None
+            album.save()

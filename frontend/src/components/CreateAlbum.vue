@@ -22,6 +22,7 @@
         },
         methods: {
             newAlbum() {
+                this.$store.commit('cancelSelectPhoto', {action: true})  //取消已选中的照片
                 //创建影集
                 this.$prompt('请输入影集标题', {
                     inputValidator: (value => {

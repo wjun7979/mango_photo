@@ -37,12 +37,15 @@ axios.interceptors.response.use(response => {
 	}
 	return Promise.resolve(response)
 }, err => {
-	Notification({
-		type: 'error',
-		title: '提示',
-		message: err.response.data.msg,
-		position: 'top-right'
-	})
+	//当后台返回错误时提示信息，但控制同一时间只出现一个通知框
+	if (document.getElementsByClassName('el-notification').length === 0) {
+		Notification({
+			type: 'error',
+			title: '提示',
+			message: err.response.data.msg,
+			position: 'top-right'
+		})
+	}
 	if (err.response.status === 401) {  //未通过后台身份验证
 		if (localStorage.getItem('userid')) {
 			localStorage.removeItem('userid')  //清除本地token

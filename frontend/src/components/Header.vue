@@ -3,7 +3,7 @@
         <el-aside width="256px" style="overflow:hidden">
             <span class="span-title">芒果相册</span>
         </el-aside>
-        <el-main style="overflow:hidden">
+        <el-main style="overflow:hidden; padding: 12px 20px 12px 10px">
             <el-row>
                 <el-col :span="14">
                     <el-input class="input-search" placeholder="搜索你的照片" v-model="keyword"
@@ -33,9 +33,10 @@
 
 <style scoped>
     .div-container {  /*最外层容器*/
-        height: 72px;
+        height: 64px;
         padding: 0;
         border-bottom: 1px solid #dadce0;
+        margin-bottom: 8px;
     }
     .span-title {  /*logo标题*/
         display: block;

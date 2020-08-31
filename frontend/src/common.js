@@ -1,5 +1,6 @@
 export default {
-    dateFormat(dt, fmt) {  //将datetime对象格式化成指定格式的字符串
+    dateFormat(dt, fmt) {
+        //将datetime对象格式化成指定格式的字符串
         if (typeof dt == 'string') {
             dt = new Date(Date.parse(dt.replace(/-/g, "/")))
         }
@@ -31,12 +32,20 @@ export default {
         }
         return fmt;
     },
-    isContain(arr1, arr2) {  //判断arr2是否是arr1的子集
+    isContain(arr1, arr2) {
+        //判断arr2是否是arr1的子集
         for (let i = arr2.length - 1; i >= 0; i--) {
             if(!arr1.includes(arr2[i])){
                 return false;
             }
         }
         return true;
-    }
+    },
+    bytesToSize(bytes) {
+        //将字节转换为合适的容量单位
+        if (bytes === 0) return '0 B'
+        let k = 1024, sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
+            i = Math.floor(Math.log(bytes) / Math.log(k))
+        return (bytes / Math.pow(k, i)).toPrecision(3) + ' ' + sizes[i]
+    },
 }

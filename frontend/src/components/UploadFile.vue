@@ -1,12 +1,12 @@
 <template>
     <div>
-        <el-button icon="el-icon-upload2" size="small"
-                   @click="showUploadDialog = true">上传</el-button>
+        <el-button icon="el-icon-upload2" size="small" @click="showUploadDialog = true">{{buttonText}}</el-button>
         <el-dialog title="上传"
                    :visible.sync="showUploadDialog"
                    :close-on-click-modal="false"
+                   :modal-append-to-body='false'
                    width="840px"
-                   style="text-align: left">
+                   style="text-align: left;">
             <div class="div-el-dialog">
                 <el-upload :action="apiUrl + '/api/upload_photo'"
                            ref="upload"
@@ -30,7 +30,6 @@
                 <el-button @click="showUploadDialog = false">关 闭</el-button>
             </span>
         </el-dialog>
-
     </div>
 </template>
 
@@ -59,6 +58,15 @@
                 type: String,
                 default: ''
             },
+            buttonText: {
+                type: String,
+                default: '上传'
+            },
+            onCompleted: {  //当上传完成时的回调
+                type: Function,
+                default: () => {
+                }
+            },
         },
         computed: {
             apiUrl() {
@@ -71,7 +79,7 @@
                 let fileDate = this.$common.dateFormat(file.lastModifiedDate, 'yyyy-MM-dd hh:mm:ss')
                 this.uploadData.dt = fileDate
             },
-            submitUpload(){
+            submitUpload() {
                 //提交
                 this.$refs.upload.submit()
             },
@@ -113,13 +121,15 @@
                 let readyList = this.fileList.filter(t => t.status === 'ready')
                 if (readyList.length === 0) {
                     this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                    this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
                     this.clearFiles()
                     this.showUploadDialog = false  //关闭上传对话框
+                    this.onCompleted()  //上传完成后的回调
                 }
             },
             handleError(err, file) {
                 //文件上传失败时
-                const result =  JSON.parse(err.message)  //关键点，得用JSON.parse来解析err里面的内容
+                const result = JSON.parse(err.message)  //关键点，得用JSON.parse来解析err里面的内容
                 let newDate = new Date()
                 let msg = file.name + '上传失败: ' + result.msg
                 this.$store.commit('showLog', {type: 'error', msg: msg, time: newDate.toLocaleTimeString()})

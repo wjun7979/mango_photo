@@ -1,106 +1,99 @@
 <template>
     <div>
-        <el-container>
-            <el-header class="mp-page-header" height="48px">
-                <el-col class="mp-page-header-title" :span="8">
-                    <i v-if="callMode==='album'" class="el-icon-back alumb-back" @click="$router.back()"></i>
-                    <span>{{title}}</span>
-                </el-col>
-                <el-col :span="16" style="text-align: right">
-                    <el-form :inline="true" style="margin-top: 2px;">
-                        <el-form-item v-if="!isShowTips" label="分组:">
-                            <el-radio-group v-model="groupType" size="small">
-                                <el-radio-button label="year">按年</el-radio-button>
-                                <el-radio-button label="month">按月</el-radio-button>
-                                <el-radio-button label="day">按天</el-radio-button>
-                            </el-radio-group>
-                        </el-form-item>
-                        <el-form-item v-if="!isShowTips" label="尺寸:" style="margin-right: 20px">
-                            <el-slider v-model="imgHeight" :min="100" :max="200" style="width: 100px"></el-slider>
-                        </el-form-item>
-                        <el-form-item v-if="callMode==='album'">
-                            <CreateAlbum title="创建子影集" :parentUUID="albumUUID"></CreateAlbum>
-                        </el-form-item>
-                        <el-form-item>
-                            <UploadFile callMode="album" :albumUUID="albumUUID"></UploadFile>
-                        </el-form-item>
-                    </el-form>
-                </el-col>
-            </el-header>
-            <el-main :style="{height: mainHeight, overflow: 'auto'}">
-                <!--子影集列表-->
-                <AlbumList v-if="callMode==='album'" :parentUUID="albumUUID"></AlbumList>
-                <!--当照片列表为空时显示一些提示信息-->
-                <div v-if="isShowTips" style="text-align: center;">
-                    <img src="../assets/images/upload-bg.png" alt="tips" width="649" height="327"/>
-                    <div style="font-size: 32px; line-height: 50px; font-weight: 400; color: #202124">准备好添加一些照片了吗？</div>
-                    <div style="font-size: 16px; line-height: 40px; font-weight: 400; color: #3c4043">点击右上角的【上传】按钮上传照片
-                    </div>
-                </div>
-                <!--照片列表-->
-                <el-checkbox-group v-model="checkGroupList" class="images-wrap">
-                    <el-row v-for="(photo, index) of photoListGroup" :key="index" style="margin-right: 28px;">
-                        <el-checkbox class="chk-group" :label="photo.timestamp"
-                                     @change="selectPhotoGroup(photo.timestamp)">
-                        </el-checkbox>
-                        <el-checkbox-group v-model="checkList">
-                            <!--瀑布流样式的照片列表-->
-                            <div class="div-images">
-                                <div v-for="img of photo.list"
-                                     :key="img.uuid"
-                                     class="div-img"
-                                     :class="{'chk-checked': checkList.indexOf(img.uuid) !== -1,
+        <!--照片分组尺寸快捷工具-->
+        <div v-if="photoList.length>0" class="div-group-size">
+            <el-popover placement="bottom-end">
+                <label>分组：</label>
+                <el-radio-group v-model="groupType" size="small">
+                    <el-radio-button label="year">按年</el-radio-button>
+                    <el-radio-button label="month">按月</el-radio-button>
+                    <el-radio-button label="day">按天</el-radio-button>
+                </el-radio-group>
+                <i class="el-icon-menu btn-group-size" slot="reference"></i>
+            </el-popover>
+            <el-popover placement="bottom-end">
+                <label>尺寸：</label>
+                <el-slider v-model="imgHeight" :min="100" :max="200" style="width: 200px"></el-slider>
+                <i class="el-icon-picture btn-group-size" slot="reference"></i>
+            </el-popover>
+        </div>
+        <!--子影集列表-->
+        <AlbumList v-if="callMode==='album'" :parentUUID="albumUUID"></AlbumList>
+        <!--当照片列表为空时显示一些提示信息-->
+        <div v-if="isShowTips" style="text-align: center; padding-top: 80px">
+            <div style="font-size: 18px; font-weight: 400; color: #202124; margin-bottom: 20px">空空如也，没有任何内容。</div>
+            <img src="../assets/images/empty.png" alt=""/>
+        </div>
+        <!--照片列表-->
+        <el-checkbox-group v-model="checkGroupList" class="images-wrap">
+            <el-row v-for="(photo, index) of photoListGroup" :key="index" style="margin-right: 28px;">
+                <el-checkbox class="chk-group" :label="photo.timestamp"
+                             @change="selectPhotoGroup(photo.timestamp)">
+                </el-checkbox>
+                <el-checkbox-group v-model="checkList">
+                    <!--瀑布流样式的照片列表-->
+                    <div class="div-images">
+                        <div v-for="img of photo.list"
+                             :key="img.uuid"
+                             class="div-img"
+                             :class="{'chk-checked': checkList.indexOf(img.uuid) !== -1,
                                       'chk-last-checked': lastSelectedUUID === img.uuid,
                                       'show-checkbox': checkList.length > 0}"
-                                     :style="{'width': img.width * imgHeight / img.height + 'px',
+                             :style="{'width': img.width * imgHeight / img.height + 'px',
                                       'flex-grow':img.width * imgHeight / img.height}">
-                                    <i :style="{'padding-bottom': img.height / img.width * 100 + '%', 'display':'block'}"></i>
-                                    <el-checkbox :label="img.uuid"
-                                                 @change="selectPhoto(img.uuid, photo.timestamp)"
-                                                 @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photo.timestamp)">
-                                    </el-checkbox>
-                                    <i class="el-icon-zoom-in btn-preview" @click="showPreview(img.uuid)"></i>
-                                    <el-image :src="apiUrl + '/' + img.path_thumbnail + '/' + img.name"
-                                              lazy
-                                              :alt="img.name"
-                                              :title="img.name"
-                                              @click.exact="clickImage(img.uuid, photo.timestamp)"
-                                              @click.shift.exact="multiSelectPhotos($event, img.uuid, photo.timestamp)"
-                                              style="cursor: pointer;">
-                                        <div slot="error">
-                                            <div class="image-slot">
-                                                <i class="el-icon-picture-outline"></i>
-                                            </div>
-                                        </div>
-                                    </el-image>
+                            <i :style="{'padding-bottom': img.height / img.width * 100 + '%', 'display':'block'}"></i>
+                            <el-checkbox :label="img.uuid"
+                                         @change="selectPhoto(img.uuid, photo.timestamp)"
+                                         @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photo.timestamp)">
+                            </el-checkbox>
+                            <i class="el-icon-zoom-in btn-preview" @click="showPreview(img.uuid)"></i>
+                            <el-image :src="apiUrl + '/' + img.path_thumbnail + '/' + img.name"
+                                      lazy
+                                      :alt="img.name"
+                                      :title="img.name"
+                                      @click.exact="clickImage(img.uuid, photo.timestamp)"
+                                      @click.shift.exact="multiSelectPhotos($event, img.uuid, photo.timestamp)"
+                                      style="cursor: pointer;">
+                                <div slot="error">
+                                    <div class="image-slot">
+                                        <i class="el-icon-picture-outline"></i>
+                                    </div>
                                 </div>
-                            </div>
-                        </el-checkbox-group>
-                    </el-row>
+                            </el-image>
+                        </div>
+                    </div>
                 </el-checkbox-group>
-            </el-main>
-        </el-container>
+            </el-row>
+        </el-checkbox-group>
 
         <!--大图预览-->
         <Preview v-if="isShowPreview" :url-list="previewListOrder" :on-close="closeViewer"></Preview>
 
         <!--选中照片后的工具栏-->
-        <el-row class="chk-toolbar" v-show="checkList.length > 0">
+        <el-row class="chk-toolbar" v-show="callMode!=='pick' && checkList.length>0">
             <el-col :span="12">
                 <i class="el-icon-close" style="color: #202124;" @click="unselectPhoto"></i>
                 <span style="font-size: 1.125rem; padding-left: 7px;">选择了 {{checkList.length}} 张照片</span>
             </el-col>
-            <el-col v-if="callMode==='photo'" :span="12" style="text-align: right">
-                <i class="el-icon-plus" title="添加到影集" @click="isShowAddToAlbumDialog = true"></i>
-                <i class="el-icon-star-off" title="收藏"></i>
-                <i class="el-icon-delete" title="删除"></i>
-                <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
-            </el-col>
-            <el-col v-else-if="callMode==='album'" :span="12" style="text-align: right">
-                <i class="el-icon-minus" title="从影集中移除"></i>
-                <i class="el-icon-star-off" title="收藏"></i>
-                <i class="el-icon-delete" title="删除"></i>
-                <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
+            <el-col :span="12" style="text-align: right">
+                <i v-if="callMode==='photo'" class="el-icon-plus" title="添加到影集"
+                   @click="isShowAddToAlbumDialog = true"></i>
+                <i v-if="callMode==='album'" class="el-icon-minus" title="从影集中移除" @click="removeFromAlbum"></i>
+                <i v-if="callMode!=='trash'" class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
+                <i v-if="callMode!=='trash'" class="el-icon-delete" title="删除" @click="trashPhoto"></i>
+                <el-dropdown v-if="callMode!=='trash'" trigger="click" @command="handCommand" placement="bottom-end">
+                    <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
+                    <el-dropdown-menu slot="dropdown">
+                        <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
+                        <el-dropdown-item icon="el-icon-date" command="modify_datetime">修改日期和时间</el-dropdown-item>
+                        <el-dropdown-item icon="el-icon-location-outline" command="modify_location">修改位置信息
+                        </el-dropdown-item>
+                    </el-dropdown-menu>
+                </el-dropdown>
+                <el-button class="btn-toolbar" v-if="callMode==='trash'" type="text" @click="restorePhoto">恢复
+                </el-button>
+                <el-button class="btn-toolbar" v-if="callMode==='trash'" type="text" @click="removePhoto">永久删除
+                </el-button>
             </el-col>
         </el-row>
 
@@ -123,8 +116,6 @@
 </template>
 
 <script>
-    import UploadFile from "./UploadFile";
-    import CreateAlbum from "./CreateAlbum";
     import AlbumList from "./AlbumList";
     import Preview from "./Preview";
     import {rafThrottle} from "element-ui/src/utils/util";
@@ -132,7 +123,7 @@
 
     export default {
         name: "PhotoList",
-        components: {UploadFile, Preview, CreateAlbum, AlbumList},
+        components: {Preview, AlbumList},
         data() {
             return {
                 imgHeight: 200,  //照片的高度
@@ -150,18 +141,26 @@
             }
         },
         props: {
-            title: {  //页头标题
-                type: String,
-                default: '照片'
-            },
             callMode: {  //调用模式
                 type: String,
-                default: 'photo'
+                default: 'photo'  //photo:照片; album:影集; pick:挑选照片到影集
             },
             albumUUID: {  //当调用模式为album时，必须指定影集uuid
                 type: String,
                 default: ''
             },
+            albumName: {  //影集标题
+                type: String,
+                default: ''
+            },
+            albumPhotoList: {  //影集中的照片列表
+                type: Array,
+                default: () => []
+            },
+            onPick: {
+                type: Function,
+                default: () => {}
+            }
         },
         computed: {
             //重要：vuex中定义的数据一定要在这里绑定，放在data()里视图不会更新
@@ -169,17 +168,29 @@
                 return this.$store.state.apiUrl  //后台api调用地址
             },
             mainHeight() {
-                return this.$store.state.mainHeight  //主内容区的高度
+                if (this.callMode === 'pick')
+                    return document.documentElement.clientHeight - 48 + 'px'
+                else
+                    return this.$store.state.mainHeight  //主内容区的高度
             },
             refreshPhoto() {
                 return this.$store.state.refreshPhoto  //是否刷新照片列表
-            }
+            },
+            cancelSelectPhoto() {
+                return this.$store.state.cancelSelectPhoto  //是否取消已选中的照片
+            },
         },
         watch: {
             refreshPhoto() {
                 //有其它组件发出刷新照片的指令
                 if (this.refreshPhoto) {
                     this.showPhotos()
+                }
+            },
+            cancelSelectPhoto() {
+                //有其它组件发出取消已选中照片的指令
+                if (this.cancelSelectPhoto) {
+                    this.unselectPhoto()
                 }
             },
             checkList(val) {
@@ -189,6 +200,13 @@
                 else {
                     this.lastSelectedUUID = val[val.length - 1]
                 }
+                //将选中的照片列表传递给上级组件
+                if (this.callMode === 'pick') {
+                    let albumPhotoList = this.albumPhotoList
+                    let removeList = albumPhotoList.filter(function(v){ return val.indexOf(v) === -1 })
+                    let addList = val.filter(function(v){ return albumPhotoList.indexOf(v) === -1 })
+                    this.onPick(removeList, addList)
+                }
             },
             groupType() {
                 //分组类型改变时重新载入照片
@@ -197,12 +215,21 @@
         },
         mounted() {
             this.showPhotos()  //获取并显示照片列表
-            this.deviceSupportInstall()  //注册键盘按键支持
+            if (this.callMode === 'pick') {
+                for (let item of this.albumPhotoList) {
+                    this.checkList.push(item)  //将当前影集中的照片默认选中
+                }
+            }
+            if (this.callMode !== 'pick') {
+                this.deviceSupportInstall()  //注册键盘按键支持
+            }
             window.addEventListener('resize', this.listenResize)
             this.setImgHeight()
         },
         beforeDestroy() {
-            this.deviceSupportUninstall()  //卸载键盘按键支持
+            if (this.callMode !== 'pick') {
+                this.deviceSupportUninstall()  //卸载键盘按键支持
+            }
             window.removeEventListener('resize', this.listenResize)
         },
         methods: {
@@ -358,6 +385,7 @@
                 //放弃选择
                 this.checkList = []
                 this.checkGroupList = []
+                this.$store.commit('cancelSelectPhoto', {action: false})  //重置vuex的值
             },
             multiSelectPhotos(e, uuid, timestamp) {
                 //连续选择照片，当按下shift时才触发该事件
@@ -422,13 +450,13 @@
                 }
                 this.$axios({
                     method: 'post',
-                    url: this.apiUrl + '/api/album_addphoto',
+                    url: this.apiUrl + '/api/album_add_photo',
                     data: {
                         album_uuid: album_uuid,
                         photo_list: this.checkList
                     }
                 }).then(() => {
-                    let msg = this.checkList.length + ' 张照片成功添加到影集 [' + album_name + '] 中'
+                    let msg = '成功将' + this.checkList.length + ' 张照片添加到影集 [' + album_name + '] 中'
                     this.unselectPhoto()
                     this.isShowAddToAlbumDialog = false
                     this.$notify({
@@ -443,6 +471,167 @@
                         time: new Date().toLocaleTimeString()
                     })
                 })
+            },
+            removeFromAlbum() {
+                //从影集中移除照片
+                this.$confirm('您仍然可以在相册中找到该内容', '要移除此内容吗？', {
+                    confirmButtonText: '移除',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/album_remove_photo',
+                        data: {
+                            album_uuid: this.albumUUID,
+                            photo_list: this.checkList
+                        }
+                    }).then(() => {
+                        let msg = this.checkList.length + ' 张照片已从影集 [' + this.albumName + '] 中移除'
+                        this.unselectPhoto()
+                        this.$notify({
+                            type: 'success',
+                            title: '成功',
+                            message: msg,
+                            position: 'top-right'
+                        })
+                        this.$store.commit('showLog', {
+                            type: 'success',
+                            msg: msg,
+                            time: new Date().toLocaleTimeString()
+                        })
+                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                    })
+                }).catch(() => {
+                });
+            },
+            addToFavorites() {
+                //收藏
+                this.$message('收藏功能还没做好呢:-)')
+            },
+            trashPhoto() {
+                //将照片移到回收站
+                this.$confirm('当需要的时候可以在回收站中恢复。', '确定要删除照片吗？', {
+                    confirmButtonText: '移到回收站',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/photo_trash',
+                        data: {
+                            photo_list: this.checkList
+                        }
+                    }).then(() => {
+                        let msg = '已将' + this.checkList.length + ' 张照片移到回收站'
+                        this.unselectPhoto()
+                        this.$notify({
+                            type: 'success',
+                            title: '成功',
+                            message: msg,
+                            position: 'top-right'
+                        })
+                        this.$store.commit('showLog', {
+                            type: 'success',
+                            msg: msg,
+                            time: new Date().toLocaleTimeString()
+                        })
+                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                        this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
+                    })
+                }).catch(() => {
+                });
+            },
+            restorePhoto() {
+                //将照片从回收站恢复
+                this.$confirm('要恢复选中的内容吗？', {
+                    confirmButtonText: '恢复',
+                    cancelButtonText: '取消',
+                    type: 'info'
+                }).then(() => {
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/photo_restore',
+                        data: {
+                            photo_list: this.checkList
+                        }
+                    }).then(() => {
+                        let msg = this.checkList.length + ' 张照片成功恢复'
+                        this.unselectPhoto()
+                        this.$notify({
+                            type: 'success',
+                            title: '成功',
+                            message: msg,
+                            position: 'top-right'
+                        })
+                        this.$store.commit('showLog', {
+                            type: 'success',
+                            msg: msg,
+                            time: new Date().toLocaleTimeString()
+                        })
+                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                        this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
+                    })
+                }).catch(() => {
+                });
+            },
+            removePhoto() {
+                //永久删除照片
+                this.$confirm('内容一旦永久删除将无法恢复', '要永久删除选中的内容吗？', {
+                    confirmButtonText: '删除',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/photo_remove',
+                        data: {
+                            photo_list: this.checkList
+                        }
+                    }).then(() => {
+                        let msg = this.checkList.length + ' 张照片成功删除'
+                        this.unselectPhoto()
+                        this.$notify({
+                            type: 'success',
+                            title: '成功',
+                            message: msg,
+                            position: 'top-right'
+                        })
+                        this.$store.commit('showLog', {
+                            type: 'success',
+                            msg: msg,
+                            time: new Date().toLocaleTimeString()
+                        })
+                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                    })
+                }).catch(() => {
+                });
+            },
+            handCommand(command) {
+                //更多选项
+                switch (command) {
+                    case 'download':
+                        this.downloadPhoto()
+                        break
+                    case 'modify_datetime':
+                        this.modifyDateTime()
+                        break
+                    case 'modify_location':
+                        this.modifyLocation()
+                        break
+                }
+            },
+            downloadPhoto() {
+                //下载
+                this.$message('下载功能还没做好呢:-)')
+            },
+            modifyDateTime() {
+                //修改日期和时间
+                this.$message('修改日期和时间功能还没做好呢:-)')
+            },
+            modifyLocation() {
+                //修改位置信息
+                this.$message('修改位置功能还没做好呢:-)')
             },
         }
     }
@@ -604,6 +793,7 @@
         padding: 0 14px;
         background-color: #fff;
         box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 2px 6px 2px rgba(60, 64, 67, .15);
+        z-index: 1100;
     }
 
     .chk-toolbar i {
@@ -625,21 +815,32 @@
         border-radius: 50%;
     }
 
-    .alumb-back {  /*影集页头的返回按钮*/
-        padding: 8px;
-        margin-right: 10px;
-        color: #5f6368;
-        cursor: pointer;
-    }
-    .alumb-back:hover {
-        background-color: #e5e5e5;
-        border-radius: 50%;
+    .btn-toolbar {
+        margin-top: 12px;
+        margin-right: 15px;
     }
 
-    .album-tree {  /*影集树*/
+    .div-group-size {
+        position: fixed;
+        right: 50px;
+        z-index: 1100;
+        padding-top: 10px;
+    }
+
+    .btn-group-size { /*照片分组和尺寸工具按钮*/
+        margin-left: 10px;
+        padding: 8px;
+        color: #409EFF;
+        background-color: #ecf5ff;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+
+    .album-tree { /*影集树*/
         height: 300px;
     }
+
     .album-dialog >>> .el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content {
-        color: #f56c6c;  /*影集树选中的节点*/
+        color: #f56c6c; /*影集树选中的节点*/
     }
 </style>

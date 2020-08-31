@@ -1,6 +1,6 @@
 <template>
-    <div>
-        <el-row :gutter="20">
+    <div style="padding-top: 10px">
+        <el-row :gutter="20" style="margin: 0">
             <el-col :span="4" v-for="album of albumList" :key="album.uuid" style="position: relative">
                 <div class="album-wrap" @click="showAlbum(album.uuid)">
                     <div class="album-cover"
@@ -19,6 +19,12 @@
                         </el-dropdown-item>
                         <el-dropdown-item icon="el-icon-delete"
                                           :command="beforeHandleCommand(album.uuid, album.name, 'remove')">删除影集
+                        </el-dropdown-item>
+                        <el-dropdown-item icon="el-icon-sort"
+                                          :command="beforeHandleCommand(album.uuid, album.name, 'move')">移动影集
+                        </el-dropdown-item>
+                        <el-dropdown-item icon="el-icon-notebook-1"
+                                          :command="beforeHandleCommand(album.uuid, album.name, 'cover')">选择影集封面
                         </el-dropdown-item>
                     </el-dropdown-menu>
                 </el-dropdown>
@@ -85,60 +91,81 @@
                 }
             },
             handCommand(command) {
+                this.$store.commit('cancelSelectPhoto', {action: true})  //取消已选中的照片
                 switch (command.command) {
                     case 'rename':  //重命名
-                        this.$prompt('请输入影集标题', {
-                            inputValue: command.name,
-                            inputValidator: (value => {
-                                if (value.trim().length === 0)
-                                    return false
-                            }),
-                            inputErrorMessage: '影集标题不能为空'
-                        }).then(({value}) => {
-                            this.$axios({
-                                method: 'post',
-                                url: this.apiUrl + '/api/album_rename',
-                                data: {
-                                    uuid: command.uuid,
-                                    name: value,
-                                    userid: localStorage.getItem('userid')
-                                }
-                            }).then(() => {
-                                this.$store.commit('refreshAlbum', {show: true})
-                                this.$store.commit('showLog', {
-                                    type: 'success',
-                                    msg: '影集 [' + command.name + '] 成功重命名为 [' + value + ']',
-                                    time: new Date().toLocaleTimeString()
-                                })
-                            })
-                        }).catch(() => {
-                        });
+                        this.renameAlbum(command)
                         break
                     case 'remove':  //删除
-                        this.$confirm('即将删除影集和所有的子影集。影集一经删除便无法恢复。不过，已删除影集中的照片仍会保留在您的相册中。', '要删除影集吗？', {
-                            confirmButtonText: '删除',
-                            cancelButtonText: '保留影集',
-                            type: 'warning'
-                        }).then(() => {
-                            this.$axios({
-                                method: 'post',
-                                url: this.apiUrl + '/api/album_remove',
-                                data: {
-                                    uuid: command.uuid
-                                }
-                            }).then(() => {
-                                this.showAlbums()  //刷新影集列表
-                                this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
-                                this.$store.commit('showLog', {
-                                    type: 'success',
-                                    msg: '影集 [' + command.name + '] 删除成功',
-                                    time: new Date().toLocaleTimeString()
-                                })
-                            })
-                        }).catch(() => {
-                        });
+                        this.removeAlbum(command)
+                        break
+                    case 'move':  //移动
+                        this.$message('移动影集功能还没做好呢:-)')
+                        break
+                    case 'cover':  //设置影集封面
+                        this.$message('设置影集封面功能还没做好呢:-)')
                         break
                 }
+            },
+            renameAlbum(command) {
+                //重命令影集
+                this.$prompt('请输入影集标题', {
+                    inputValue: command.name,
+                    inputValidator: (value => {
+                        if (value.trim().length === 0)
+                            return false
+                    }),
+                    inputErrorMessage: '影集标题不能为空'
+                }).then(({value}) => {
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/album_rename',
+                        data: {
+                            uuid: command.uuid,
+                            name: value,
+                            userid: localStorage.getItem('userid')
+                        }
+                    }).then(() => {
+                        this.$store.commit('refreshAlbum', {show: true})
+                        this.$store.commit('showLog', {
+                            type: 'success',
+                            msg: '影集 [' + command.name + '] 成功重命名为 [' + value + ']',
+                            time: new Date().toLocaleTimeString()
+                        })
+                    })
+                }).catch(() => {
+                });
+            },
+            removeAlbum(command) {
+                //删除影集
+                this.$confirm('即将删除影集和所有的子影集。影集一经删除便无法恢复。不过，已删除影集中的照片仍会保留在您的相册中。', '要删除影集吗？', {
+                    confirmButtonText: '删除',
+                    cancelButtonText: '保留影集',
+                    type: 'warning'
+                }).then(() => {
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/album_remove',
+                        data: {
+                            uuid: command.uuid
+                        }
+                    }).then(() => {
+                        this.showAlbums()  //刷新影集列表
+                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                        this.$store.commit('showLog', {
+                            type: 'success',
+                            msg: '影集 [' + command.name + '] 删除成功',
+                            time: new Date().toLocaleTimeString()
+                        })
+                    })
+                }).catch(() => {
+                });
+            },
+            moveAlbum() {
+                //移动影集
+            },
+            setAlbumCover() {
+                //设置影集封面
             },
             showAlbum(uuid) {
                 //跳转到指定的影集

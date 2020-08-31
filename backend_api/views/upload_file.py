@@ -13,6 +13,7 @@ from django.db import transaction
 from PIL import Image  # 图像处理
 import exifread  # 读取exif信息
 from backend_api.models import Photo, Address, Album, AlbumPhoto
+from backend_api.views.album import album_auto_cover
 
 
 @require_http_methods(['POST'])  # django内置的视力装饰器，这行表示只能通过POST方法访问
@@ -27,13 +28,24 @@ def upload_photo(request):
         userid = request.POST['userid']  # 当前登录的用户id
         now = datetime.now()  # 当前时间，用于创建目录
         file = request.FILES['file']  # 前端上传的文件对象
+        call_mode = request.POST['call_mode']
+        album_uuid = request.POST['album_uuid']
 
-        # 获取文件md5值，然后检查是否已经存在，如果存在就跳过
+        # 获取文件md5值，然后检查是否已经存在，如果是在照片中添加就跳过，如果是在影集中添加则写入
         file_md5 = __get_file_md5(file)
-        photo = Photo.objects.filter(md5=file_md5)  # 表过滤
-        if len(photo) > 0:
-            response['msg'] = '照片已存在，跳过'
-            return JsonResponse(response, status=500)
+        photo = Photo.objects.filter(md5=file_md5).first()  # 表过滤
+        if photo:
+            if call_mode == 'album':
+                album_photo = AlbumPhoto()
+                album_photo.uuid = str(uuid.uuid1()).replace('-', '')
+                album_photo.album_uuid = Album.objects.get(uuid=album_uuid)
+                album_photo.photo_uuid = Photo.objects.get(uuid=photo.uuid)
+                album_photo.save()
+                album_auto_cover(album_uuid)  # 设置影集封面
+                return JsonResponse(response, status=200)
+            else:
+                response['msg'] = '照片已存在，跳过'
+                return JsonResponse(response, status=500)
 
         # 根据当前日期创建文件夹 /photos/current/{userid}/年/月/日
         file_path = os.path.join('photos', 'current', userid, now.strftime('%Y'), now.strftime('%m'),
@@ -110,31 +122,14 @@ def upload_photo(request):
             address.save()
 
         # 写入影集数据表
-        call_mode = request.POST['call_mode']
-        album_uuid = request.POST['album_uuid']
         if call_mode == 'album':
             album_photo = AlbumPhoto()
             album_photo.uuid = str(uuid.uuid1()).replace('-', '')
             album_photo.album_uuid = Album.objects.get(uuid=album_uuid)
             album_photo.photo_uuid = Photo.objects.get(uuid=photo_uuid)
             album_photo.save()
+            album_auto_cover(album_uuid)  # 设置影集封面
 
-            # 写入封面，遍历从该影集开始的所有上级，如果封面是由系统自动产生的，则替换它，否则保留原封面
-            albums = Album.objects.raw('''
-                SELECT t2.uuid, t2.cover, t2.cover_from FROM (
-                    SELECT @r AS _id,
-                        (SELECT @r := parent_uuid FROM m_album WHERE uuid = _id ) AS parent_uuid,
-                        @l:=@l+1 AS lvl
-                    FROM (select @r:=%s, @l:=0) vars, m_album 
-                    WHERE @r<>'' AND parent_uuid <>''
-                ) t1 JOIN m_album t2 on t1._id = t2.uuid 
-                ORDER BY t1.lvl DESC
-            ''', [album_uuid])
-            for item in albums:
-                if item.cover_from == 'auto':
-                    album = Album.objects.get(uuid=item.uuid)
-                    album.cover = Photo.objects.get(uuid=photo_uuid)
-                    album.save()
         return JsonResponse(response, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息
