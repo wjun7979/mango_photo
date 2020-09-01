@@ -14,7 +14,7 @@ class MyMiddleware(MiddlewareMixin):
         try:
             # return None  # 临时放开验证
             path = request.path
-            if path == '/api/login' or path == '/api/refresh_token':
+            if path in ['/api/login', '/api/login_get_bgimg', '/api/refresh_token']:
                 return None
             if re.match(r'^/api/.*', path):  # 仅针对api的请求进行身份验证
                 # 从Header中获取token等信息

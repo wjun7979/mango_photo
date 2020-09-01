@@ -8,6 +8,7 @@ from backend_api.views.album import *
 urlpatterns = [
     path('login', login),  # 用户登录
     path('refresh_token', refresh_token),  # 刷新token
+    path('login_get_bgimg', login_get_bgimg),  # 获取背景图片
     path('upload_photo', upload_photo),  # 上传照片
     path('user_getinfo', user_getinfo),  # 获取指定用户的基本信息
     path('user_upload_avatar', user_upload_avatar),  # 上传用户头像

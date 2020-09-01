@@ -22,6 +22,7 @@
         <!--当照片列表为空时显示一些提示信息-->
         <div v-if="isShowTips" style="text-align: center; padding-top: 80px">
             <div style="font-size: 18px; font-weight: 400; color: #202124; margin-bottom: 20px">空空如也，没有任何内容。</div>
+            <UploadFile v-if="callMode==='photo'" button-type="primary"></UploadFile>
             <img src="../assets/images/empty.png" alt=""/>
         </div>
         <!--照片列表-->
@@ -134,13 +135,14 @@
 
 <script>
     import AlbumList from "./AlbumList";
+    import UploadFile from "./UploadFile";
     import Preview from "./Preview";
     import {rafThrottle} from "element-ui/src/utils/util";
     import {off, on} from "element-ui/src/utils/dom";
 
     export default {
         name: "PhotoList",
-        components: {Preview, AlbumList},
+        components: {Preview, AlbumList, UploadFile},
         data() {
             return {
                 imgHeight: 200,  //照片的高度

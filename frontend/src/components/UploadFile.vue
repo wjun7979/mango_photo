@@ -1,6 +1,8 @@
 <template>
     <div>
-        <el-button icon="el-icon-upload2" size="small" @click="showUploadDialog = true">{{buttonText}}</el-button>
+        <el-button icon="el-icon-upload2" size="small" @click="showUploadDialog = true" :type="buttonType">
+            {{buttonText}}
+        </el-button>
         <el-dialog title="上传"
                    :visible.sync="showUploadDialog"
                    :close-on-click-modal="false"
@@ -8,19 +10,16 @@
                    width="840px"
                    style="text-align: left;">
             <div class="div-el-dialog">
-                <el-upload :action="apiUrl + '/api/upload_photo'"
+                <el-upload action=""
                            ref="upload"
                            :multiple="true"
+                           :file-list="fileList"
                            list-type="picture-card"
                            :show-file-list="true"
                            accept="image/*"
-                           :headers="headers"
-                           :data="uploadData"
                            :auto-upload="false"
                            :on-change="handleChange"
-                           :before-upload="beforeUpload"
-                           :on-success="handleSuccess"
-                           :on-error="handleError">
+                           :on-remove="handleRemove">
                     <i class="el-icon-plus"></i>
                 </el-upload>
             </div>
@@ -30,6 +29,12 @@
                 <el-button @click="showUploadDialog = false">关 闭</el-button>
             </span>
         </el-dialog>
+
+        <!--进度条-->
+        <el-card v-if="showUploadProgress" class="upload-progress">
+            <p class="upload-progress-tips">正在上传 {{this.fileList.length}} 张照片...</p>
+            <el-progress :percentage="progress"></el-progress>
+        </el-card>
     </div>
 </template>
 
@@ -38,15 +43,10 @@
         name: "UploadFile",
         data() {
             return {
-                headers: {userid: localStorage.getItem('userid'), token: localStorage.getItem('token')},
-                uploadData: {
-                    userid: localStorage.getItem('userid'),  //当前用户id
-                    call_mode: this.callMode,
-                    album_uuid: this.albumUUID,
-                    dt: ''  //上传时附带的参数，文件的最后修改时间
-                },
                 showUploadDialog: false,  //是否显示上传对话框
-                fileList: [],
+                fileList: [],  //上传的文件列表
+                showUploadProgress: false,  //是否显示上传进度
+                progress: 0,  //已完成的上传进度
             }
         },
         props: {
@@ -58,7 +58,11 @@
                 type: String,
                 default: ''
             },
-            buttonText: {
+            buttonType: {  //上传按钮类型
+                type: String,
+                default: ''
+            },
+            buttonText: {  //上传按钮文本
                 type: String,
                 default: '上传'
             },
@@ -74,20 +78,57 @@
             },
         },
         methods: {
-            beforeUpload(file) {
-                //将文件的最后修改时间附加到上传参数中
-                let fileDate = this.$common.dateFormat(file.lastModifiedDate, 'yyyy-MM-dd hh:mm:ss')
-                this.uploadData.dt = fileDate
-            },
             submitUpload() {
                 //提交
-                this.$refs.upload.submit()
-            },
-            handleSuccess(response, file) {
-                //文件上传成功时
-                let newDate = new Date()
-                let msg = file.name + '上传成功'
-                this.$store.commit('showLog', {type: 'success', msg: msg, time: newDate.toLocaleTimeString()})
+                if (this.fileList.length === 0) {
+                    this.$message.warning('请选取文件')
+                    return
+                }
+                this.showUploadDialog = false  //关闭上传对话框
+
+                let formData = new FormData()
+                // 因为要传一个文件数组过去，所以要循环append
+                this.fileList.forEach((file) => {
+                    let fileDate = this.$common.dateFormat(file.raw.lastModifiedDate, 'yyyy-MM-dd hh:mm:ss')
+                    formData.append('file', file.raw)
+                    formData.append(file.name, fileDate)
+                })
+
+                this.$axios({
+                    method: 'post',
+                    headers: {'Content-Type': 'multipart/form-data'},
+                    url: this.apiUrl + '/api/upload_photo',
+                    data: formData,
+                    params: {
+                        userid: localStorage.getItem('userid'),  //当前用户id
+                        call_mode: this.callMode,  //调用模式
+                        album_uuid: this.albumUUID  //影集uuid
+                    },
+                    onUploadProgress: (progressEvent) => {
+                        this.showUploadProgress = true
+                        let num = progressEvent.loaded / progressEvent.total * 100 | 0;  //百分比
+                        this.progress = num
+                    }
+                }).then(response => {
+                    this.showUploadProgress = false
+                    let res = response.data
+                    this.$notify({
+                        type: res.error.length === 0 ? 'success' : 'error',
+                        title: '提示',
+                        message: '本次共上传 ' + this.fileList.length + ' 张照片，成功 ' + res.success.length + ' 张，失败 ' + res.error.length + ' 张',
+                        position: 'top-right'
+                    })
+                    //输出失败文件的日志
+                    for (let error of res.error) {
+                        let newDate = new Date()
+                        let msg = error.name + '上传失败: ' + error.msg
+                        this.$store.commit('showLog', {type: 'error', msg: msg, time: newDate.toLocaleTimeString()})
+                    }
+                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                    this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
+                    this.clearFiles()
+                    this.onCompleted()  //上传完成后的回调
+                })
             },
             handleChange(file, fileList) {
                 //文件状态改变时
@@ -117,22 +158,10 @@
                         fileList.pop()
                     }
                 }
-                //检查是否全部上传完毕
-                let readyList = this.fileList.filter(t => t.status === 'ready')
-                if (readyList.length === 0) {
-                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
-                    this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
-                    this.clearFiles()
-                    this.showUploadDialog = false  //关闭上传对话框
-                    this.onCompleted()  //上传完成后的回调
-                }
             },
-            handleError(err, file) {
-                //文件上传失败时
-                const result = JSON.parse(err.message)  //关键点，得用JSON.parse来解析err里面的内容
-                let newDate = new Date()
-                let msg = file.name + '上传失败: ' + result.msg
-                this.$store.commit('showLog', {type: 'error', msg: msg, time: newDate.toLocaleTimeString()})
+            handleRemove(file, fileList) {
+                //文件列表移除文件时的钩子
+                this.fileList = fileList
             },
             clearFiles() {
                 //清空已上传的文件列表
@@ -146,8 +175,20 @@
 </script>
 
 <style scoped>
-    .div-el-dialog {
+    .div-el-dialog {  /*上传对话框*/
         height: 400px;
         overflow: auto;
+    }
+
+    .upload-progress {  /*上传进度条*/
+        position: fixed;
+        left: 40px;
+        bottom: 60px;
+        width: 330px;
+        z-index: 2;
+    }
+    .upload-progress-tips {
+        text-align: left;
+        padding: 0 0 20px 20px;
     }
 </style>

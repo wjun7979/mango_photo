@@ -3,6 +3,7 @@ import hashlib  # md5
 import traceback  # 输出更详细的错误信息
 import uuid
 import re  # 正则
+import json
 # import pprint  # 格式化打印
 import requests  # 调用api
 from datetime import datetime
@@ -21,123 +22,135 @@ from backend_api.views.album import album_auto_cover
 def upload_photo(request):
     """上传文件"""
     save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
-    response = {}
-    photo_fullpath = ''  # 照片的完整路径
-    thumbnail_fullpath = ''  # 缩略图的完整路径
+    response = {
+        'success': [],  # 上传成功的文件
+        'error': []  # 上传失败的文件
+    }
     try:
-        userid = request.POST['userid']  # 当前登录的用户id
-        now = datetime.now()  # 当前时间，用于创建目录
-        file = request.FILES['file']  # 前端上传的文件对象
-        call_mode = request.POST['call_mode']
-        album_uuid = request.POST['album_uuid']
+        userid = request.GET.get('userid')  # 当前登录的用户id
+        call_mode = request.GET.get('call_mode')  # 调用模式
+        album_uuid = request.GET.get('album_uuid')  # 影集uuid
+        file_list = request.FILES.getlist('file')  # 前端上传的文件对象
 
-        # 获取文件md5值，然后检查是否已经存在，如果是在照片中添加就跳过，如果是在影集中添加则写入
-        file_md5 = __get_file_md5(file)
-        photo = Photo.objects.filter(md5=file_md5).first()  # 表过滤
-        if photo:
-            if call_mode == 'album':
-                album_photo = AlbumPhoto()
-                album_photo.uuid = str(uuid.uuid1()).replace('-', '')
-                album_photo.album_uuid = Album.objects.get(uuid=album_uuid)
-                album_photo.photo_uuid = Photo.objects.get(uuid=photo.uuid)
-                album_photo.save()
-                album_auto_cover(album_uuid)  # 设置影集封面
-                return JsonResponse(response, status=200)
-            else:
-                response['msg'] = '照片已存在，跳过'
-                return JsonResponse(response, status=500)
+        for file in file_list:
+            photo_fullpath = ''  # 照片的完整路径
+            thumbnail_fullpath = ''  # 缩略图的完整路径
+            try:
+                # 获取文件md5值，然后检查是否已经存在，如果是在照片中添加就跳过，如果是在影集中添加则写入
+                file_md5 = __get_file_md5(file)
+                photo = Photo.objects.filter(md5=file_md5).first()  # 表过滤
+                if photo:
+                    if call_mode == 'album':
+                        album_photo = AlbumPhoto()
+                        album_photo.uuid = str(uuid.uuid1()).replace('-', '')
+                        album_photo.album_uuid = Album.objects.get(uuid=album_uuid)
+                        album_photo.photo_uuid = Photo.objects.get(uuid=photo.uuid)
+                        album_photo.save()
+                        response['success'].append({'name': file.name})
+                        continue
+                    else:
+                        response['error'].append({'name': file.name, 'msg': '照片已存在，跳过'})
+                        continue
 
-        # 根据当前日期创建文件夹 /photos/current/{userid}/年/月/日
-        file_path = os.path.join('photos', 'current', userid, now.strftime('%Y'), now.strftime('%m'),
-                                 now.strftime('%d'))  # 相对路径
-        real_path = os.path.join(settings.BASE_DIR, file_path)  # 物理路径
-        if not os.path.exists(real_path):  # 如果目标文件夹不存在则创建
-            os.makedirs(real_path, exist_ok=True)
+                # 根据当前日期创建文件夹 /photos/current/{userid}/年/月/日
+                now = datetime.now()  # 当前时间，用于创建目录
+                file_path = os.path.join('photos', 'current', userid, now.strftime('%Y'), now.strftime('%m'),
+                                         now.strftime('%d'))  # 相对路径
+                real_path = os.path.join(settings.BASE_DIR, file_path)  # 物理路径
+                if not os.path.exists(real_path):  # 如果目标文件夹不存在则创建
+                    os.makedirs(real_path, exist_ok=True)
 
-        # 检查当前目录下是否有同名文件，如果存在则重命名
-        file_name = file.name  # 原始文件名
-        photo_fullpath = os.path.join(real_path, file_name)  # 包含路径的完整文件名
-        if os.path.exists(photo_fullpath):
-            splitext = os.path.splitext(photo_fullpath)
-            photo_fullpath = splitext[0] + '_' + str(uuid.uuid1()).replace('-', '') + splitext[1]
+                # 检查当前目录下是否有同名文件，如果存在则重命名
+                file_name = file.name  # 原始文件名
+                photo_fullpath = os.path.join(real_path, file_name)  # 包含路径的完整文件名
+                if os.path.exists(photo_fullpath):
+                    splitext = os.path.splitext(photo_fullpath)
+                    photo_fullpath = splitext[0] + '_' + str(uuid.uuid1()).replace('-', '') + splitext[1]
 
-        # 写入文件
-        file.seek(0)  # 因为之前获取md5时读取过文件，所以这里要将指针定位到文件头
-        __write_file(photo_fullpath, file)
+                # 写入文件
+                file.seek(0)  # 因为之前获取md5时读取过文件，所以这里要将指针定位到文件头
+                __write_file(photo_fullpath, file)
 
-        # 创建缩略图
-        thumbnail = __create_thumbnail(userid, photo_fullpath)
-        thumbnail_fullpath = thumbnail[1]
+                # 创建缩略图
+                thumbnail = __create_thumbnail(userid, photo_fullpath)
+                thumbnail_fullpath = thumbnail[1]
 
-        # 获取照片的尺寸
-        im = Image.open(photo_fullpath)  # 打开原始照片文件
-        im_width = im.width
-        im_height = im.height
+                # 获取照片的尺寸
+                im = Image.open(photo_fullpath)  # 打开原始照片文件
+                im_width = im.width
+                im_height = im.height
 
-        # 获取照片的Exif信息
-        exif = __get_exif(photo_fullpath, request.POST['dt'])
-        # pprint.pprint(exif)
+                # 获取照片的Exif信息
+                exif = __get_exif(photo_fullpath, request.POST.get(file.name))
+                # pprint.pprint(exif)
 
-        # 写入照片数据表
-        photo_uuid = str(uuid.uuid1()).replace('-', '')  # 生成照片唯一序列号
-        photo = Photo()
-        photo.uuid = photo_uuid
-        photo.userid = userid
-        photo.path = file_path
-        photo.path_thumbnail = thumbnail[0]
-        photo.name = os.path.split(photo_fullpath)[1]
-        photo.md5 = file_md5
-        photo.size = file.size
-        photo.width = im_width
-        photo.height = im_height
-        photo.exif_datetime = exif['DateTime']
-        photo.exif_make = exif['Make']
-        photo.exif_model = exif['Model']
-        photo.exif_lensmodel = exif['LensModel']
-        photo.exif_fnumber = exif['FNumber']
-        photo.exif_exposuretime = exif['ExposureTime']
-        photo.exif_isospeedratings = exif['ISOSpeedRatings']
-        photo.exif_focallength = exif['FocalLength']
-        photo.exif_gpslatitude = exif['GPSLatitude']
-        photo.exif_gpslatituderef = exif['GPSLatitudeRef']
-        photo.exif_gpslongitude = exif['GPSLongitude']
-        photo.exif_gpslongituderef = exif['GPSLongitudeRef']
-        photo.save()
+                # 写入照片数据表
+                photo_uuid = str(uuid.uuid1()).replace('-', '')  # 生成照片唯一序列号
+                photo = Photo()
+                photo.uuid = photo_uuid
+                photo.userid = userid
+                photo.path = file_path
+                photo.path_thumbnail = thumbnail[0]
+                photo.name = os.path.split(photo_fullpath)[1]
+                photo.md5 = file_md5
+                photo.size = file.size
+                photo.width = im_width
+                photo.height = im_height
+                photo.exif_datetime = exif['DateTime']
+                photo.exif_make = exif['Make']
+                photo.exif_model = exif['Model']
+                photo.exif_lensmodel = exif['LensModel']
+                photo.exif_fnumber = exif['FNumber']
+                photo.exif_exposuretime = exif['ExposureTime']
+                photo.exif_isospeedratings = exif['ISOSpeedRatings']
+                photo.exif_focallength = exif['FocalLength']
+                photo.exif_gpslatitude = exif['GPSLatitude']
+                photo.exif_gpslatituderef = exif['GPSLatitudeRef']
+                photo.exif_gpslongitude = exif['GPSLongitude']
+                photo.exif_gpslongituderef = exif['GPSLongitudeRef']
+                photo.save()
 
-        # 获取并写入照片的位置信息
-        if exif['GPSLatitude'] and exif['GPSLongitude']:
-            location = __get_address_from_gps(exif['GPSLatitude'], exif['GPSLatitudeRef'], exif['GPSLongitude'],
-                                              exif['GPSLongitudeRef'])
-            Address.objects.filter(uuid=photo_uuid).delete()  # 先删除再插入
-            address = Address()
-            address.uuid = Photo.objects.get(uuid=photo_uuid)
-            address.lat = location['lat']
-            address.lng = location['lng']
-            address.address = location['formatted_address']
-            address.country = location['country']
-            address.province = location['province']
-            address.city = location['city']
-            address.district = location['district']
-            address.town = location['town']
-            address.save()
+                # 获取并写入照片的位置信息
+                if exif['GPSLatitude'] and exif['GPSLongitude']:
+                    location = __get_address_from_gps(exif['GPSLatitude'], exif['GPSLatitudeRef'], exif['GPSLongitude'],
+                                                      exif['GPSLongitudeRef'])
+                    Address.objects.filter(uuid=photo_uuid).delete()  # 先删除再插入
+                    address = Address()
+                    address.uuid = Photo.objects.get(uuid=photo_uuid)
+                    address.lat = location['lat']
+                    address.lng = location['lng']
+                    address.address = location['formatted_address']
+                    address.country = location['country']
+                    address.province = location['province']
+                    address.city = location['city']
+                    address.district = location['district']
+                    address.town = location['town']
+                    address.save()
 
-        # 写入影集数据表
-        if call_mode == 'album':
-            album_photo = AlbumPhoto()
-            album_photo.uuid = str(uuid.uuid1()).replace('-', '')
-            album_photo.album_uuid = Album.objects.get(uuid=album_uuid)
-            album_photo.photo_uuid = Photo.objects.get(uuid=photo_uuid)
-            album_photo.save()
-            album_auto_cover(album_uuid)  # 设置影集封面
+                # 写入影集数据表
+                if call_mode == 'album':
+                    album_photo = AlbumPhoto()
+                    album_photo.uuid = str(uuid.uuid1()).replace('-', '')
+                    album_photo.album_uuid = Album.objects.get(uuid=album_uuid)
+                    album_photo.photo_uuid = Photo.objects.get(uuid=photo_uuid)
+                    album_photo.save()
+                response['success'].append({'name': file.name})
+            except Exception as e:
+                traceback.print_exc()  # 输出详细的错误信息
+                response['error'].append({'name': file.name, 'msg': str(e)})
+                if photo_fullpath and os.path.exists(photo_fullpath):  # 出错时删除可能已经上传的文件
+                    os.remove(photo_fullpath)
+                if thumbnail_fullpath and os.path.exists(thumbnail_fullpath):  # 出错时删除可能已经生成的缩略图
+                    os.remove(thumbnail_fullpath)
+                continue
+
+        # 所有文件上传完成之后，设置影集封面
+        album_auto_cover(album_uuid)
 
         return JsonResponse(response, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息
         transaction.savepoint_rollback(save_tag)  # 回滚数据库事务
-        if photo_fullpath and os.path.exists(photo_fullpath):  # 出错时删除可能已经上传的文件
-            os.remove(photo_fullpath)
-        if thumbnail_fullpath and os.path.exists(thumbnail_fullpath):  # 出错时删除可能已经生成的缩略图
-            os.remove(thumbnail_fullpath)
         response['msg'] = str(e)
         return JsonResponse(response, status=500)
 

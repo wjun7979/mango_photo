@@ -1,5 +1,6 @@
 import hashlib
 import json
+import requests  # 调用api
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
 from backend_api.common.token import Token
@@ -38,6 +39,14 @@ def refresh_token(request):
     response['userid'] = userid
     response['token'] = Token.get_token(userid)
     return JsonResponse(response, status=200)
+
+
+@require_http_methods(['GET'])
+def login_get_bgimg(request):
+    """获取背景图片"""
+    api = 'https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=8'
+    response = requests.get(api)
+    return JsonResponse(response.json(), status=200)
 
 
 def __get_ip_address(request):

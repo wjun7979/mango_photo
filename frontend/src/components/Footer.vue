@@ -2,7 +2,7 @@
     <div class="footer">
         <el-row>
             <el-col :span="12" class="status">
-                <div v-if="photoCount.nums>0">照片库中共有 {{photoCount.nums}} 张照片，占用空间 {{photoCount.size}}</div>
+                <div>照片库中共有 {{photoCount.nums}} 张照片，占用空间 {{photoCount.size}}</div>
             </el-col>
             <el-popover @show="openLogBox">
                 <el-card class="log-box" id="logBox" :body-style="{padding: '0'}">
@@ -39,7 +39,7 @@
             return {
                 photoCount: {
                     nums: 0,
-                    size: '',
+                    size: '0 B',
                 }
             }
         },
@@ -79,8 +79,11 @@
                         userid: localStorage.getItem('userid')
                     }
                 }).then(response => {
-                    this.photoCount = response.data
-                    this.photoCount.size = this.$common.bytesToSize(this.photoCount.size)
+                    let res = response.data
+                    if (res.nums > 0) {
+                        this.photoCount.nums = res.nums
+                        this.photoCount.size = this.$common.bytesToSize(res.size)
+                    }
                     this.$store.commit('refreshPhotoStatistics', {show: false})  //重置“是否刷新照片库统计信息”标志
                 })
             },

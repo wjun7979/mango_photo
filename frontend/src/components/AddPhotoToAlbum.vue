@@ -129,36 +129,25 @@
                         remove_list: this.removeList,
                     }
                 }).then(() => {
+                    let msg = ''
                     if (this.addList.length > 0) {
-                        let msg = '成功将' + this.addList.length + ' 张照片添加到影集 [' + this.albumName + '] 中'
-                        this.$notify({
-                            type: 'success',
-                            title: '成功',
-                            message: msg,
-                            position: 'top-right'
-                        })
-                        this.$store.commit('showLog', {
-                            type: 'success',
-                            msg: msg,
-                            time: new Date().toLocaleTimeString()
-                        })
+                        msg = '成功将 ' + this.addList.length + ' 张照片添加到影集 [' + this.albumName + '] 中'
                     }
                     if (this.removeList.length > 0) {
-                        let msg = this.removeList.length + ' 张照片已从影集 [' + this.albumName + '] 中移除'
-                        this.$nextTick(() => {
-                            this.$notify({
-                                type: 'success',
-                                title: '成功',
-                                message: msg,
-                                position: 'top-right'
-                            })
-                        })
-                        this.$store.commit('showLog', {
-                            type: 'success',
-                            msg: msg,
-                            time: new Date().toLocaleTimeString()
-                        })
+                        if (msg !== '') msg += '； 同时 '
+                        msg += this.removeList.length + ' 张照片已从影集 [' + this.albumName + '] 中移除'
                     }
+                    this.$notify({
+                        type: 'success',
+                        title: '成功',
+                        message: msg,
+                        position: 'top-right'
+                    })
+                    this.$store.commit('showLog', {
+                        type: 'success',
+                        msg: msg,
+                        time: new Date().toLocaleTimeString()
+                    })
                     this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                     this.onClose()
                 })

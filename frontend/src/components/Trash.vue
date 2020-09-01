@@ -45,7 +45,6 @@
                         }
                     }).then(() => {
                         let msg = '回收站已清空'
-                        this.unselectPhoto()
                         this.$notify({
                             type: 'success',
                             title: '成功',
@@ -58,6 +57,7 @@
                             time: new Date().toLocaleTimeString()
                         })
                         this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                        this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
                     })
                 }).catch(() => {
                 });

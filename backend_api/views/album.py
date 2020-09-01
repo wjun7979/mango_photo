@@ -176,6 +176,7 @@ def album_rename(request):
     return JsonResponse({}, status=200)
 
 
+@transaction.atomic  # 数据库事务处理
 def album_auto_cover(album_uuid):
     """自动设置指定影集及其父集的封面"""
     # 写入封面，遍历从该影集开始的所有上级，如果封面是由系统自动产生的，则替换它，否则保留原封面
@@ -203,9 +204,13 @@ def album_auto_cover(album_uuid):
             album_photo = AlbumPhoto.objects.filter(album_uuid__in=albums, photo_uuid__is_deleted=False).order_by(
                 '-input_date').first()
             # 设置封面，如果影集和子集中没有任何照片时，则将封面设置为空
-            album = Album.objects.get(uuid=item.uuid)
+            # album = Album.objects.get(uuid=item.uuid)
+            # if album_photo:
+            #     album.cover = album_photo.photo_uuid
+            # else:
+            #     album.cover = None
+            # album.save()
             if album_photo:
-                album.cover = album_photo.photo_uuid
+                Album.objects.filter(uuid=item.uuid).update(cover=album_photo.photo_uuid)
             else:
-                album.cover = None
-            album.save()
+                Album.objects.filter(uuid=item.uuid).update(cover=None)
