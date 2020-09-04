@@ -3,7 +3,6 @@ import hashlib  # md5
 import traceback  # 输出更详细的错误信息
 import uuid
 import re  # 正则
-import json
 # import pprint  # 格式化打印
 import requests  # 调用api
 from datetime import datetime
@@ -52,9 +51,9 @@ def upload_photo(request):
                         response['error'].append({'name': file.name, 'msg': '照片已存在，跳过'})
                         continue
 
-                # 根据当前日期创建文件夹 /photos/current/{userid}/年/月/日
+                # 根据当前日期创建文件夹 /photos/{userid}/current/年/月/日
                 now = datetime.now()  # 当前时间，用于创建目录
-                file_path = os.path.join('photos', 'current', userid, now.strftime('%Y'), now.strftime('%m'),
+                file_path = os.path.join('photos', userid, 'current', now.strftime('%Y'), now.strftime('%m'),
                                          now.strftime('%d'))  # 相对路径
                 real_path = os.path.join(settings.BASE_DIR, file_path)  # 物理路径
                 if not os.path.exists(real_path):  # 如果目标文件夹不存在则创建
@@ -182,9 +181,9 @@ def __create_thumbnail(userid, full_path):
     """创建照片缩略图"""
     im = Image.open(full_path)  # 打开原始照片文件
     im.thumbnail((500, 500))  # 创建大小不超过指定值的缩略图
-    # 根据当前日期创建文件夹 /photos/thumbnail/{userid}/年/月/日
+    # 根据当前日期创建文件夹 /photos/{userid}/thumbnail/年/月/日
     now = datetime.now()  # 当前时间，用于创建目录
-    file_path = os.path.join('photos', 'thumbnail', userid, now.strftime('%Y'), now.strftime('%m'),
+    file_path = os.path.join('photos', userid, 'thumbnail', now.strftime('%Y'), now.strftime('%m'),
                              now.strftime('%d'))  # 相对路径
     real_path = os.path.join(settings.BASE_DIR, file_path)  # 物理路径
     if not os.path.exists(real_path):  # 如果目标文件夹不存在则创建

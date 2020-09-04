@@ -109,7 +109,7 @@
             },
             renameAlbum(command) {
                 //重命令影集
-                this.$prompt('请输入影集标题', {
+                this.$prompt('请输入影集标题：', {
                     inputValue: command.name,
                     inputValidator: (value => {
                         if (value.trim().length === 0)

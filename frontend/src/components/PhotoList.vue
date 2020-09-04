@@ -13,7 +13,7 @@
             </el-popover>
             <el-popover placement="bottom-end">
                 <label>尺寸：</label>
-                <el-slider v-model="imgHeight" :min="100" :max="200" style="width: 200px"></el-slider>
+                <el-slider v-model="imgHeight" :min="100" :max="300" style="width: 200px"></el-slider>
                 <i class="el-icon-picture btn-group-size" slot="reference"></i>
             </el-popover>
         </div>
@@ -27,14 +27,14 @@
         </div>
         <!--照片列表-->
         <el-checkbox-group v-model="checkGroupList" class="images-wrap">
-            <el-row v-for="(photo, index) of photoListGroup" :key="index" style="margin-right: 28px;">
-                <el-checkbox class="chk-group" :label="photo.timestamp"
-                             @change="selectPhotoGroup(photo.timestamp)">
+            <el-row v-for="(photoGroup, index) of photoListGroup" :key="index" style="margin-right: 28px;">
+                <el-checkbox class="chk-group" :label="photoGroup.timestamp"
+                             @change="selectPhotoGroup(photoGroup.timestamp)">
                 </el-checkbox>
                 <el-checkbox-group v-model="checkList">
                     <!--瀑布流样式的照片列表-->
                     <div class="div-images">
-                        <div v-for="img of photo.list"
+                        <div v-for="img of photoGroup.list"
                              :key="img.uuid"
                              class="div-img"
                              :class="{'chk-checked': checkList.indexOf(img.uuid) !== -1,
@@ -45,15 +45,14 @@
                             <i :style="{'padding-bottom': img.height / img.width * 100 + '%', 'display':'block'}"></i>
                             <el-checkbox :label="img.uuid"
                                          @change="selectPhoto(img.uuid, photo.timestamp)"
-                                         @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photo.timestamp)">
+                                         @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photoGroup.timestamp)">
                             </el-checkbox>
                             <i class="el-icon-zoom-in btn-preview" @click="showPreview(img.uuid)"></i>
                             <el-image :src="apiUrl + '/' + img.path_thumbnail + '/' + img.name"
                                       lazy
                                       :alt="img.name"
-                                      :title="img.name"
-                                      @click.exact="clickImage(img.uuid, photo.timestamp)"
-                                      @click.shift.exact="multiSelectPhotos($event, img.uuid, photo.timestamp)"
+                                      @click.exact="clickImage(img.uuid, photoGroup.timestamp)"
+                                      @click.shift.exact="multiSelectPhotos($event, img.uuid, photoGroup.timestamp)"
                                       style="cursor: pointer;">
                                 <div slot="error">
                                     <div class="image-slot">
@@ -61,6 +60,9 @@
                                     </div>
                                 </div>
                             </el-image>
+                            <div v-if="img.comments" class="div-img-comments" :title="img.comments"
+                                 @click="clickImage(img.uuid, photoGroup.timestamp)">{{img.comments}}
+                            </div>
                         </div>
                     </div>
                 </el-checkbox-group>
@@ -79,7 +81,7 @@
             </el-col>
             <el-col :span="12" style="text-align: right">
                 <div v-if="callMode==='photo'">
-                    <i class="el-icon-plus" title="添加到影集" @click="isShowAddToAlbumDialog = true"></i>
+                    <i class="el-icon-plus" title="添加到影集" @click="openAlbumTree"></i>
                     <i class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
                     <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
                     <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
@@ -119,12 +121,22 @@
         <el-dialog class="album-dialog" title="添加到影集"
                    :visible.sync="isShowAddToAlbumDialog"
                    width="400px"
-                   :close-on-click-modal="false">
+                   :close-on-click-modal="false"
+                   :destroy-on-close="true">
             <el-tree class="album-tree" ref="albumTree" :lazy="true" :load="loadAlbumTree" node-key="uuid"
                      :props="{label:'name'}"
                      :default-expand-all="false"
                      :expand-on-click-node="true"
-                     :highlight-current="true"></el-tree>
+                     :highlight-current="true">
+                <div slot-scope="{ data }">
+                    <div class="album-tree-cover" :style="{'background-image':'url('+apiUrl+'/'+data.cover_path+'/'+data.cover_name+')'}"></div>
+                    <div style="float: left">
+                        <p class="album-tree-title">{{data.name}}</p>
+                        <p class="album-tree-photos" v-if="data.photos === 0">没有内容</p>
+                        <p class="album-tree-photos" v-else>{{data.photos}}项</p>
+                    </div>
+                </div>
+            </el-tree>
             <span slot="footer">
                 <el-button @click="isShowAddToAlbumDialog = false" size="small">取消</el-button>
                 <el-button type="primary" size="small" @click="addToAlbum">确定</el-button>
@@ -296,8 +308,10 @@
                     for (let item of this.photoList) {
                         this.previewList.push({
                             'uuid': item.uuid,
+                            'name': item.name,
                             'url': this.apiUrl + '/' + item.path + '/' + item.name,
-                            'timestamp': this.getGroupLabel(item['exif_datetime'])
+                            'timestamp': this.getGroupLabel(item['exif_datetime']),
+                            'comments': item.comments
                         })
                     }
                     this.creatPhotoGroup()  //创建照片分组
@@ -442,6 +456,10 @@
                         this.clickImage(uuid, timestamp)
                 }
             },
+            openAlbumTree() {
+                //打开影集树形列表对话框
+                this.isShowAddToAlbumDialog = true
+            },
             loadAlbumTree(node, resolve) {
                 //加载影集树
                 let parent_uuid = ''
@@ -463,7 +481,9 @@
             addToAlbum() {
                 //将照片添加到影集
                 let album_uuid = this.$refs.albumTree.getCurrentKey()
-                let album_name = this.$refs.albumTree.getCurrentNode().name
+                let album_name = ''
+                if (album_uuid)  //如果有节点被选中，获取节点名称
+                    album_name = this.$refs.albumTree.getCurrentNode().name
                 if (!album_uuid) {
                     this.$notify({
                         type: 'error',
@@ -762,6 +782,20 @@
         border-color: #409eff;
     }
 
+    .div-img-comments {  /*照片的说明文字*/
+        position: absolute;
+        bottom: 0;
+        padding: 5px;
+        width: 100%;
+        font-size: 12px;
+        color: #fff;
+        background: linear-gradient(rgba(0,0,0,.1),rgba(0,0,0,.6)); /*渐变色背景*/
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        cursor: pointer;
+    }
+
     .div-img:hover >>> .el-checkbox,
     .div-img:hover .btn-preview { /*鼠标移上去时显示勾选控件和预览按钮*/
         visibility: visible;
@@ -867,5 +901,31 @@
 
     .album-dialog >>> .el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content {
         color: #f56c6c; /*影集树选中的节点*/
+    }
+
+    .album-tree >>> .el-tree-node__content {
+        height: 50px;
+        margin-bottom: 10px;
+    }
+
+    .album-tree-cover {
+        float: left;
+        margin-top: 2px;
+        margin-right: 10px;
+        width: 40px;
+        height: 40px;
+        background-color: #80868b;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        border-radius: 5px;
+    }
+
+    .album-tree-title {
+        font-size: 16px;
+    }
+
+    .album-tree-photos { /*影集中照片的数量*/
+        font-size: 12px;
     }
 </style>

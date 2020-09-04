@@ -3,8 +3,8 @@ import json
 import traceback
 
 from django.db import transaction
-from django.db.models import Count, Sum
-from django.forms import model_to_dict
+from django.db.models import Count, Sum, Q
+from django.db.models import F
 from django.http import JsonResponse
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
@@ -28,11 +28,42 @@ def photo_list(request):
             photos = photos.filter(albumphoto__album_uuid=album_uuid)
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
-    photos = photos.values('uuid', 'path', 'path_thumbnail', 'name', 'width', 'height', 'exif_datetime')
+    photos = photos.values('uuid', 'path', 'path_thumbnail', 'name', 'width', 'height', 'exif_datetime', 'comments')
     photos = photos.order_by('-exif_datetime')
 
     response = json.loads(json.dumps(list(photos), cls=DateEncoder))
     # safe 控制是否只有字典类型的数据才能被序列化，这里的response是一个数组，所以要将safe设置为False
+    return JsonResponse(response, safe=False, status=200)
+
+
+@require_http_methods(['GET'])
+def photo_get_info(request):
+    """获取指定照片详细信息"""
+    photo_uuid = request.GET.get('photo_uuid')
+    photo = Photo.objects.values('uuid', 'name', 'width', 'height', 'size', 'exif_datetime', 'exif_make', 'exif_model',
+                                 'exif_fnumber', 'exif_exposuretime', 'exif_focallength', 'exif_isospeedratings',
+                                 'comments', photo_address=F('address__address'), photo_lat=F('address__lat'),
+                                 photo_lng=F('address__lng'))
+    photo = photo.get(uuid=photo_uuid)
+    photo['exif_datetime'] = photo['exif_datetime'].strftime('%Y-%m-%d %H:%M:%S')  # 对日期型字段进行转换
+    return JsonResponse(photo, safe=False, status=200)
+
+
+@require_http_methods(['GET'])
+def photo_get_albums(request):
+    """获取指定照片所属的影集列表"""
+    photo_uuid = request.GET.get('photo_uuid')
+    # 先得到照片所属影集的uuid列表
+    album_uuid_list = AlbumPhoto.objects.values('album_uuid').filter(photo_uuid=photo_uuid)
+    # 然后再得到影集列表
+    albums = Album.objects.filter(uuid__in=album_uuid_list)
+    albums = albums.values('uuid', 'name', cover_path=F('cover__path_thumbnail'),
+                           cover_name=F('cover__name'))  # 通过外键关联查询封面路径
+    # 影集中的照片数量通过外键表获取
+    albums = albums.annotate(photos=Count('albumphoto', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
+    albums = albums.order_by('name')
+    # 返回结果
+    response = json.loads(json.dumps(list(albums)))
     return JsonResponse(response, safe=False, status=200)
 
 
@@ -151,3 +182,15 @@ def photo_empty_trash(request):
         transaction.savepoint_rollback(save_tag)  # 回滚数据库事务
         response['msg'] = str(e)
         return JsonResponse(response, status=500)
+
+
+@require_http_methods(['POST'])
+def photo_set_comments(request):
+    """为照片添加说明文字"""
+    request_data = json.loads(request.body)
+    photo_uuid = request_data.get('photo_uuid')
+    comments = request_data.get('comments')
+    photo = Photo.objects.get(uuid=photo_uuid)
+    photo.comments = comments
+    photo.save()
+    return JsonResponse({}, status=200)

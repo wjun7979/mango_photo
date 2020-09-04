@@ -5,4 +5,9 @@ module.exports = {
             'wlon.vicp.net'
         ]
     },
+    configureWebpack: {
+        externals: {
+            "BMap": "BMap"
+        }
+    }
 }

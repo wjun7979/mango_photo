@@ -32,8 +32,11 @@ def user_upload_avatar(request):
         if im.width > 300 or im.height > 300:
             im.thumbnail((300, 300))  # 创建大小不超过指定值的缩略图
         ext_filename = os.path.splitext(file.name)[1]
-        file_path = os.path.join('photos', 'avatar', userid + ext_filename)  # 相对路径
-        full_path = os.path.join(settings.BASE_DIR, file_path)  # 包含路径的完整文件名
+        file_path = os.path.join('photos', userid, 'avatar')  # 相对路径
+        real_path = os.path.join(settings.BASE_DIR, file_path)  # 物理路径
+        if not os.path.exists(real_path):  # 如果目标文件夹不存在则创建
+            os.makedirs(real_path, exist_ok=True)
+        full_path = os.path.join(real_path, userid + ext_filename)  # 包含路径的完整文件名
         im.save(full_path)
         # 将头像路径存入数据库
         user = User.objects.get(userid=userid)

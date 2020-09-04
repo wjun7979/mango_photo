@@ -8,6 +8,7 @@
                 <span class="viewer-btn viewer-close" @click="close">
                     <i class="el-icon-back"></i>
                 </span>
+                <span class="viewer-comments" @click="setPhotoComments">{{currentImg.comments}}</span>
                 <!--工具栏-->
                 <div class="viewer-toolbar">
                     <div v-if="callMode === 'photo'">
@@ -31,8 +32,11 @@
                             <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
                             <el-dropdown-menu slot="dropdown">
                                 <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-remove-outline" command="remove_from_album">从影集中移除</el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-notebook-1" command="set_album_cover">设为影集封面</el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-plus" command="add_to_album">添加到影集</el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-remove-outline" command="remove_from_album">从影集中移除
+                                </el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-notebook-1" command="set_album_cover">设为影集封面
+                                </el-dropdown-item>
                                 <el-dropdown-item icon="el-icon-delete" command="trash_photo">移到回收站</el-dropdown-item>
                             </el-dropdown-menu>
                         </el-dropdown>
@@ -71,21 +75,99 @@
                 </div>
                 <!--大图显示-->
                 <div class="viewer-canvas">
-                    <img class="viewer-img" ref="img" :src="currentImg" :style="imgStyle" @load="handleImgLoad"
+                    <img class="viewer-img" ref="img" :src="currentImg.url" :style="imgStyle" @load="handleImgLoad"
                          @error="handleImgError" @mousedown="handleMouseDown"/>
                 </div>
             </div>
             <!--修改侧边栏-->
-            <div class="viewer-side" v-if="isShowModifySide">
+            <div class="viewer-side" v-show="isShowModifySide">
                 <el-row>
-                    <i class="el-icon-close viewer-side-btn-close" @click="closeModify"/>
+                    <i class="el-icon-close side-btn-close" @click="closeModify"/>
                 </el-row>
             </div>
             <!--信息侧边栏-->
-            <div class="viewer-side" v-if="isShowInfoSide">
-                <el-row>
-                    <i class="el-icon-close viewer-side-btn-close" @click="closeInfo"/>
+            <div class="viewer-side" v-show="isShowInfoSide">
+                <el-row class="side-close">
+                    <i class="el-icon-close side-btn-close" @click="closeInfo"/>
+                    <span style="font-size: 20px">信息</span>
                 </el-row>
+                <div style="padding-top: 70px">
+                    <el-row class="side-href" @click.native="setPhotoComments">
+                        <el-col :span="24" style="border-bottom: solid 1px #8c939d">
+                            <span v-if="photoInfo.comments===null">添加说明</span>
+                            <span v-else>{{photoInfo.comments}}</span>
+                        </el-col>
+                    </el-row>
+                    <el-row style="font-size: 12px" v-show="photoAlbums.length>0">影集</el-row>
+                    <el-row v-for="(album, index) of this.photoAlbums" :key="index">
+                        <el-col :span="4">
+                            <div class="side-album-cover"
+                                 :style="{'background-image':'url('+apiUrl+'/'+album.cover_path+'/'+album.cover_name+')'}"></div>
+                        </el-col>
+                        <el-col :span="20">
+                            <p>{{album.name}}</p>
+                            <p style="font-size: 14px; color: #8c939d" v-if="album.photos === 0">没有内容</p>
+                            <p style="font-size: 14px; color: #8c939d" v-else>{{album.photos}}项</p>
+                        </el-col>
+                    </el-row>
+                    <el-row style="font-size: 12px">详情</el-row>
+                    <el-row class="side-href" v-if="photoInfo.exif_datetime">
+                        <el-col :span="3">
+                            <i class="el-icon-date" style="font-size: 24px; line-height: 44px"></i>
+                        </el-col>
+                        <el-col :span="18">
+                            <p>{{$common.dateFormat(photoInfo.exif_datetime, 'yyyy年M月d日')}}</p>
+                            <p style="font-size: 14px; color: #8c939d">
+                                <span>{{$common.dateFormat(photoInfo.exif_datetime, '周w')}}，</span>
+                                <span>{{$common.dateFormat(photoInfo.exif_datetime, 'hh:mm:ss')}}</span>
+                            </p>
+                        </el-col>
+                        <el-col :span="3" style="text-align: right">
+                            <i class="el-icon-edit" style="font-size: 16px; line-height: 44px; color: #8c939d"></i>
+                        </el-col>
+                    </el-row>
+                    <el-row v-show="photoInfo.name">
+                        <el-col :span="3">
+                            <i class="el-icon-picture" style="font-size: 24px; line-height: 44px"></i>
+                        </el-col>
+                        <el-col :span="21">
+                            <p :title="photoInfo.name" class="side-title">{{photoInfo.name}}</p>
+                            <p style="font-size: 14px; color: #8c939d">
+                                <span style="margin-right: 10px;">{{photoInfo.width}} × {{photoInfo.height}}</span>
+                                <span>{{$common.bytesToSize(photoInfo.size)}}</span>
+                            </p>
+                        </el-col>
+                    </el-row>
+                    <el-row v-show="photoInfo.exif_make">
+                        <el-col :span="3">
+                            <i class="el-icon-camera-solid" style="font-size: 24px; line-height: 44px"></i>
+                        </el-col>
+                        <el-col :span="21">
+                            <p class="side-title">{{photoInfo.exif_make}} {{photoInfo.exif_model}}</p>
+                            <p style="font-size: 14px; color: #8c939d">
+                                <span style="margin-right: 10px;">ƒ/{{photoInfo.exif_fnumber}}</span>
+                                <span style="margin-right: 10px;">{{photoInfo.exif_exposuretime}}</span>
+                                <span style="margin-right: 10px;">{{photoInfo.exif_focallength}}mm</span>
+                                <span>ISO{{photoInfo.exif_isospeedratings}}</span>
+                            </p>
+                        </el-col>
+                    </el-row>
+                    <el-row class="side-href">
+                        <el-col :span="3">
+                            <i class="el-icon-location" style="font-size: 24px;"></i>
+                        </el-col>
+                        <el-col :span="18">
+                            <p v-if="photoInfo.photo_address">{{photoInfo.photo_address}}</p>
+                            <p v-else>这张照片是在哪里拍摄的？</p>
+                        </el-col>
+                        <el-col :span="3" style="text-align: right">
+                            <i class="el-icon-edit" style="font-size: 16px; color: #8c939d"></i>
+                        </el-col>
+                    </el-row>
+                    <el-row style="padding: 15px 0" v-show="photoInfo.photo_address">
+                        <div id="map-core" style="height: 360px"></div>
+                    </el-row>
+                </div>
             </div>
         </div>
     </transition>
@@ -94,6 +176,7 @@
 <script>
     import {on, off} from 'element-ui/src/utils/dom';
     import {rafThrottle, isFirefox} from 'element-ui/src/utils/util';
+    import BMap from 'BMap'
 
     const Mode = {
         CONTAIN: {
@@ -125,6 +208,9 @@
                 isShowModifySide: false,  //是否显示修改侧边栏
                 isShowInfoSide: false,  //是否显示信息侧边栏
                 viewerWrapperMargin: '0px',  //最外层容器右边距
+                photoInfo: {},  //当前照片的详细信息
+                photoAlbums: [],  //当前照片所属的影集列表
+                baiduMap: null,  //百度地图对象
             }
         },
         props: {
@@ -157,8 +243,7 @@
                 }
             },
             currentImg() {
-                // eslint-disable-next-line no-unused-vars
-                this.$nextTick(_ => {
+                this.$nextTick(() => {
                     const $img = this.$refs.img;
                     if (!$img.complete) {
                         this.loading = true;
@@ -167,18 +252,21 @@
             }
         },
         mounted() {
-            this.deviceSupportInstall();
-            this.$refs['viewer-wrapper'].focus();
+            this.deviceSupportInstall()
+            this.$refs['viewer-wrapper'].focus()
         },
         computed: {
+            apiUrl() {
+                return this.$store.state.apiUrl  //后台api调用地址
+            },
             isSingle() {  //是否只有一张图片
-                return this.urlList.length <= 1;
+                return this.urlList.length <= 1
             },
             currentImg() {  //当前图片默认是传入数组urlList的第一个元素
-                return this.urlList[this.index].url;
+                return this.urlList[this.index]
             },
             imgStyle() {
-                const {scale, deg, offsetX, offsetY, enableTransition} = this.transform;
+                const {scale, deg, offsetX, offsetY, enableTransition} = this.transform
                 const style = {
                     transform: `scale(${scale}) rotate(${deg}deg)`,
                     transition: enableTransition ? 'transform .3s' : '',
@@ -186,7 +274,7 @@
                     'margin-top': `${offsetY}px`
                 };
                 if (this.mode === Mode.CONTAIN) {
-                    style.maxWidth = style.maxHeight = '100%';
+                    style.maxWidth = style.maxHeight = '100%'
                 }
                 return style;
             }
@@ -235,11 +323,11 @@
                     }
                 });
                 on(document, 'keydown', this._keyDownHandler);
-                on(document, mousewheelEventName, this._mouseWheelHandler);
+                on(this.$refs.img, mousewheelEventName, this._mouseWheelHandler);
             },
             deviceSupportUninstall() {  //卸载键盘按键和鼠标滚动支持
                 off(document, 'keydown', this._keyDownHandler);
-                off(document, mousewheelEventName, this._mouseWheelHandler);
+                off(this.$refs.img, mousewheelEventName, this._mouseWheelHandler);
                 this._keyDownHandler = null;
                 this._mouseWheelHandler = null;
             },
@@ -291,10 +379,18 @@
             prev() {  //上一张
                 const len = this.urlList.length;
                 this.index = (this.index - 1 + len) % len;
+                if (this.isShowInfoSide) {
+                    this.getPhotoInfo()  //重新获取照片详细信息
+                    this.getPhotoAlbums()  //重新获取照片所属的影集列表
+                }
             },
             next() {  //下一张
                 const len = this.urlList.length;
                 this.index = (this.index + 1) % len;
+                if (this.isShowInfoSide) {
+                    this.getPhotoInfo()  //重新获取照片详细信息
+                    this.getPhotoAlbums()  //重新获取照片所属的影集列表
+                }
             },
             handleActions(action, options = {}) {  //对图片进行缩放和旋转操作
                 if (this.loading) return;
@@ -336,10 +432,58 @@
                 this.isShowModifySide = false
                 this.isShowInfoSide = !this.isShowInfoSide
                 this.viewerWrapperMargin = this.isShowInfoSide ? '360px' : '0px'
+                if (this.isShowInfoSide) {
+                    this.getPhotoInfo()  //获取照片详细信息
+                    this.getPhotoAlbums()  //获取照片所属的影集列表
+                }
             },
             closeInfo() {  //关闭信息侧边栏
                 this.isShowInfoSide = false
                 this.viewerWrapperMargin = '0px'
+                // 将照片信息和所属影集列表恢复到初始值，便于信息侧边栏恢复到初始状态，避免打开侧边栏时会闪现上一张照片信息的问题
+                this.photoInfo = {}
+                this.photoAlbums = []
+            },
+            getPhotoInfo() {
+                //获取当前照片的详细信息
+                this.$axios({
+                    method: 'get',
+                    url: this.apiUrl + '/api/photo_get_info',
+                    params: {
+                        photo_uuid: this.urlList[this.index].uuid
+                    }
+                }).then(response => {
+                    const res = response.data
+                    console.log(res)
+                    this.photoInfo = res
+                    //将当前位置定位到地图
+                    this.$nextTick(function () {
+                        if (res.photo_lng && res.photo_lat) {
+                            this.baiduMap = new BMap.Map("map-core")
+                            this.baiduMap.enableScrollWheelZoom(true)
+                            // this.baiduMap.centerAndZoom(new BMap.Point(116.331398, 39.897445), 15)
+                            this.baiduMap.clearOverlays()  //清除标注
+                            let new_point = new BMap.Point(res.photo_lng, res.photo_lat)
+                            let marker = new BMap.Marker(new_point)  // 创建标注
+                            this.baiduMap.addOverlay(marker)  // 将标注添加到地图中
+                            this.baiduMap.panTo(new_point)  //定位到标注点
+                            this.baiduMap.centerAndZoom(new_point, 15)
+                        }
+                    })
+                })
+            },
+            getPhotoAlbums() {
+                //获取指定照片所属的影集列表
+                this.$axios({
+                    method: 'get',
+                    url: this.apiUrl + '/api/photo_get_albums',
+                    params: {
+                        photo_uuid: this.urlList[this.index].uuid
+                    }
+                }).then(response => {
+                    const res = response.data
+                    this.photoAlbums = res
+                })
             },
             addToFavorites() {
                 //收藏
@@ -392,6 +536,40 @@
             restorePhoto() {
                 //将照片从回收站恢复
                 this.$message('将照片从回收站恢复功能还没做好呢:-)')
+            },
+            setPhotoComments() {
+                //为照片添加说明文字
+                this.deviceSupportUninstall()  //卸载键盘按键支持
+                this.$prompt('请输入照片说明：', {
+                    inputValue: this.currentImg.comments,
+                    inputValidator: (value => {
+                        if (value.trim().length === 0)
+                            return false
+                    }),
+                    inputErrorMessage: '照片说明不能为空',
+                    callback: ((action, instance) => {
+                        if (action === 'confirm') {
+                            this.$axios({
+                                method: 'post',
+                                url: this.apiUrl + '/api/photo_set_comments',
+                                data: {
+                                    photo_uuid: this.currentImg.uuid,
+                                    comments: instance.inputValue,
+                                }
+                            }).then(() => {
+                                this.currentImg.comments = instance.inputValue
+                                this.photoInfo.comments = instance.inputValue
+                                this.$store.commit('showLog', {
+                                    type: 'success',
+                                    msg: '为 [' + this.currentImg.name + '] 成功添加了说明 [' + instance.inputValue + ']',
+                                    time: new Date().toLocaleTimeString()
+                                })
+                                this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                            })
+                        }
+                        this.deviceSupportInstall()  //恢复键盘按键支持
+                    })
+                })
             },
         }
     }
@@ -452,6 +630,26 @@
         font-size: 23px;
         background-color: rgba(0, 0, 0, 0.1);
         color: #fff;
+    }
+
+    /*照片的说明文字*/
+    .viewer-comments {
+        position: absolute;
+        top: 20px;
+        left: 70px;
+        padding: 8px;
+        max-width: 500px;
+        color: #fff;
+        background-color: rgba(0, 0, 0, 0.1);
+        border-radius: 8px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        cursor: pointer;
+        z-index: 1;
+    }
+    .viewer-comments:hover {
+        background-color: #454749;
     }
 
     /*上一张按钮*/
@@ -532,25 +730,62 @@
         top: 0;
         right: 0;
         z-index: 2000;
-        padding: 20px;
         width: 360px;
         height: 100%;
+        overflow: auto;
         background-color: #202124;
+        color: #d9d9d9;
+    }
+
+    .viewer-side >>> .el-row {
+        padding: 15px 30px;
+    }
+
+    .side-close { /*侧边栏的关闭栏*/
+        position: fixed;
+        width: 360px;
+        background-color: #202124;
+        z-index: 1
     }
 
     /*侧边栏的关闭按钮*/
-    .viewer-side-btn-close {
-        width: 44px;
-        height: 44px;
-        line-height: 44px;
+    .side-btn-close {
+        width: 40px;
+        height: 40px;
+        line-height: 40px;
         text-align: center;
+        margin-right: 5px;
         color: #fff;
         font-size: 23px;
         cursor: pointer;
     }
 
-    .viewer-side-btn-close:hover {
+    .side-btn-close:hover {
         background-color: #454749;
         border-radius: 50%;
+    }
+
+    .side-album-cover { /*侧边栏影集封面*/
+        width: 44px;
+        height: 44px;
+        background-color: #80868b;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        border-radius: 5px;
+    }
+
+    .side-href { /*侧边栏照片拍摄时间*/
+        cursor: pointer;
+    }
+
+    .side-href:hover {
+        background-color: #454545;
+    }
+
+    .side-title { /*侧边栏中超长的文字*/
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
     }
 </style>
