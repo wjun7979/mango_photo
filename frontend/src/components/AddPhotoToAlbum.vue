@@ -137,16 +137,9 @@
                         if (msg !== '') msg += '； 同时 '
                         msg += this.removeList.length + ' 张照片已从影集 [' + this.albumName + '] 中移除'
                     }
-                    this.$notify({
-                        type: 'success',
-                        title: '成功',
+                    this.$message({
                         message: msg,
-                        position: 'top-right'
-                    })
-                    this.$store.commit('showLog', {
                         type: 'success',
-                        msg: msg,
-                        time: new Date().toLocaleTimeString()
                     })
                     this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                     this.onClose()

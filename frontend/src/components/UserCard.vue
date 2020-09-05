@@ -102,28 +102,20 @@
                 const isImage = accept_list.indexOf(extension_name) !== -1
                 if (!isImage) {
                     let msg = '不支持 ' + extension_name + ' 的文件格式'
-                    this.$notify({
-                        type: 'error',
-                        title: '提示',
+                    this.$message({
                         message: msg,
-                        position: 'top-right'
+                        type: 'success',
                     })
-                    let newDate = new Date()
-                    this.$store.commit('showLog', {type: 'error', msg: msg, time: newDate.toLocaleTimeString()})
                     return false
                 }
                 //检查文件大小
                 const isOverSize = file.size / 1024 / 1024 < 1
                 if (!isOverSize) {
                     let msg = '不支持超过1MB的文件'
-                    this.$notify({
-                        type: 'error',
-                        title: '提示',
+                    this.$message({
                         message: msg,
-                        position: 'top-right'
+                        type: 'success',
                     })
-                    let newDate = new Date()
-                    this.$store.commit('showLog', {type: 'error', msg: msg, time: newDate.toLocaleTimeString()})
                     return false
                 }
             },
@@ -131,21 +123,18 @@
                 //文件上传成功时
                 this.userInfo.avatar = this.apiUrl + '/' + response.path
                 let msg = '用户头像修改成功'
-                let newDate = new Date()
-                this.$store.commit('showLog', {type: 'success', msg: msg, time: newDate.toLocaleTimeString()})
+                this.$message({
+                    message: msg,
+                    type: 'success',
+                })
             },
             handleError(err) {
                 //头像文件上传失败时
                 const result =  JSON.parse(err.message)  //关键点，得用JSON.parse来解析err里面的内容
-                this.$notify({
-                    type: 'error',
-                    title: '提示',
+                this.$message({
                     message: result.msg,
-                    position: 'top-right'
+                    type: 'error',
                 })
-                let newDate = new Date()
-                let msg = '用户头像上传失败: ' + result.msg
-                this.$store.commit('showLog', {type: 'error', msg: msg, time: newDate.toLocaleTimeString()})
             },
             logout() {
                 //退出登录

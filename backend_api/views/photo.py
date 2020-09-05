@@ -194,3 +194,13 @@ def photo_set_comments(request):
     photo.comments = comments
     photo.save()
     return JsonResponse({}, status=200)
+
+
+@require_http_methods(['POST'])
+def photo_set_datetime(request):
+    """修改照片的拍摄时间"""
+    request_data = json.loads(request.body)
+    photo_uuid_list = request_data.get('photo_list')
+    photo_datetime = request_data.get('photo_datetime')
+    Photo.objects.filter(uuid__in=photo_uuid_list).update(exif_datetime=photo_datetime)
+    return JsonResponse({}, status=200)

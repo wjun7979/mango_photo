@@ -559,10 +559,9 @@
                             }).then(() => {
                                 this.currentImg.comments = instance.inputValue
                                 this.photoInfo.comments = instance.inputValue
-                                this.$store.commit('showLog', {
+                                this.$message({
+                                    message: '成功为照片添加了说明 [' + instance.inputValue + ']',
                                     type: 'success',
-                                    msg: '为 [' + this.currentImg.name + '] 成功添加了说明 [' + instance.inputValue + ']',
-                                    time: new Date().toLocaleTimeString()
                                 })
                                 this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                             })

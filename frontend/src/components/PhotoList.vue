@@ -142,6 +142,18 @@
                 <el-button type="primary" size="small" @click="addToAlbum">确定</el-button>
             </span>
         </el-dialog>
+
+        <!--修改日期和时间对话框-->
+        <el-dialog title="修改日期和时间" :visible.sync="isShowModifyDateTimeDialog" width="350px"
+                   @closed="deviceSupportInstall">
+            <el-date-picker type="datetime" v-model="photoDateTime" default-time="8:00:00"
+                            placeholder="选择日期时ss间" format="yyyy-MM-dd HH:mm"
+                            value-format="yyyy-MM-dd HH:mm:ss" style="width: 310px"></el-date-picker>
+            <span slot="footer">
+                <el-button size="small" @click="isShowModifyDateTimeDialog=false">取消</el-button>
+                <el-button type="primary" size="small" @click="modifyDateTime">确定</el-button>
+            </span>
+        </el-dialog>
     </div>
 </template>
 
@@ -169,6 +181,8 @@
                 checkList: [],  //选中的照片列表
                 lastSelectedUUID: null,  //最后一次选中的照片uuid
                 isShowAddToAlbumDialog: false,  //是否显示添加到影集对话框
+                isShowModifyDateTimeDialog: false,  //是否显示修改日期时间对话框
+                photoDateTime: null,  //照片的拍摄时间
             }
         },
         props: {
@@ -485,11 +499,9 @@
                 if (album_uuid)  //如果有节点被选中，获取节点名称
                     album_name = this.$refs.albumTree.getCurrentNode().name
                 if (!album_uuid) {
-                    this.$notify({
-                        type: 'error',
-                        title: '提示',
+                    this.$message({
                         message: '请选择要添加照片的影集',
-                        position: 'top-right'
+                        type: 'error',
                     })
                     return false
                 }
@@ -503,18 +515,11 @@
                 }).then(() => {
                     let msg = '成功将' + this.checkList.length + ' 张照片添加到影集 [' + album_name + '] 中'
                     this.unselectPhoto()
-                    this.isShowAddToAlbumDialog = false
-                    this.$notify({
-                        type: 'success',
-                        title: '成功',
+                    this.$message({
                         message: msg,
-                        position: 'top-right'
-                    })
-                    this.$store.commit('showLog', {
                         type: 'success',
-                        msg: msg,
-                        time: new Date().toLocaleTimeString()
                     })
+                    this.isShowAddToAlbumDialog = false
                 })
             },
             removeFromAlbum() {
@@ -534,16 +539,9 @@
                     }).then(() => {
                         let msg = this.checkList.length + ' 张照片已从影集 [' + this.albumName + '] 中移除'
                         this.unselectPhoto()
-                        this.$notify({
-                            type: 'success',
-                            title: '成功',
+                        this.$message({
                             message: msg,
-                            position: 'top-right'
-                        })
-                        this.$store.commit('showLog', {
                             type: 'success',
-                            msg: msg,
-                            time: new Date().toLocaleTimeString()
                         })
                         this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                     })
@@ -570,16 +568,9 @@
                     }).then(() => {
                         let msg = '已将' + this.checkList.length + ' 张照片移到回收站'
                         this.unselectPhoto()
-                        this.$notify({
-                            type: 'success',
-                            title: '成功',
+                        this.$message({
                             message: msg,
-                            position: 'top-right'
-                        })
-                        this.$store.commit('showLog', {
                             type: 'success',
-                            msg: msg,
-                            time: new Date().toLocaleTimeString()
                         })
                         this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                         this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
@@ -603,16 +594,9 @@
                     }).then(() => {
                         let msg = this.checkList.length + ' 张照片成功恢复'
                         this.unselectPhoto()
-                        this.$notify({
-                            type: 'success',
-                            title: '成功',
+                        this.$message({
                             message: msg,
-                            position: 'top-right'
-                        })
-                        this.$store.commit('showLog', {
                             type: 'success',
-                            msg: msg,
-                            time: new Date().toLocaleTimeString()
                         })
                         this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                         this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
@@ -636,16 +620,9 @@
                     }).then(() => {
                         let msg = this.checkList.length + ' 张照片成功删除'
                         this.unselectPhoto()
-                        this.$notify({
-                            type: 'success',
-                            title: '成功',
+                        this.$message({
                             message: msg,
-                            position: 'top-right'
-                        })
-                        this.$store.commit('showLog', {
                             type: 'success',
-                            msg: msg,
-                            time: new Date().toLocaleTimeString()
                         })
                         this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                     })
@@ -659,7 +636,7 @@
                         this.downloadPhoto()
                         break
                     case 'modify_datetime':
-                        this.modifyDateTime()
+                        this.showModifyDateTime()
                         break
                     case 'modify_location':
                         this.modifyLocation()
@@ -670,9 +647,42 @@
                 //下载
                 this.$message('下载功能还没做好呢:-)')
             },
+            showModifyDateTime() {
+                //显示修改日期和时间对话框
+                this.deviceSupportUninstall()  ////卸载键盘按键支持
+                if (this.checkList.length > 0) {
+                    let uuid = this.checkList[0]
+                    let photo = this.photoList.find(t => t.uuid === uuid)
+                    this.photoDateTime = photo.exif_datetime
+                }
+                this.isShowModifyDateTimeDialog = true
+            },
             modifyDateTime() {
                 //修改日期和时间
-                this.$message('修改日期和时间功能还没做好呢:-)')
+                if (this.photoDateTime === null) {
+                    this.$message({
+                        message: '请输入正确的拍摄时间',
+                        type: 'error',
+                    })
+                    return false
+                }
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/photo_set_datetime',
+                    data: {
+                        photo_list: this.checkList,
+                        photo_datetime: this.photoDateTime,
+                    }
+                }).then(() => {
+                    let msg = '成功将 ' + this.checkList.length + ' 张照片的拍摄时间修改为 ' + this.photoDateTime
+                    this.unselectPhoto()
+                    this.$message({
+                        message: msg,
+                        type: 'success',
+                    })
+                    this.isShowModifyDateTimeDialog = false
+                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                })
             },
             modifyLocation() {
                 //修改位置信息

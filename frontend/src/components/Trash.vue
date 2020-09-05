@@ -44,17 +44,9 @@
                             userid: localStorage.getItem('userid'),
                         }
                     }).then(() => {
-                        let msg = '回收站已清空'
-                        this.$notify({
+                        this.$message({
+                            message: '回收站已清空',
                             type: 'success',
-                            title: '成功',
-                            message: msg,
-                            position: 'top-right'
-                        })
-                        this.$store.commit('showLog', {
-                            type: 'success',
-                            msg: msg,
-                            time: new Date().toLocaleTimeString()
                         })
                         this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                         this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息

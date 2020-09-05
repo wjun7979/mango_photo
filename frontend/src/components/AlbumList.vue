@@ -127,10 +127,9 @@
                         }
                     }).then(() => {
                         this.$store.commit('refreshAlbum', {show: true})
-                        this.$store.commit('showLog', {
+                        this.$message({
+                            message: '影集 [' + command.name + '] 成功重命名为 [' + value + ']',
                             type: 'success',
-                            msg: '影集 [' + command.name + '] 成功重命名为 [' + value + ']',
-                            time: new Date().toLocaleTimeString()
                         })
                     })
                 }).catch(() => {
@@ -152,10 +151,9 @@
                     }).then(() => {
                         this.showAlbums()  //刷新影集列表
                         this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
-                        this.$store.commit('showLog', {
+                        this.$message({
+                            message: '影集 [' + command.name + '] 删除成功',
                             type: 'success',
-                            msg: '影集 [' + command.name + '] 删除成功',
-                            time: new Date().toLocaleTimeString()
                         })
                     })
                 }).catch(() => {

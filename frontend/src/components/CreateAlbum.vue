@@ -46,10 +46,9 @@
                             name: 'album',
                             params: {uuid: uuid}
                         })
-                        this.$store.commit('showLog', {
+                        this.$message({
+                            message: '影集 [' + value + '] 创建成功',
                             type: 'success',
-                            msg: '影集 [' + value + '] 创建成功',
-                            time: new Date().toLocaleTimeString()
                         })
                     })
                 }).catch(() => {

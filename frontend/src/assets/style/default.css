@@ -25,3 +25,7 @@
     line-height: 48px;
     font-size: 18px;
 }
+
+.err-notify {  /*包含详细错误信息的通知框*/
+    width: 410px;
+}

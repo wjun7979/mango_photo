@@ -112,17 +112,34 @@
                 }).then(response => {
                     this.showUploadProgress = false
                     let res = response.data
-                    this.$notify({
-                        type: res.error.length === 0 ? 'success' : 'error',
-                        title: '提示',
-                        message: '本次共上传 ' + this.fileList.length + ' 张照片，成功 ' + res.success.length + ' 张，失败 ' + res.error.length + ' 张',
-                        position: 'top-right'
-                    })
-                    //输出失败文件的日志
-                    for (let error of res.error) {
-                        let newDate = new Date()
-                        let msg = error.name + '上传失败: ' + error.msg
-                        this.$store.commit('showLog', {type: 'error', msg: msg, time: newDate.toLocaleTimeString()})
+                    let msg = '本次共上传 ' + this.fileList.length + ' 张照片'
+                    if (res.success.length > 0)
+                        msg += '，成功 ' + res.success.length + ' 张'
+                    if (res.error.length > 0)
+                        msg += '，失败 ' + res.error.length + ' 张'
+                    if (res.error.length === 0) {
+                        this.$notify({
+                            type: 'success',
+                            title: '提示',
+                            message: msg,
+                            position: 'top-right'
+                        })
+                    }
+                    else {
+                        msg += '<div style="width: 350px; height: 250px; overflow: auto">'
+                        for (let error of res.error) {
+                            msg += '<br/>' + error.name + '上传失败: ' + error.msg
+                        }
+                        msg += '</div>'
+                        this.$notify({
+                            type: 'error',
+                            title: '提示',
+                            message: msg,
+                            customClass: 'err-notify',
+                            dangerouslyUseHTMLString: true,
+                            position: 'top-right',
+                            duration: 0
+                        })
                     }
                     this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                     this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
@@ -133,7 +150,6 @@
             handleChange(file, fileList) {
                 //文件状态改变时
                 this.fileList = fileList
-                let newDate = new Date()
                 if (file.status === 'ready') {  // 文件添加之后
                     //检查文件类型
                     //上传文件的扩展名
@@ -141,15 +157,25 @@
                     const accept_list = ['jpg', 'jpeg', 'png', 'bmp']  //允许上传的文件类型列表
                     const isImage = accept_list.indexOf(extension_name) !== -1
                     if (!isImage) {
-                        let msg = '不支持 ' + file.name + ' 的文件格式'
-                        this.$store.commit('showLog', {type: 'error', msg: msg, time: newDate.toLocaleTimeString()})
+                        if (document.getElementsByClassName('el-message').length === 0) {
+                            let msg = '不支持 ' + file.name + ' 的文件格式'
+                            this.$message({
+                                message: msg,
+                                type: 'error',
+                            })
+                        }
                         fileList.pop()
                     }
                     //检查文件大小
                     const isOverSize = file.size / 1024 / 1024 <= 20
                     if (!isOverSize) {
-                        let msg = file.name + ' 文件大小超过了20MB'
-                        this.$store.commit('showLog', {type: 'error', msg: msg, time: newDate.toLocaleTimeString()})
+                        if (document.getElementsByClassName('el-message').length === 0) {
+                            let msg = file.name + ' 文件大小超过了20MB'
+                            this.$message({
+                                message: msg,
+                                type: 'error',
+                            })
+                        }
                         fileList.pop()
                     }
                     //检查是否重复添加
