@@ -44,7 +44,7 @@
                                       'flex-grow':img.width * imgHeight / img.height}">
                             <i :style="{'padding-bottom': img.height / img.width * 100 + '%', 'display':'block'}"></i>
                             <el-checkbox :label="img.uuid"
-                                         @change="selectPhoto(img.uuid, photo.timestamp)"
+                                         @change="selectPhoto(img.uuid, photoGroup.timestamp)"
                                          @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photoGroup.timestamp)">
                             </el-checkbox>
                             <i class="el-icon-zoom-in btn-preview" @click="showPreview(img.uuid)"></i>
@@ -163,7 +163,6 @@
     import Preview from "./Preview";
     import {rafThrottle} from "element-ui/src/utils/util";
     import {off, on} from "element-ui/src/utils/dom";
-
     export default {
         name: "PhotoList",
         components: {Preview, AlbumList, UploadFile},
@@ -268,14 +267,16 @@
             if (this.callMode !== 'pick') {
                 this.deviceSupportInstall()  //注册键盘按键支持
             }
-            window.addEventListener('resize', this.listenResize)
             this.setImgHeight()
+            window.addEventListener('resize', this.listenResize)
+            window.addEventListener('popstate', this.goBack)
         },
         beforeDestroy() {
             if (this.callMode !== 'pick') {
                 this.deviceSupportUninstall()  //卸载键盘按键支持
             }
             window.removeEventListener('resize', this.listenResize)
+            window.removeEventListener('popstate', this.goBack)
         },
         methods: {
             deviceSupportInstall() {
@@ -298,6 +299,12 @@
             listenResize: function () {
                 //监听浏览器窗口大小变化的事件
                 this.setImgHeight()
+            },
+            goBack() {
+                //当浏览器后退时，关闭大图预览
+                if (this.isShowPreview) {
+                    this.isShowPreview = false
+                }
             },
             setImgHeight() {
                 //浏览器窗口大小变化时改变照片的大小
@@ -354,6 +361,8 @@
                 this.previewListOrder = this.previewList.slice(index).concat(this.previewList.slice(0, index))
                 this.isShowPreview = true
                 this.deviceSupportUninstall()  //卸载键盘按键支持，防止与大图预览中的快捷键冲突
+                //向浏览器插入一个空的历史记录
+                history.pushState(null, null, document.URL)
             },
             clickImage(uuid, timestamp) {
                 //点击照片时发生，按下shift等修饰键时不会触发单击事件
@@ -379,6 +388,7 @@
                 //关闭大图预览
                 this.isShowPreview = false
                 this.deviceSupportInstall()  //恢复键盘按键支持
+                this.$router.back()  //抵消预览时插入的空历史记录
             },
             getGroupLabel(val) {
                 //获取分组标签
@@ -702,45 +712,37 @@
         color: #909399;
         text-align: center;
     }
-
     .images-wrap, .div-images { /*瀑布流照片*/
         display: flex;
         flex-wrap: wrap;
     }
-
     .div-images::after {
         content: '';
         flex-grow: 999999999;
     }
-
     .div-images .div-img {
         position: relative;
         margin: 0 5px 5px 0;
     }
-
     .div-img >>> .el-image {
         position: absolute;
         top: 0;
         width: 100%;
         vertical-align: bottom;
     }
-
     .chk-group { /*分组选择*/
         margin-top: 15px;
         margin-bottom: 10px;
     }
-
     .chk-group >>> .el-checkbox__input { /*修正分组选择勾选框的位置偏移*/
         margin-top: -2px;
     }
-
     .chk-group >>> .el-checkbox__inner { /*分组选择控件外观*/
         width: 20px;
         height: 20px;
         border-width: 2px;
         border-radius: 50%;
     }
-
     .chk-group >>> .el-checkbox__inner:after { /*分组选择控件内勾的外观*/
         top: 0;
         width: 5px;
@@ -749,27 +751,22 @@
         border-left: 0;
         border-top: 0;
     }
-
     .chk-group >>> .is-checked .el-checkbox__inner {
         background-color: #757575;
         border-color: #757575;
     }
-
     .chk-group >>> .is-checked + .el-checkbox__label {
         color: #606266;
     }
-
     .div-images >>> .el-checkbox { /*选择控件*/
         visibility: hidden; /*控件默认隐藏*/
         position: absolute;
         top: 8px;
         left: 8px;
     }
-
     .div-images >>> .el-checkbox__label { /*选择控件的文本*/
         display: none;
     }
-
     .div-images >>> .el-checkbox__inner { /*选择控件的外观*/
         width: 20px;
         height: 20px;
@@ -777,7 +774,6 @@
         border-radius: 50%;
         background-color: rgba(0, 0, 0, .1);
     }
-
     .div-images >>> .el-checkbox__inner:after { /*选择控件内勾的外观*/
         top: 0;
         width: 5px;
@@ -786,12 +782,10 @@
         border-left: 0;
         border-top: 0;
     }
-
     .div-images >>> .is-checked .el-checkbox__inner {
         background-color: #409eff;
         border-color: #409eff;
     }
-
     .div-img-comments {  /*照片的说明文字*/
         position: absolute;
         bottom: 0;
@@ -805,35 +799,28 @@
         overflow: hidden;
         cursor: pointer;
     }
-
     .div-img:hover >>> .el-checkbox,
     .div-img:hover .btn-preview { /*鼠标移上去时显示勾选控件和预览按钮*/
         visibility: visible;
     }
-
     .show-checkbox >>> .el-checkbox {
         visibility: visible; /*当选择了照片时，所有的勾选控件都显示出来*/
     }
-
     .chk-checked { /*选中之后的背景色*/
         background-color: #dbe9ff;
     }
-
     .chk-last-checked { /*最后一次选中的的背景色*/
         background-color: #ffd9e9;
     }
-
     .chk-checked >>> .el-image { /*选中之后改变照片大小*/
         top: 16px;
         left: 16px;
         width: calc(100% - 32px);
         height: calc(100% - 32px);
     }
-
     .chk-checked >>> .el-checkbox__inner {
         visibility: visible;
     }
-
     .btn-preview { /*照片上浮现的预览按钮*/
         visibility: hidden;
         position: absolute;
@@ -848,11 +835,9 @@
         border-radius: 50%;
         cursor: pointer;
     }
-
     .btn-preview:hover {
         color: #fff;
     }
-
     .chk-toolbar { /*选中照片后的工具栏*/
         position: absolute;
         top: 0;
@@ -864,7 +849,6 @@
         box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 2px 6px 2px rgba(60, 64, 67, .15);
         z-index: 1100;
     }
-
     .chk-toolbar i {
         margin-top: 12px;
         margin-right: 5px;
@@ -878,24 +862,20 @@
         border-radius: 50%;
         cursor: pointer;
     }
-
     .chk-toolbar i:hover {
         background-color: #e5e5e5;
         border-radius: 50%;
     }
-
     .btn-toolbar {
         margin-top: 12px;
         margin-right: 15px;
     }
-
     .div-group-size {
         position: fixed;
         right: 50px;
         z-index: 1100;
         padding-top: 10px;
     }
-
     .btn-group-size { /*照片分组和尺寸工具按钮*/
         margin-left: 10px;
         padding: 8px;
@@ -904,20 +884,16 @@
         border-radius: 50%;
         cursor: pointer;
     }
-
     .album-tree { /*影集树*/
         height: 300px;
     }
-
     .album-dialog >>> .el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content {
         color: #f56c6c; /*影集树选中的节点*/
     }
-
     .album-tree >>> .el-tree-node__content {
         height: 50px;
         margin-bottom: 10px;
     }
-
     .album-tree-cover {
         float: left;
         margin-top: 2px;
@@ -930,11 +906,9 @@
         background-repeat: no-repeat;
         border-radius: 5px;
     }
-
     .album-tree-title {
         font-size: 16px;
     }
-
     .album-tree-photos { /*影集中照片的数量*/
         font-size: 12px;
     }

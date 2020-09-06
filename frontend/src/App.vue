@@ -1,6 +1,8 @@
 <template>
     <div class="mp-index-wrap">
-        <router-view></router-view>
+        <transition name="el-fade-in-linear">
+            <router-view></router-view>
+        </transition>
     </div>
 </template>
 

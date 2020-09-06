@@ -56,8 +56,18 @@
         },
         mounted() {
             this.getAlbum()
+            window.addEventListener('popstate', this.goBack)
+        },
+        beforeDestroy() {
+            window.removeEventListener('popstate', this.goBack)
         },
         methods: {
+            goBack() {
+                //当浏览器后退时，关闭添加照片到影集的选择界面
+                if (this.isShowAddPhotoToAlbum) {
+                    this.isShowAddPhotoToAlbum = false
+                }
+            },
             getAlbum() {
                 //获取指定的影集信息
                 this.$axios({
@@ -88,11 +98,14 @@
                         this.albumPhotoList.push(item.uuid)
                     }
                     this.isShowAddPhotoToAlbum = true
+                    //向浏览器插入一个空的历史记录
+                    history.pushState(null, null, document.URL)
                 })
             },
             closePick() {
                 //关闭照片选择界面
                 this.isShowAddPhotoToAlbum = false
+                this.$router.back()  //抵消打开照片选择界面时插入的空历史记录
             },
         }
     }

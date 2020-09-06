@@ -54,7 +54,7 @@ const routes = [
 //实例化VueRouter并将routes添加进去
 const router = new VueRouter({
     mode: 'history',
-    routes  //ES6简写，等于routes:routes
+    routes,  //ES6简写，等于routes:routes
 })
 
 //路由拦截

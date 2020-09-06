@@ -4,10 +4,11 @@
     box-sizing: border-box;
 }
 
+html, body {
+    height: 100%;
+}
+
 .mp-index-wrap { /*最外层容器*/
-    position: absolute;
-    top: 0;
-    left: 0;
     width: 100%;
     min-width: 1280px;
     height: 100%;

@@ -177,7 +177,6 @@
     import {on, off} from 'element-ui/src/utils/dom';
     import {rafThrottle, isFirefox} from 'element-ui/src/utils/util';
     import BMap from 'BMap'
-
     const Mode = {
         CONTAIN: {
             name: 'contain',
@@ -188,9 +187,7 @@
             icon: 'el-icon-c-scale-to-original'
         }
     };
-
     const mousewheelEventName = isFirefox() ? 'DOMMouseScroll' : 'mousewheel';
-
     export default {
         name: "Preview",
         data() {
@@ -341,7 +338,6 @@
             handleMouseDown(e) {
                 //鼠标左键按下时，拖动图片
                 if (this.loading || e.button !== 0) return;
-
                 const {offsetX, offsetY} = this.transform;
                 const startX = e.pageX;
                 const startY = e.pageY;
@@ -353,7 +349,6 @@
                 on(document, 'mouseup', () => {
                     off(document, 'mousemove', this._dragHandler);
                 });
-
                 e.preventDefault();
             },
             reset() {
@@ -368,7 +363,6 @@
             },
             toggleMode() {
                 if (this.loading) return;
-
                 const modeNames = Object.keys(Mode);
                 const modeValues = Object.values(Mode);
                 const index = modeValues.indexOf(this.mode);
@@ -583,7 +577,6 @@
         bottom: 0;
         left: 0;
     }
-
     /*遮罩*/
     .viewer-mask {
         position: absolute;
@@ -593,7 +586,6 @@
         left: 0;
         background: #000;
     }
-
     /*大图画布*/
     .viewer-canvas {
         width: 100%;
@@ -602,7 +594,6 @@
         justify-content: center;
         align-items: center;
     }
-
     /*按钮*/
     .viewer-btn {
         position: absolute;
@@ -615,11 +606,9 @@
         box-sizing: border-box;
         user-select: none;
     }
-
     .viewer-btn:hover {
         background-color: #454749;
     }
-
     /*关闭按钮*/
     .viewer-close {
         top: 20px;
@@ -630,7 +619,6 @@
         background-color: rgba(0, 0, 0, 0.1);
         color: #fff;
     }
-
     /*照片的说明文字*/
     .viewer-comments {
         position: absolute;
@@ -650,7 +638,6 @@
     .viewer-comments:hover {
         background-color: #454749;
     }
-
     /*上一张按钮*/
     .viewer-prev, .viewer-next {
         top: 50%;
@@ -662,15 +649,12 @@
         background-color: rgba(0, 0, 0, 0.1);
         border-color: #fff;
     }
-
     .viewer-prev {
         left: 40px;
     }
-
     .viewer-next {
         right: 40px;
     }
-
     /*动作按钮*/
     .viewer-actions {
         left: 50%;
@@ -683,7 +667,6 @@
         border-color: #fff;
         border-radius: 22px;
     }
-
     .viewer-actions-inner {
         width: 100%;
         height: 100%;
@@ -695,7 +678,6 @@
         align-items: center;
         justify-content: space-around;
     }
-
     /*工具栏*/
     .viewer-toolbar {
         position: absolute;
@@ -704,7 +686,6 @@
         top: 20px;
         right: 30px;
     }
-
     .viewer-toolbar i {
         margin-right: 10px;
         width: 44px;
@@ -717,12 +698,10 @@
         border-radius: 50%;
         cursor: pointer;
     }
-
     .viewer-toolbar i:hover {
         background-color: #454749;
         border-radius: 50%;
     }
-
     /*侧边栏*/
     .viewer-side {
         position: fixed;
@@ -735,18 +714,15 @@
         background-color: #202124;
         color: #d9d9d9;
     }
-
     .viewer-side >>> .el-row {
         padding: 15px 30px;
     }
-
     .side-close { /*侧边栏的关闭栏*/
         position: fixed;
         width: 360px;
         background-color: #202124;
         z-index: 1
     }
-
     /*侧边栏的关闭按钮*/
     .side-btn-close {
         width: 40px;
@@ -758,12 +734,10 @@
         font-size: 23px;
         cursor: pointer;
     }
-
     .side-btn-close:hover {
         background-color: #454749;
         border-radius: 50%;
     }
-
     .side-album-cover { /*侧边栏影集封面*/
         width: 44px;
         height: 44px;
@@ -773,15 +747,12 @@
         background-repeat: no-repeat;
         border-radius: 5px;
     }
-
     .side-href { /*侧边栏照片拍摄时间*/
         cursor: pointer;
     }
-
     .side-href:hover {
         background-color: #454545;
     }
-
     .side-title { /*侧边栏中超长的文字*/
         white-space: nowrap;
         text-overflow: ellipsis;

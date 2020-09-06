@@ -66,3 +66,4 @@ new Vue({
     router,  //路由
     store,  //全局状态管理
 }).$mount('#app')
+
