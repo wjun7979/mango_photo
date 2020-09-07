@@ -1,8 +1,8 @@
 <template>
-    <el-container class="pick-wrapper">
-        <el-header class="mp-page-header" height="56px">
+    <el-container>
+        <el-header class="mp-page-header" height="56px" style="padding: 4px 0 0 0">
             <el-col class="mp-page-header-title" :span="8">
-                <i class="el-icon-close pick-close" @click="onClose"></i>
+                <i class="el-icon-close pick-close" @click="$router.back()"></i>
                 <span v-if="addList.length===0 && removeList.length===0">添加到影集：{{albumName}}</span>
                 <span v-if="addList.length>0" style="padding-left: 7px;">添加了 {{addList.length}} 张照片</span>
                 <span v-if="addList.length>0 && removeList.length>0" style="padding-left: 7px;">，</span>
@@ -14,13 +14,13 @@
                         <UploadFile callMode="album" :albumUUID="albumUUID" button-text="从计算机中选择"
                                     :on-completed="onClose"></UploadFile>
                     </el-form-item>
-                    <el-form-item style="padding-right: 20px">
+                    <el-form-item style="padding-right: 10px">
                         <el-button type="primary" size="small" @click="finishPick">完成</el-button>
                     </el-form-item>
                 </el-form>
             </el-col>
         </el-header>
-        <el-main :style="{height: mainHeight, overflow: 'auto', padding: '20px'}">
+        <el-main style="padding-top: 56px">
             <PhotoList callMode="pick" :albumUUID="albumUUID" :albumName="albumName" :albumPhotoList="albumPhotoList"
                        :on-pick="onPick"></PhotoList>
         </el-main>
@@ -30,68 +30,61 @@
 <script>
     import PhotoList from "./PhotoList";
     import UploadFile from "./UploadFile";
-    import {rafThrottle} from "element-ui/src/utils/util";
-    import {off, on} from "element-ui/src/utils/dom";
 
     export default {
         name: "AddPhotoToAlbum",
         data() {
             return {
+                albumUUID: this.$route.params.albumUUID,
+                albumName: '',
+                albumPhotoList: [],  //影集中的照片列表
                 addList: [],  //添加的照片列表
                 removeList: [],  //移除的照片列表
             }
         },
         components: {PhotoList, UploadFile},
-        props: {
-            albumUUID: {  //影集uuid
-                type: String,
-                default: ''
-            },
-            albumName: {  //影集标题
-                type: String,
-                default: ''
-            },
-            albumPhotoList: {  //影集中的照片列表
-                type: Array,
-                default: () => []
-            },
-            onClose: {  //关闭照片选择界面时的回调函数
-                type: Function,
-                default: () => {
-                }
-            }
-        },
         computed: {
             apiUrl() {
                 return this.$store.state.apiUrl  //后台api调用地址
             },
-            mainHeight() {
-                return this.$store.state.mainHeight  //主内容区的高度
-            },
         },
         mounted() {
-            this.deviceSupportInstall()  //注册键盘按键支持
-        },
-        beforeDestroy() {
-            this.deviceSupportUninstall()  //卸载键盘按键支持
+            this.getAlbum()
+            this.getAlbumPhotoList()
         },
         methods: {
-            deviceSupportInstall() {
-                //注册键盘按键支持
-                this._keyDownHandler = rafThrottle(e => {
-                    const keyCode = e.keyCode
-                    switch (keyCode) {
-                        case 27:  //ESC取消选择
-                            this.onClose()
-                            break
+            onClose() {
+                this.$router.back()
+            },
+            getAlbum() {
+                //获取指定的影集信息
+                this.$axios({
+                    method: 'get',
+                    url: this.apiUrl + '/api/album_get',
+                    params: {
+                        uuid: this.albumUUID
+                    }
+                }).then(response => {
+                    const result = response.data
+                    this.albumName = result.name
+                })
+            },
+            getAlbumPhotoList() {
+                //获取当前影集中的照片，进行初始选中
+                this.$axios({
+                    method: 'get',
+                    url: this.apiUrl + '/api/photo_list',
+                    params: {
+                        userid: localStorage.getItem('userid'),
+                        call_mode: 'album',
+                        album_uuid: this.albumUUID,
+                    }
+                }).then(response => {
+                    this.albumPhotoList = []
+                    for (let item of response.data) {
+                        this.albumPhotoList.push(item.uuid)
                     }
                 })
-                on(document, 'keydown', this._keyDownHandler)
-            },
-            deviceSupportUninstall() {
-                //卸载键盘按键支持
-                off(document, 'keydown', this._keyDownHandler)
-                this._keyDownHandler = null
             },
             onPick(removeList, addList) {
                 //当选中列表值改变时的回调
@@ -114,7 +107,7 @@
                         this.pickToAlbum()
                     }
                     else {
-                        this.onClose()
+                        this.$router.back()
                     }
                 }
             },
@@ -150,22 +143,11 @@
 </script>
 
 <style scoped>
-    .pick-wrapper {
-        position: fixed;
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        padding-top: 8px;
-        text-align: left;
-        background-color: #fff;
-        z-index: 1100;
-    }
-
     .pick-close { /*影集页头的返回按钮*/
         padding: 8px;
         margin-right: 10px;
         color: #5f6368;
+        font-weight: bold;
         cursor: pointer;
     }
 

@@ -3,8 +3,10 @@ import VueRouter from 'vue-router'
 import Login from './components/Login'
 import Main from './components/Main'
 import Photos from "./components/Photos"
+import Photo from "./components/Photo";
 import Albums from "./components/Albums";
 import Album from "./components/Album";
+import Pick from "./components/Pick";
 import Trash from "./components/Trash"
 import NotFound from "./components/NotFound";
 
@@ -18,7 +20,7 @@ Vue.use(VueRouter)
 
 //定义routes路由的集合，数组类型
 const routes = [
-    {path: '', redirect: '/login'},
+    {path: '', redirect: '/photos'},
     {
         path: '/login', name: 'login', component: Login, meta: {
             title: '登录'
@@ -48,6 +50,16 @@ const routes = [
             },
         ]
     },
+    {
+        path: '/photo/:uuid/:callMode/:albumUUID?', name: 'photo', component: Photo, meta: {
+            title: '照片'
+        }
+    },
+    {
+        path: '/pick/:albumUUID', name: 'pick', component: Pick, meta: {
+            title: '添加照片到影集'
+        }
+    },
     {path: '*', component: NotFound},
 ]
 
@@ -55,6 +67,18 @@ const routes = [
 const router = new VueRouter({
     mode: 'history',
     routes,  //ES6简写，等于routes:routes
+    scrollBehavior(to, from, savedPosition) {
+        //点击浏览器后退按钮时，定位到之前的滚动条位置
+        if (savedPosition) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve(savedPosition)
+                }, 500)
+            })
+        } else {
+            return {x: 0, y: 0}
+        }
+    }
 })
 
 //路由拦截

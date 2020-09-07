@@ -91,7 +91,9 @@
                     }
                 }).then(response => {
                     this.userInfo = response.data
-                    this.userInfo.avatar = this.apiUrl + '/' + this.userInfo.avatar
+                    if (this.userInfo.avatar) {
+                        this.userInfo.avatar = this.apiUrl + '/' + this.userInfo.avatar
+                    }
                 })
             },
             beforeUpload(file) {

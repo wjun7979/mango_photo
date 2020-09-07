@@ -6,7 +6,7 @@
                 <CreateAlbum></CreateAlbum>
             </el-col>
         </el-header>
-        <el-main :style="{height: mainHeight, overflow: 'auto', padding: 0}">
+        <el-main class="mp-page-main">
             <AlbumList></AlbumList>
         </el-main>
     </el-container>
@@ -19,11 +19,6 @@
     export default {
         name: "Albums",
         components: {AlbumList, CreateAlbum},
-        computed: {
-            mainHeight() {
-                return this.$store.state.mainHeight  //主内容区的高度
-            },
-        },
     }
 </script>
 

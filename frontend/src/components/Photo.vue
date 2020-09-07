@@ -5,7 +5,7 @@
                  :style="{'margin-right': viewerWrapperMargin,'z-index': 2000}">
                 <div class="viewer-mask"></div>
                 <!-- 关闭按钮 -->
-                <span class="viewer-btn viewer-close" @click="close">
+                <span class="viewer-btn viewer-close" @click="$router.back()">
                     <i class="el-icon-back"></i>
                 </span>
                 <span class="viewer-comments" @click="setPhotoComments">{{currentImg.comments}}</span>
@@ -40,9 +40,6 @@
                                 <el-dropdown-item icon="el-icon-delete" command="trash_photo">移到回收站</el-dropdown-item>
                             </el-dropdown-menu>
                         </el-dropdown>
-                    </div>
-                    <div v-if="callMode === 'pick'">
-                        <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
                     </div>
                     <div v-if="callMode === 'trash'">
                         <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
@@ -169,6 +166,32 @@
                     </el-row>
                 </div>
             </div>
+            <!--添加到影集对话框-->
+            <el-dialog class="album-dialog" title="添加到影集"
+                       :visible.sync="isShowAddToAlbumDialog"
+                       width="400px"
+                       :close-on-click-modal="false"
+                       :destroy-on-close="true">
+                <el-tree class="album-tree" ref="albumTree" :lazy="true" :load="loadAlbumTree" node-key="uuid"
+                         :props="{label:'name'}"
+                         :default-expand-all="false"
+                         :expand-on-click-node="true"
+                         :highlight-current="true">
+                    <div slot-scope="{ data }">
+                        <div class="album-tree-cover"
+                             :style="{'background-image':'url('+apiUrl+'/'+data.cover_path+'/'+data.cover_name+')'}"></div>
+                        <div style="float: left">
+                            <p class="album-tree-title">{{data.name}}</p>
+                            <p class="album-tree-photos" v-if="data.photos === 0">没有内容</p>
+                            <p class="album-tree-photos" v-else>{{data.photos}}项</p>
+                        </div>
+                    </div>
+                </el-tree>
+                <span slot="footer">
+                <el-button @click="isShowAddToAlbumDialog = false" size="small">取消</el-button>
+                <el-button type="primary" size="small" @click="addToAlbum">确定</el-button>
+            </span>
+            </el-dialog>
         </div>
     </transition>
 </template>
@@ -192,7 +215,13 @@
         name: "Preview",
         data() {
             return {
+                uuid: this.$route.params.uuid,  //当前点击的照片uuid
+                callMode: this.$route.params.callMode,  //调用模式
+                albumUUID: this.$route.params.albumUUID,  //当调用模式为album时，必须指定影集uuid
+                albumName: '',  //影集标题
+                previewListOrder: [],  //大图预览列表
                 index: 0,  //当前预览图编号
+                currentImg: {},  //当前预览图
                 loading: false,  //当前是否于图片加载状态
                 mode: Mode.CONTAIN,  //显示模式 CONTAIN:适应窗口,ORIGINAL:原始
                 transform: {
@@ -208,34 +237,13 @@
                 photoInfo: {},  //当前照片的详细信息
                 photoAlbums: [],  //当前照片所属的影集列表
                 baiduMap: null,  //百度地图对象
+                isShowAddToAlbumDialog: false,  //是否显示添加到影集对话框
             }
-        },
-        props: {
-            callMode: {  //调用模式
-                type: String,
-                default: 'photo'  //photo:照片; album:影集; pick:挑选照片到影集
-            },
-            albumUUID: {  //当调用模式为album时，必须指定影集uuid
-                type: String,
-                default: ''
-            },
-            albumName: {  //影集标题
-                type: String,
-                default: ''
-            },
-            urlList: {  //大图预览列表
-                type: Array,
-                default: () => []
-            },
-            onClose: {  //关闭预览窗口后的回调
-                type: Function,
-                default: () => {
-                }
-            },
         },
         watch: {
             index: {
                 handler: function () {
+                    this.currentImg = this.previewListOrder[this.index]
                     this.reset();
                 }
             },
@@ -248,19 +256,12 @@
                 });
             }
         },
-        mounted() {
-            this.deviceSupportInstall()
-            this.$refs['viewer-wrapper'].focus()
-        },
         computed: {
             apiUrl() {
                 return this.$store.state.apiUrl  //后台api调用地址
             },
             isSingle() {  //是否只有一张图片
-                return this.urlList.length <= 1
-            },
-            currentImg() {  //当前图片默认是传入数组urlList的第一个元素
-                return this.urlList[this.index]
+                return this.previewListOrder.length <= 1
             },
             imgStyle() {
                 const {scale, deg, offsetX, offsetY, enableTransition} = this.transform
@@ -276,37 +277,44 @@
                 return style;
             }
         },
+        mounted() {
+            if (this.callMode === 'album') {
+                this.getAlbum()
+            }
+            this.getPreviewList()  //获取预览列表
+            this.deviceSupportInstall()
+            this.$refs['viewer-wrapper'].focus()
+        },
+        beforeDestroy() {
+            this.deviceSupportUninstall()  //卸载键盘按键支持
+        },
         methods: {
-            close() {  //关闭大图预览
-                this.deviceSupportUninstall();
-                this.onClose();
-            },
             deviceSupportInstall() {  //注册键盘按键和鼠标滚动支持
                 this._keyDownHandler = rafThrottle(e => {
-                    const keyCode = e.keyCode;
+                    const keyCode = e.keyCode
                     switch (keyCode) {
                         case 27:  //ESC退出
-                            this.close();
-                            break;
+                            this.$router.back()
+                            break
                         case 32:  //SPACE切换显示模式:1:1或合适缩放
-                            this.toggleMode();
-                            break;
+                            this.toggleMode()
+                            break
                         case 37:  //LEFT_ARROW上一张
-                            this.prev();
-                            break;
+                            this.prev()
+                            break
                         case 38:  //UP_ARROW放大
-                            this.handleActions('zoomIn');
-                            break;
+                            this.handleActions('zoomIn')
+                            break
                         case 39:  //RIGHT_ARROW 下一张
-                            this.next();
-                            break;
+                            this.next()
+                            break
                         case 40:  //DOWN_ARROW缩小
-                            this.handleActions('zoomOut');
-                            break;
+                            this.handleActions('zoomOut')
+                            break
                     }
                 });
                 this._mouseWheelHandler = rafThrottle(e => {
-                    const delta = e.wheelDelta ? e.wheelDelta : -e.detail;
+                    const delta = e.wheelDelta ? e.wheelDelta : -e.detail
                     if (delta > 0) {
                         this.handleActions('zoomIn', {
                             zoomRate: 0.2,
@@ -320,7 +328,7 @@
                     }
                 });
                 on(document, 'keydown', this._keyDownHandler);
-                on(this.$refs.img, mousewheelEventName, this._mouseWheelHandler);
+                on(this.$refs.img, mousewheelEventName, this._mouseWheelHandler)
             },
             deviceSupportUninstall() {  //卸载键盘按键和鼠标滚动支持
                 off(document, 'keydown', this._keyDownHandler);
@@ -371,16 +379,32 @@
                 this.reset();
             },
             prev() {  //上一张
-                const len = this.urlList.length;
+                const len = this.previewListOrder.length;
                 this.index = (this.index - 1 + len) % len;
+                this.$router.replace({
+                    name: 'photo',
+                    params: {
+                        uuid: this.previewListOrder[this.index].uuid,
+                        callMode: this.callMode,
+                        albumUUID: this.albumUUID
+                    }
+                })
                 if (this.isShowInfoSide) {
                     this.getPhotoInfo()  //重新获取照片详细信息
                     this.getPhotoAlbums()  //重新获取照片所属的影集列表
                 }
             },
             next() {  //下一张
-                const len = this.urlList.length;
+                const len = this.previewListOrder.length;
                 this.index = (this.index + 1) % len;
+                this.$router.replace({
+                    name: 'photo',
+                    params: {
+                        uuid: this.previewListOrder[this.index].uuid,
+                        callMode: this.callMode,
+                        albumUUID: this.albumUUID
+                    }
+                })
                 if (this.isShowInfoSide) {
                     this.getPhotoInfo()  //重新获取照片详细信息
                     this.getPhotoAlbums()  //重新获取照片所属的影集列表
@@ -413,6 +437,47 @@
                 }
                 transform.enableTransition = enableTransition;
             },
+            getAlbum() {
+                //获取指定的影集信息
+                this.$axios({
+                    method: 'get',
+                    url: this.apiUrl + '/api/album_get',
+                    params: {
+                        uuid: this.albumUUID
+                    }
+                }).then(response => {
+                    const result = response.data
+                    this.albumName = result.name
+                })
+            },
+            getPreviewList() {
+                //获取预览列表
+                this.$axios({
+                    method: 'get',
+                    url: this.apiUrl + '/api/photo_list',
+                    params: {
+                        userid: localStorage.getItem('userid'),
+                        call_mode: this.callMode,
+                        album_uuid: this.albumUUID,
+                    }
+                }).then(response => {
+                    let photoList = response.data
+                    // 生成大图预览列表
+                    let previewList = []
+                    for (let item of photoList) {
+                        previewList.push({
+                            'uuid': item.uuid,
+                            'name': item.name,
+                            'url': this.apiUrl + '/' + item.path + '/' + item.name,
+                            'comments': item.comments
+                        })
+                    }
+                    let index = previewList.findIndex(t => t.uuid === this.uuid)  //获取即将预览的照片索引
+                    //根据索引对预览数组重新排序
+                    this.previewListOrder = previewList.slice(index).concat(previewList.slice(0, index))
+                    this.currentImg = this.previewListOrder[0]
+                })
+            },
             showModify() {  //显示修改侧边栏
                 this.isShowInfoSide = false
                 this.isShowModifySide = !this.isShowModifySide
@@ -444,7 +509,7 @@
                     method: 'get',
                     url: this.apiUrl + '/api/photo_get_info',
                     params: {
-                        photo_uuid: this.urlList[this.index].uuid
+                        photo_uuid: this.previewListOrder[this.index].uuid
                     }
                 }).then(response => {
                     const res = response.data
@@ -472,7 +537,7 @@
                     method: 'get',
                     url: this.apiUrl + '/api/photo_get_albums',
                     params: {
-                        photo_uuid: this.urlList[this.index].uuid
+                        photo_uuid: this.previewListOrder[this.index].uuid
                     }
                 }).then(response => {
                     const res = response.data
@@ -490,7 +555,7 @@
                         this.downloadPhoto()
                         break
                     case 'add_to_album':
-                        this.addToAlbum()
+                        this.isShowAddToAlbumDialog = true
                         break
                     case 'remove_from_album':
                         this.removeFromAlbum()
@@ -507,17 +572,118 @@
                 //下载
                 this.$message('下载功能还没做好呢:-)')
             },
+            loadAlbumTree(node, resolve) {
+                //加载影集树
+                let parent_uuid = ''
+                if (node.level !== 0) {
+                    parent_uuid = node.data.uuid
+                }
+                this.$axios({
+                    method: 'get',
+                    url: this.apiUrl + '/api/album_list',
+                    params: {
+                        parent_uuid: parent_uuid,
+                        userid: localStorage.getItem('userid'),
+                    }
+                }).then(response => {
+                    const result = response.data
+                    return resolve(result)
+                })
+            },
             addToAlbum() {
                 //将照片添加到影集
-                this.$message('将照片添加到影集功能还没做好呢:-)')
+                let album_uuid = this.$refs.albumTree.getCurrentKey()
+                let album_name = ''
+                if (album_uuid)  //如果有节点被选中，获取节点名称
+                    album_name = this.$refs.albumTree.getCurrentNode().name
+                if (!album_uuid) {
+                    this.$message({
+                        message: '请选择要添加照片的影集',
+                        type: 'error',
+                    })
+                    return false
+                }
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/album_add_photo',
+                    data: {
+                        album_uuid: album_uuid,
+                        photo_list: [this.currentImg.uuid]
+                    }
+                }).then(() => {
+                    let msg = '成功将照片' + this.currentImg.name + '添加到影集 [' + album_name + '] 中'
+                    this.$message({
+                        message: msg,
+                        type: 'success',
+                    })
+                    this.isShowAddToAlbumDialog = false
+                    //如果信息侧边栏处于打开状态，则刷新该图片所属的影集列表
+                    if (this.isShowInfoSide) {
+                        this.getPhotoAlbums()
+                    }
+                })
             },
             removeFromAlbum() {
                 //从影集中移除照片
-                this.$message('从影集中移除照片功能还没做好呢:-)')
+                this.$confirm('您仍然可以在相册中找到该内容', '要移除此内容吗？', {
+                    confirmButtonText: '移除',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/album_remove_photo',
+                        data: {
+                            album_uuid: this.albumUUID,
+                            photo_list: [this.currentImg.uuid]
+                        }
+                    }).then(() => {
+                        let msg = '照片' + this.currentImg.name + '已从影集 [' + this.albumName + '] 中移除'
+                        this.$message({
+                            message: msg,
+                            type: 'success',
+                        })
+                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                        //从当前预览列表中移除当前照片
+                        this.previewListOrder.splice(this.index, 1)
+                        if (this.previewListOrder.length > 0)
+                            this.next()  //如果列表中还有照片，则显示下一张
+                        else
+                            this.close()  //否则关闭预览
+                    })
+                }).catch(() => {
+                });
             },
             trashPhoto() {
                 //将照片移到回收站
-                this.$message('将照片移到回收站功能还没做好呢:-)')
+                this.$confirm('当需要的时候可以在回收站中恢复。', '确定要删除照片吗？', {
+                    confirmButtonText: '移到回收站',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/photo_trash',
+                        data: {
+                            photo_list: [this.currentImg.uuid]
+                        }
+                    }).then(() => {
+                        let msg = '已将照片' + this.currentImg.name + '移到回收站'
+                        this.$message({
+                            message: msg,
+                            type: 'success',
+                        })
+                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                        this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
+                        //从当前预览列表中移除当前照片
+                        this.previewListOrder.splice(this.index, 1)
+                        if (this.previewListOrder.length > 0)
+                            this.next()  //如果列表中还有照片，则显示下一张
+                        else
+                            this.close()  //否则关闭预览
+                    })
+                }).catch(() => {
+                });
             },
             setAlbumCover() {
                 //设为影集封面
@@ -525,11 +691,57 @@
             },
             removePhoto() {
                 //永久删除照片
-                this.$message('永久删除功能还没做好呢:-)')
+                this.$confirm('内容一旦永久删除将无法恢复', '要永久删除选中的内容吗？', {
+                    confirmButtonText: '删除',
+                    cancelButtonText: '取消',
+                    type: 'warning'
+                }).then(() => {
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/photo_remove',
+                        data: {
+                            photo_list: [this.currentImg.uuid]
+                        }
+                    }).then(() => {
+                        let msg = '照片' + this.currentImg.name + '成功删除'
+                        this.$message({
+                            message: msg,
+                            type: 'success',
+                        })
+                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                        //从当前预览列表中移除当前照片
+                        this.previewListOrder.splice(this.index, 1)
+                        if (this.previewListOrder.length > 0)
+                            this.next()  //如果列表中还有照片，则显示下一张
+                        else
+                            this.close()  //否则关闭预览
+                    })
+                }).catch(() => {
+                });
             },
             restorePhoto() {
                 //将照片从回收站恢复
-                this.$message('将照片从回收站恢复功能还没做好呢:-)')
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/photo_restore',
+                    data: {
+                        photo_list: [this.currentImg.uuid]
+                    }
+                }).then(() => {
+                    let msg = '照片' + this.currentImg.name + '成功恢复'
+                    this.$message({
+                        message: msg,
+                        type: 'success',
+                    })
+                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                    this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
+                    //从当前预览列表中移除当前照片
+                    this.previewListOrder.splice(this.index, 1)
+                    if (this.previewListOrder.length > 0)
+                        this.next()  //如果列表中还有照片，则显示下一张
+                    else
+                        this.close()  //否则关闭预览
+                })
             },
             setPhotoComments() {
                 //为照片添加说明文字
@@ -757,5 +969,34 @@
         white-space: nowrap;
         text-overflow: ellipsis;
         overflow: hidden;
+    }
+
+    .album-tree { /*影集树*/
+        height: 300px;
+    }
+    .album-dialog >>> .el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content {
+        color: #f56c6c; /*影集树选中的节点*/
+    }
+    .album-tree >>> .el-tree-node__content {
+        height: 50px;
+        margin-bottom: 10px;
+    }
+    .album-tree-cover {
+        float: left;
+        margin-top: 2px;
+        margin-right: 10px;
+        width: 40px;
+        height: 40px;
+        background-color: #80868b;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        border-radius: 5px;
+    }
+    .album-tree-title {
+        font-size: 16px;
+    }
+    .album-tree-photos { /*影集中照片的数量*/
+        font-size: 12px;
     }
 </style>

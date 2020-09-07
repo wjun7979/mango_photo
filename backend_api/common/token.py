@@ -7,7 +7,7 @@ class Token(object):
     """处理Token"""
 
     @staticmethod
-    def get_token(key, expire=3600):
+    def get_token(key, expire=86400):
         """加密token"""
         key += 'Nhj10LyBc'
         ts_str = str(time.time() + expire)

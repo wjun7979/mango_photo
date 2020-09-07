@@ -1,6 +1,6 @@
 <template>
     <div>
-        <el-button icon="el-icon-upload2" size="small" @click="showUploadDialog = true" :type="buttonType">
+        <el-button icon="el-icon-upload2" size="small" @click="showUpload" :type="buttonType">
             {{buttonText}}
         </el-button>
         <el-dialog title="上传"
@@ -78,6 +78,12 @@
             },
         },
         methods: {
+            showUpload() {
+                this.showUploadDialog = true
+                if (this.callMode === 'photo') {
+                    this.$store.commit('cancelSelectPhoto', {action: true})  //取消已选中的照片
+                }
+            },
             submitUpload() {
                 //提交
                 if (this.fileList.length === 0) {

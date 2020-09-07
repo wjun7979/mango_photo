@@ -8,7 +8,7 @@
                 <UploadFile></UploadFile>
             </el-col>
         </el-header>
-        <el-main :style="{height: mainHeight, overflow: 'auto', padding: 0}">
+        <el-main class="mp-page-main">
             <PhotoList></PhotoList>
         </el-main>
     </el-container>
@@ -21,11 +21,6 @@
     export default {
         name: "Photos",
         components: {PhotoList, UploadFile},
-        computed: {
-            mainHeight() {
-                return this.$store.state.mainHeight  //主内容区的高度
-            },
-        },
     }
 </script>
 

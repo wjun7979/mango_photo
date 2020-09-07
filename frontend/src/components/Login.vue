@@ -124,10 +124,10 @@
         position: absolute;
         left: calc(50% - 200px);
         width: 400px;
-        background-color: #fff;
+        background-color: rgba(255, 255, 255, 0.9);
         border: 1px solid #e4e4e4;
         border-radius: 20px;
-        box-shadow: 0 1px 2px 0 rgba(60,64,67,.30), 0 2px 6px 2px rgba(60,64,67,.15);
+        box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 2px 6px 2px rgba(60, 64, 67, .15);
     }
 
     .login-title { /*网站标题*/
@@ -151,7 +151,7 @@
         padding: 20px 30px;
         text-align: right;
         border-top: 1px solid #e4e4e4;
-        background-color: #f7f7f7;
+        background-color: rgba(200, 200, 200, 0.6);
         border-bottom-left-radius: 20px;
         border-bottom-right-radius: 20px;
     }

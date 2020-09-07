@@ -8,7 +8,7 @@
                 <el-button icon="el-icon-delete" size="small" @click="emptyTrash">清空回收站</el-button>
             </el-col>
         </el-header>
-        <el-main :style="{height: mainHeight, overflow: 'auto', padding: 0}">
+        <el-main class="mp-page-main">
             <PhotoList callMode="trash"></PhotoList>
         </el-main>
     </el-container>
@@ -23,9 +23,6 @@
         computed: {
             apiUrl() {
                 return this.$store.state.apiUrl  //后台api调用地址
-            },
-            mainHeight() {
-                return this.$store.state.mainHeight  //主内容区的高度
             },
         },
         methods: {

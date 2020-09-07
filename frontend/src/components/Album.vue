@@ -17,30 +17,23 @@
                 </el-form>
             </el-col>
         </el-header>
-        <el-main :style="{height: mainHeight, overflow: 'auto', padding: 0}">
-            <PhotoList callMode="album" :albumUUID="albumUUID" :albumName="albumName"></PhotoList>
+        <el-main class="mp-page-main">
+            <PhotoList callMode="album" :albumUUID="albumUUID"></PhotoList>
         </el-main>
-
-        <AddPhotoToAlbum v-if="isShowAddPhotoToAlbum" :albumUUID="albumUUID" :albumName="albumName"
-                         :albumPhotoList="albumPhotoList"
-                         :on-close="closePick"></AddPhotoToAlbum>
     </el-container>
 </template>
 
 <script>
     import PhotoList from "./PhotoList"
     import CreateAlbum from "./CreateAlbum";
-    import AddPhotoToAlbum from "./AddPhotoToAlbum";
 
     export default {
         name: "Album",
-        components: {AddPhotoToAlbum, PhotoList, CreateAlbum},
+        components: {PhotoList, CreateAlbum},
         data() {
             return {
                 albumUUID: this.$route.params.uuid,  //影集uuid
                 albumName: '',  //影集标题
-                isShowAddPhotoToAlbum: false,  //是否显示添加照片到影集的选择界面
-                albumPhotoList: [],  //影集中的照片列表
             }
         },
         props: [
@@ -50,24 +43,11 @@
             apiUrl() {
                 return this.$store.state.apiUrl  //后台api调用地址
             },
-            mainHeight() {
-                return this.$store.state.mainHeight  //主内容区的高度
-            },
         },
         mounted() {
             this.getAlbum()
-            window.addEventListener('popstate', this.goBack)
-        },
-        beforeDestroy() {
-            window.removeEventListener('popstate', this.goBack)
         },
         methods: {
-            goBack() {
-                //当浏览器后退时，关闭添加照片到影集的选择界面
-                if (this.isShowAddPhotoToAlbum) {
-                    this.isShowAddPhotoToAlbum = false
-                }
-            },
             getAlbum() {
                 //获取指定的影集信息
                 this.$axios({
@@ -82,30 +62,10 @@
                 })
             },
             openPick() {
-                this.$store.commit('cancelSelectPhoto', {action: true})  //取消已选中的照片
-                //打开照片选择界面，将当前影集中的照片传入组件进行初始选中
-                this.$axios({
-                    method: 'get',
-                    url: this.apiUrl + '/api/photo_list',
-                    params: {
-                        userid: localStorage.getItem('userid'),
-                        call_mode: 'album',
-                        album_uuid: this.albumUUID,
-                    }
-                }).then(response => {
-                    this.albumPhotoList = []
-                    for (let item of response.data) {
-                        this.albumPhotoList.push(item.uuid)
-                    }
-                    this.isShowAddPhotoToAlbum = true
-                    //向浏览器插入一个空的历史记录
-                    history.pushState(null, null, document.URL)
+                this.$router.push({
+                    name: 'pick',
+                    params: {albumUUID: this.albumUUID}
                 })
-            },
-            closePick() {
-                //关闭照片选择界面
-                this.isShowAddPhotoToAlbum = false
-                this.$router.back()  //抵消打开照片选择界面时插入的空历史记录
             },
         }
     }
@@ -116,6 +76,7 @@
         padding: 8px;
         margin-right: 10px;
         color: #5f6368;
+        font-weight: bold;
         cursor: pointer;
     }
 

@@ -1,6 +1,6 @@
 <template>
     <div class="mp-index-wrap">
-        <transition name="el-fade-in-linear">
+        <transition name="fade" :duration="{ enter: 1000, leave: 0 }">
             <router-view></router-view>
         </transition>
     </div>
@@ -8,22 +8,17 @@
 
 <script>
     export default {
-        name: 'App',
-        mounted() {
-            window.addEventListener('resize', this.listenResize)
-        },
-        beforeDestroy() {
-            window.removeEventListener('resize', this.listenResize)
-        },
-        methods: {
-            listenResize: function () {
-                //监听浏览器窗口大小变化的事件
-                this.$store.commit('setMainHeight')  //重新设置主内容区的高度
-            },
-        }
+        name: 'App'
     }
 </script>
 
 <style scoped>
+    /*路由切换过渡动画*/
+    .fade-enter-active, .fade-leave-active {
+        transition: opacity .5s;
+    }
 
+    .fade-enter, .fade-leave-to {
+        opacity: 0;
+    }
 </style>

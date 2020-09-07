@@ -6,7 +6,6 @@ Vue.use(Vuex)  //全局状态管理
 const store = new Vuex.Store({
     state: {
         apiUrl: 'http://127.0.0.1:8000',  //后台api调用地址
-        mainHeight: document.documentElement.clientHeight - 72 - 56 - 48 + 'px',  //主内容区的高度
         refreshPhoto: false,  //是否刷新照片列表
         refreshAlbum: false,  //是否刷新影集列表
         refreshPhotoStatistics: false,  //是否刷新照片库统计信息
@@ -20,9 +19,6 @@ const store = new Vuex.Store({
             else {
                 state.apiUrl = 'http://wlon.vicp.net:7080'
             }
-        },
-        setMainHeight(state) {  //设置主内容区的高度
-            state.mainHeight = document.documentElement.clientHeight - 72 - 56 - 48 + 'px'
         },
         refreshPhoto(state, payload) {  //更改"是否刷新照片列表"的值
             state.refreshPhoto = payload.show
