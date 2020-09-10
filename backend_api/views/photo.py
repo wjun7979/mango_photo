@@ -1,7 +1,7 @@
 import os
 import json
 import traceback
-
+import requests  # 调用api
 from django.db import transaction
 from django.db.models import Count, Sum, Q
 from django.db.models import F
@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
 from backend_api.common.date_encoder import DateEncoder
-from backend_api.models import Photo, AlbumPhoto, Album
+from backend_api.models import Photo, AlbumPhoto, Album, Address
 from backend_api.views.album import album_auto_cover
 
 
@@ -28,7 +28,8 @@ def photo_list(request):
             photos = photos.filter(albumphoto__album_uuid=album_uuid)
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
-    photos = photos.values('uuid', 'path', 'path_thumbnail', 'name', 'width', 'height', 'exif_datetime', 'comments')
+    photos = photos.values('uuid', 'path', 'path_thumbnail', 'name', 'width', 'height', 'exif_datetime', 'comments',
+                           'address__address', 'address__poi_name')
     photos = photos.order_by('-exif_datetime')
 
     response = json.loads(json.dumps(list(photos), cls=DateEncoder))
@@ -42,8 +43,8 @@ def photo_get_info(request):
     photo_uuid = request.GET.get('photo_uuid')
     photo = Photo.objects.values('uuid', 'name', 'width', 'height', 'size', 'exif_datetime', 'exif_make', 'exif_model',
                                  'exif_fnumber', 'exif_exposuretime', 'exif_focallength', 'exif_isospeedratings',
-                                 'comments', photo_address=F('address__address'), photo_lat=F('address__lat'),
-                                 photo_lng=F('address__lng'))
+                                 'comments', photo_address=F('address__address'), photo_poi_name=F('address__poi_name'),
+                                 photo_lat=F('address__lat'), photo_lng=F('address__lng'))
     photo = photo.get(uuid=photo_uuid)
     photo['exif_datetime'] = photo['exif_datetime'].strftime('%Y-%m-%d %H:%M:%S')  # 对日期型字段进行转换
     return JsonResponse(photo, safe=False, status=200)
@@ -204,3 +205,63 @@ def photo_set_datetime(request):
     photo_datetime = request_data.get('photo_datetime')
     Photo.objects.filter(uuid__in=photo_uuid_list).update(exif_datetime=photo_datetime)
     return JsonResponse({}, status=200)
+
+
+@require_http_methods(['GET'])
+def photo_query_location(request):
+    """查询位置信息"""
+    ak = settings.BMAP_AK
+    query = request.GET.get('query')
+    # 地点输入提示服务
+    baidu_map_api = 'http://api.map.baidu.com/place/v2/suggestion?ak={0}&query={1}' \
+                    '&region=全国&output=json'.format(ak, query)
+    response = requests.get(baidu_map_api)
+    result = response.json()
+    if result['status'] != 0:  # 接口调用失败
+        raise Exception(result['message'])  # 抛出异常
+    return JsonResponse(result['result'], safe=False, status=200)
+
+
+@require_http_methods(['POST'])
+@transaction.atomic  # 数据库事务处理
+def photo_set_location(request):
+    """修改照片的位置信息"""
+    save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
+    try:
+        ak = settings.BMAP_AK
+        request_data = json.loads(request.body)
+        photo_uuid_list = request_data.get('photo_list')
+        location = request_data.get('location')
+        Address.objects.filter(uuid__in=photo_uuid_list).delete()  # 先删除再插入
+        if location:
+            lat = location.split(',')[0]
+            lng = location.split(',')[1]
+            poi_name = location.split(',')[2]
+            # 全球逆地理编码服务
+            baidu_map_api = 'http://api.map.baidu.com/reverse_geocoding/v3/?ak={0}&output=json&coordtype=wgs84ll' \
+                            '&location={1},{2}'.format(ak, lat, lng)
+            response = requests.get(baidu_map_api)
+            result = response.json()
+            if result['status'] != 0:  # 接口调用失败
+                raise Exception(result['message'])  # 抛出异常
+            for item in photo_uuid_list:
+                address = Address()
+                address.uuid = Photo.objects.get(uuid=item)
+                address.lat = lat
+                address.lng = lng
+                address.address = result['result']['formatted_address']
+                address.poi_name = poi_name
+                address.country = result['result']['addressComponent']['country']
+                address.province = result['result']['addressComponent']['province']
+                address.city = result['result']['addressComponent']['city']
+                address.district = result['result']['addressComponent']['district']
+                address.town = result['result']['addressComponent']['town']
+                address.save()
+            return JsonResponse({'address': poi_name}, safe=False, status=200)
+        else:  # 删除位置信息
+            return JsonResponse({'address': ''}, safe=False, status=200)
+    except Exception as e:
+        traceback.print_exc()  # 输出详细的错误信息
+        transaction.savepoint_rollback(save_tag)  # 回滚数据库事务
+        response['msg'] = str(e)
+        return JsonResponse(response, status=500)

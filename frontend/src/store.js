@@ -10,6 +10,7 @@ const store = new Vuex.Store({
         refreshAlbum: false,  //是否刷新影集列表
         refreshPhotoStatistics: false,  //是否刷新照片库统计信息
         cancelSelectPhoto: false,  //是否取消已选中的照片
+        infoSideStatus: true,  //信息侧边栏的最后一次显示状态
     },
     mutations: {
         setApiUrl(state) {  //根据客户端访问地址改变API请求地址
@@ -32,6 +33,9 @@ const store = new Vuex.Store({
         cancelSelectPhoto(state, payload) {  //更改“是否取消已选中的照片”的值
             state.cancelSelectPhoto = payload.action
         },
+        setInfoSideStatus(state, payload) {  //更改“信息侧边栏的最后一次显示状态”的值
+            state.infoSideStatus = payload.status
+        }
     }
 })
 store.commit('setApiUrl')

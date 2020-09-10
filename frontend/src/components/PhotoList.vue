@@ -60,9 +60,21 @@
                                     </div>
                                 </div>
                             </el-image>
-                            <div v-if="img.comments" class="div-img-comments" :title="img.comments"
-                                 @click="clickImage(img.uuid, photoGroup.timestamp)">{{img.comments}}
+                            <div v-if="img.comments||img.address__address" class="div-img-comments"
+                                 @click="clickImage(img.uuid, photoGroup.timestamp)">
+                                <el-tooltip placement="bottom-start" :content="img.address__address">
+                                    <div slot="content">
+                                        <span v-show="img.address__poi_name">{{img.address__poi_name}} - </span>
+                                        <span>{{img.address__address}}</span>
+                                    </div>
+                                    <i v-if="img.address__address" class="el-icon-location-outline btn-location"></i>
+                                </el-tooltip>
+                                <el-tooltip placement="bottom-start" :content="img.comments">
+                                    <span>{{img.comments}}</span>
+                                </el-tooltip>
+
                             </div>
+
                         </div>
                     </div>
                 </el-checkbox-group>
@@ -139,13 +151,39 @@
         </el-dialog>
         <!--修改日期和时间对话框-->
         <el-dialog title="修改日期和时间" :visible.sync="isShowModifyDateTimeDialog" width="350px"
-                   @closed="deviceSupportInstall">
+                   :close-on-click-modal="false" @closed="deviceSupportInstall">
             <el-date-picker type="datetime" v-model="photoDateTime" default-time="8:00:00"
-                            placeholder="选择日期时ss间" format="yyyy-MM-dd HH:mm"
+                            placeholder="选择日期时间" format="yyyy-MM-dd HH:mm"
                             value-format="yyyy-MM-dd HH:mm:ss" style="width: 310px"></el-date-picker>
             <span slot="footer">
                 <el-button size="small" @click="isShowModifyDateTimeDialog=false">取消</el-button>
                 <el-button type="primary" size="small" @click="modifyDateTime">确定</el-button>
+            </span>
+        </el-dialog>
+        <!--修改位置信息对话框-->
+        <el-dialog title="修改位置信息" :visible.sync="isShowModifyLocationDialog" width="500px"
+                   :close-on-click-modal="false" @closed="deviceSupportInstall">
+            <p v-if="photoLocationList.length>0" style="font-weight: 600; margin-bottom: 10px">选中的照片中包含以下位置信息：</p>
+            <div v-if="photoLocationList.length>0" class="location-list">
+                <p v-for="(address,index) of photoLocationList" :key="index" style="margin-bottom: 5px">
+                    <span>{{address}}</span>
+                </p>
+            </div>
+            <el-select v-model="photoLocation" :remote="true" :filterable="true" placeholder="输入地理位置"
+                       :remote-method="getLocationList" :loading="locationLoading" :clearable="true"
+                       @clear="locationOptions=[]"
+                       style="width: 460px">
+                <el-option v-for="item in locationOptions" :key="item.uid"
+                           :label="item.name"
+                           :value="item.location.lat+','+item.location.lng+','+item.name">
+                    <span style="float: left">{{ item.name }}</span>
+                    <span style="float: right; color: #8492a6; font-size: 13px">{{ item.province + item.city + item.district }}</span>
+                </el-option>
+            </el-select>
+            <span slot="footer">
+                <el-button v-if="photoLocationList.length>0" type="danger" size="small" @click="modifyLocation">清除位置信息</el-button>
+                <el-button size="small" @click="isShowModifyLocationDialog=false">取消</el-button>
+                <el-button type="primary" size="small" @click="checkLocation">确定</el-button>
             </span>
         </el-dialog>
     </div>
@@ -166,8 +204,6 @@
                 photoList: [],  //照片列表
                 photoListGroup: [],  //分组后的照片列表
                 isShowTips: false,  //是否显示上传提示
-                isShowPreview: false,  //是否显示大图预览
-                previewList: [],  //初始的照片预览列表
                 groupType: 'day',  //分组类型 day, month, year
                 checkGroupList: [],  //选中的分组列表
                 checkList: [],  //选中的照片列表
@@ -175,6 +211,11 @@
                 isShowAddToAlbumDialog: false,  //是否显示添加到影集对话框
                 isShowModifyDateTimeDialog: false,  //是否显示修改日期时间对话框
                 photoDateTime: null,  //照片的拍摄时间
+                isShowModifyLocationDialog: false,  //是否显示修改位置信息对话框
+                photoLocation: '',  //照片的拍摄地点
+                photoLocationList: [],  //选中照片中包含的位置列表
+                locationLoading: false,  //位置选择框是否正在从远程获取数据
+                locationOptions: [],  //地点检索的结果
             }
         },
         props: {
@@ -523,10 +564,12 @@
             },
             removeFromAlbum() {
                 //从影集中移除照片
+                this.deviceSupportUninstall()
                 this.$confirm('您仍然可以在相册中找到该内容', '要移除此内容吗？', {
                     confirmButtonText: '移除',
                     cancelButtonText: '取消',
-                    type: 'warning'
+                    type: 'warning',
+                    closeOnClickModal: false,
                 }).then(() => {
                     this.$axios({
                         method: 'post',
@@ -545,6 +588,7 @@
                         this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                     })
                 }).catch(() => {
+                    this.deviceSupportInstall()
                 });
             },
             addToFavorites() {
@@ -557,7 +601,8 @@
                 this.$confirm('当需要的时候可以在回收站中恢复。', '确定要删除照片吗？', {
                     confirmButtonText: '移到回收站',
                     cancelButtonText: '取消',
-                    type: 'warning'
+                    type: 'warning',
+                    closeOnClickModal: false,
                 }).then(() => {
                     this.$axios({
                         method: 'post',
@@ -585,7 +630,8 @@
                 this.$confirm('要恢复选中的内容吗？', {
                     confirmButtonText: '恢复',
                     cancelButtonText: '取消',
-                    type: 'info'
+                    type: 'info',
+                    closeOnClickModal: false,
                 }).then(() => {
                     this.$axios({
                         method: 'post',
@@ -613,7 +659,8 @@
                 this.$confirm('内容一旦永久删除将无法恢复', '要永久删除选中的内容吗？', {
                     confirmButtonText: '删除',
                     cancelButtonText: '取消',
-                    type: 'warning'
+                    type: 'warning',
+                    closeOnClickModal: false,
                 }).then(() => {
                     this.$axios({
                         method: 'post',
@@ -644,7 +691,23 @@
                         this.showModifyDateTime()
                         break
                     case 'modify_location':
-                        this.modifyLocation()
+                        this.deviceSupportUninstall()  //卸载键盘按键支持，避免与dialog的esc关闭冲突
+                        this.photoLocation = ''
+                        this.locationOptions = []
+                        this.isShowModifyLocationDialog = true
+                        //获取选中照片中包含的位置列表
+                        this.photoLocationList = []
+                        for (let uuid of this.checkList) {
+                            let photo = this.photoList.find(t => t.uuid === uuid)
+                            if (photo && photo.address__address) {
+                                let address = photo.address__address
+                                if (photo.address__poi_name) {
+                                    address = photo.address__poi_name + ' - ' + address
+                                }
+                                this.photoLocationList.push(address)
+                            }
+                        }
+                        this.photoLocationList = Array.from(new Set(this.photoLocationList))  //数组去重复
                         break
                 }
             },
@@ -689,9 +752,59 @@
                     this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                 })
             },
+            getLocationList(query) {
+                //根据用户输入的关键字返回位置列表
+                if (query !== '') {
+                    this.locationLoading = true
+                    this.$axios({
+                        method: 'get',
+                        url: this.apiUrl + '/api/photo_query_location',
+                        params: {
+                            query: query,  //查询的关键字
+                        }
+                    }).then(response => {
+                        this.locationLoading = false
+                        this.locationOptions = response.data
+                    })
+                }
+            },
+            checkLocation() {
+                //检查输入的位置信息
+                if (this.photoLocation === '') {
+                    this.$message({
+                        message: '请输入正确的地理位置',
+                        type: 'error',
+                    })
+                    return false
+                }
+                this.modifyLocation()
+            },
             modifyLocation() {
-                //修改位置信息
-                this.$message('修改位置功能还没做好呢:-)')
+                //修改照片的位置信息
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/photo_set_location',
+                    data: {
+                        photo_list: this.checkList,
+                        location: this.photoLocation,
+                    }
+                }).then(response => {
+                    let res = response.data
+                    let msg
+                    if (res.address) {
+                        msg = '成功将 ' + this.checkList.length + ' 张照片的位置信息修改为 ' + res.address
+                    }
+                    else {
+                        msg = '成功删除了 ' + this.checkList.length + ' 张照片的位置信息'
+                    }
+                    this.unselectPhoto()
+                    this.$message({
+                        message: msg,
+                        type: 'success',
+                    })
+                    this.isShowModifyLocationDialog = false
+                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                })
             },
         }
     }
@@ -833,6 +946,12 @@
     .btn-preview:hover {
         color: #fff;
     }
+    .btn-location {  /*照片的位置信息*/
+        margin-right: 5px;
+        color: #fff;
+        font-size: 14px;
+        cursor: pointer;
+    }
     .chk-toolbar { /*选中照片后的工具栏*/
         position: fixed;
         top: 0;
@@ -906,5 +1025,27 @@
     }
     .album-tree-photos { /*影集中照片的数量*/
         font-size: 12px;
+    }
+
+    .location-list {  /*已存在的位置列表*/
+        padding: 0 10px;
+        margin-bottom: 20px;
+        max-height: 150px;
+        overflow: auto;
+    }
+    .location-list::-webkit-scrollbar {
+        width: 6px;
+    }
+    .location-list::-webkit-scrollbar-track {
+        background-color: #fff;
+    }
+    .location-list::-webkit-scrollbar-thumb {
+        border-radius:5px;
+        background-color: #cdcdcd;
+    }
+    .location-list p {
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
     }
 </style>

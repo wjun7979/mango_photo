@@ -64,6 +64,7 @@ class Address(models.Model):
     lat = models.CharField(max_length=100)  # 纬度
     lng = models.CharField(max_length=100)  # 经度
     address = models.CharField(max_length=500)  # 结构化地址信息
+    poi_name = models.CharField(null=True, max_length=500)  # poi名称
     country = models.CharField(null=True, max_length=500)  # 国家
     province = models.CharField(null=True, max_length=500)  # 省
     city = models.CharField(null=True, max_length=500)  # 城市

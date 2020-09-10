@@ -32,7 +32,8 @@
                 this.$confirm('所有内容将被永久删除，且此操作无法撤消', '要清空回收站吗？', {
                     confirmButtonText: '清空回收站',
                     cancelButtonText: '取消',
-                    type: 'warning'
+                    type: 'warning',
+                    closeOnClickModal: false,
                 }).then(() => {
                     this.$axios({
                         method: 'post',

@@ -249,7 +249,7 @@ def __get_exif(full_path: str, dt: str):
 
 def __get_address_from_gps(lat, lat_ref, lng, lng_ref):
     """根据gps坐标获取位置信息"""
-    ak = 'OoD6BEoc77sczG45r8Wfw1wfeMuCM7dW'
+    ak = settings.BMAP_AK
     # 纬度
     deg, minu, sec = [x.replace(' ', '') for x in lat[1:-1].split(',')]
     lat = __convert_gps_to_decimal(deg, minu, sec, lat_ref)
@@ -258,6 +258,7 @@ def __get_address_from_gps(lat, lat_ref, lng, lng_ref):
     lng = __convert_gps_to_decimal(deg, minu, sec, lng_ref)
     # lat = '31.225696563611'
     # lng = '121.49884033194'
+    # 全球逆地理编码服务
     baidu_map_api = 'http://api.map.baidu.com/reverse_geocoding/v3/?ak={0}&output=json&coordtype=wgs84ll' \
                     '&location={1},{2}'.format(ak, lat, lng)
     response = requests.get(baidu_map_api)
@@ -267,8 +268,8 @@ def __get_address_from_gps(lat, lat_ref, lng, lng_ref):
         raise Exception(result['message'])  # 抛出异常
     location = {
         'status': result['status'],
-        'lat': result['result']['location']['lat'],
-        'lng': result['result']['location']['lng'],
+        'lat': lat,
+        'lng': lng,
         'formatted_address': result['result']['formatted_address'],
         'country': result['result']['addressComponent']['country'],
         'province': result['result']['addressComponent']['province'],

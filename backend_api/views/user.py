@@ -40,10 +40,10 @@ def user_upload_avatar(request):
         im.save(full_path)
         # 将头像路径存入数据库
         user = User.objects.get(userid=userid)
-        user.avatar = file_path
+        user.avatar = os.path.join(file_path, userid + ext_filename)
         user.save()
         # 向前端返回头像路径
-        response['path'] = file_path
+        response['path'] = os.path.join(file_path, userid + ext_filename)
         return JsonResponse(response, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息

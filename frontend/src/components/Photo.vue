@@ -2,13 +2,13 @@
     <transition name="el-fade-in-linear">
         <div>
             <div ref="viewer-wrapper" class="viewer-wrapper"
-                 :style="{'margin-right': viewerWrapperMargin,'z-index': 2000}">
+                 :style="{'margin-right': viewerWrapperMargin}">
                 <div class="viewer-mask"></div>
                 <!-- 关闭按钮 -->
                 <span class="viewer-btn viewer-close" @click="$router.back()">
                     <i class="el-icon-back"></i>
                 </span>
-                <span class="viewer-comments" @click="setPhotoComments">{{currentImg.comments}}</span>
+                <span v-show="currentImg.comments" class="viewer-comments" @click="setPhotoComments">{{currentImg.comments}}</span>
                 <!--工具栏-->
                 <div class="viewer-toolbar">
                     <div v-if="callMode === 'photo'">
@@ -72,8 +72,8 @@
                 </div>
                 <!--大图显示-->
                 <div class="viewer-canvas">
-                    <img class="viewer-img" ref="img" :src="currentImg.url" :style="imgStyle" @load="handleImgLoad"
-                         @error="handleImgError" @mousedown="handleMouseDown"/>
+                    <img class="viewer-img" ref="img" :src="currentImg.url" alt="" :style="imgStyle"
+                         @load="handleImgLoad" @error="handleImgError" @mousedown="handleMouseDown"/>
                 </div>
             </div>
             <!--修改侧边栏-->
@@ -91,8 +91,8 @@
                 <div style="padding-top: 70px">
                     <el-row class="side-href" @click.native="setPhotoComments">
                         <el-col :span="24" style="border-bottom: solid 1px #8c939d">
-                            <span v-if="photoInfo.comments===null">添加说明</span>
-                            <span v-else>{{photoInfo.comments}}</span>
+                            <span v-if="photoInfo.comments">{{photoInfo.comments}}</span>
+                            <span v-else>添加说明</span>
                         </el-col>
                     </el-row>
                     <el-row style="font-size: 12px" v-show="photoAlbums.length>0">影集</el-row>
@@ -108,7 +108,7 @@
                         </el-col>
                     </el-row>
                     <el-row style="font-size: 12px">详情</el-row>
-                    <el-row class="side-href" v-if="photoInfo.exif_datetime">
+                    <el-row class="side-href" v-if="photoInfo.exif_datetime" @click.native="showModifyDateTime">
                         <el-col :span="3">
                             <i class="el-icon-date" style="font-size: 24px; line-height: 44px"></i>
                         </el-col>
@@ -149,20 +149,28 @@
                             </p>
                         </el-col>
                     </el-row>
-                    <el-row class="side-href">
+                    <el-row class="side-href" @click.native="showModifyLocation">
                         <el-col :span="3">
                             <i class="el-icon-location" style="font-size: 24px;"></i>
                         </el-col>
                         <el-col :span="18">
-                            <p v-if="photoInfo.photo_address">{{photoInfo.photo_address}}</p>
+                            <p v-if="photoInfo.photo_address">
+                                <span v-if="photoInfo.photo_poi_name">{{photoInfo.photo_poi_name}} - </span>
+                                <span>{{photoInfo.photo_address}}</span>
+                            </p>
                             <p v-else>这张照片是在哪里拍摄的？</p>
                         </el-col>
                         <el-col :span="3" style="text-align: right">
                             <i class="el-icon-edit" style="font-size: 16px; color: #8c939d"></i>
                         </el-col>
                     </el-row>
-                    <el-row style="padding: 15px 0" v-show="photoInfo.photo_address">
+                    <el-row style="padding: 0" v-show="photoInfo.photo_address">
                         <div id="map-core" style="height: 360px"></div>
+                        <a :href="'http://api.map.baidu.com/marker?location='+photoInfo.photo_lat+','+photoInfo.photo_lng+'&output=html&src=wjun.mango_photo'"
+                           target="_blank" title="在百度地图上显示照片位置信息">
+                            <img src="../assets/images/bmap_copyright_logo.png" alt=""
+                                 style="position: absolute; left: 5px; bottom: 10px;"/>
+                        </a>
                     </el-row>
                 </div>
             </div>
@@ -171,7 +179,8 @@
                        :visible.sync="isShowAddToAlbumDialog"
                        width="400px"
                        :close-on-click-modal="false"
-                       :destroy-on-close="true">
+                       :destroy-on-close="true"
+                       @closed="deviceSupportInstall">
                 <el-tree class="album-tree" ref="albumTree" :lazy="true" :load="loadAlbumTree" node-key="uuid"
                          :props="{label:'name'}"
                          :default-expand-all="false"
@@ -190,6 +199,42 @@
                 <span slot="footer">
                 <el-button @click="isShowAddToAlbumDialog = false" size="small">取消</el-button>
                 <el-button type="primary" size="small" @click="addToAlbum">确定</el-button>
+            </span>
+            </el-dialog>
+            <!--修改日期和时间对话框-->
+            <el-dialog title="修改日期和时间" :visible.sync="isShowModifyDateTimeDialog" width="350px"
+                       :close-on-click-modal="false" @closed="deviceSupportInstall">
+                <el-date-picker type="datetime" v-model="photoDateTime" default-time="8:00:00"
+                                placeholder="选择日期时间" format="yyyy-MM-dd HH:mm"
+                                value-format="yyyy-MM-dd HH:mm:ss" style="width: 310px"></el-date-picker>
+                <span slot="footer">
+                <el-button size="small" @click="isShowModifyDateTimeDialog=false">取消</el-button>
+                <el-button type="primary" size="small" @click="modifyDateTime">确定</el-button>
+            </span>
+            </el-dialog>
+            <!--修改位置信息对话框-->
+            <el-dialog title="修改位置信息" :visible.sync="isShowModifyLocationDialog" width="500px"
+                       :close-on-click-modal="false" @closed="deviceSupportInstall">
+                <p v-if="photoInfo.photo_address" style="margin-bottom: 20px">
+                    <span v-if="photoInfo.photo_poi_name">{{photoInfo.photo_poi_name}} - </span>
+                    <span>{{photoInfo.photo_address}}</span>
+                </p>
+                <el-select v-model="photoLocation" :remote="true" :filterable="true" placeholder="输入地理位置"
+                           :remote-method="getLocationList" :loading="locationLoading" :clearable="true"
+                           @clear="locationOptions=[]"
+                           style="width: 460px">
+                    <el-option v-for="item in locationOptions" :key="item.uid"
+                               :label="item.name"
+                               :value="item.location.lat+','+item.location.lng+','+item.name">
+                        <span style="float: left">{{ item.name }}</span>
+                        <span style="float: right; color: #8492a6; font-size: 13px">{{ item.province + item.city + item.district }}</span>
+                    </el-option>
+                </el-select>
+                <span slot="footer">
+                <el-button v-if="photoInfo.photo_address" type="danger" size="small"
+                           @click="modifyLocation">清除位置信息</el-button>
+                <el-button size="small" @click="isShowModifyLocationDialog=false">取消</el-button>
+                <el-button type="primary" size="small" @click="checkLocation">确定</el-button>
             </span>
             </el-dialog>
         </div>
@@ -231,13 +276,19 @@
                     offsetY: 0,
                     enableTransition: false
                 },
-                isShowModifySide: false,  //是否显示修改侧边栏
                 isShowInfoSide: false,  //是否显示信息侧边栏
+                isShowModifySide: false,  //是否显示修改侧边栏
                 viewerWrapperMargin: '0px',  //最外层容器右边距
                 photoInfo: {},  //当前照片的详细信息
                 photoAlbums: [],  //当前照片所属的影集列表
                 baiduMap: null,  //百度地图对象
                 isShowAddToAlbumDialog: false,  //是否显示添加到影集对话框
+                isShowModifyDateTimeDialog: false,  //是否显示修改日期时间对话框
+                photoDateTime: null,  //照片的拍摄时间
+                isShowModifyLocationDialog: false,  //是否显示修改位置信息对话框
+                photoLocation: '',  //照片的拍摄地点
+                locationLoading: false,  //位置选择框是否正在从远程获取数据
+                locationOptions: [],  //地点检索的结果
             }
         },
         watch: {
@@ -275,7 +326,10 @@
                     style.maxWidth = style.maxHeight = '100%'
                 }
                 return style;
-            }
+            },
+            infoSideStatus() {
+                return this.$store.state.infoSideStatus  //信息侧边栏的最后一次显示状态
+            },
         },
         mounted() {
             if (this.callMode === 'album') {
@@ -476,6 +530,10 @@
                     //根据索引对预览数组重新排序
                     this.previewListOrder = previewList.slice(index).concat(previewList.slice(0, index))
                     this.currentImg = this.previewListOrder[0]
+                    //如果用户上一次操作时，信息侧边栏是打开状态的，则恢复它
+                    if (this.infoSideStatus) {
+                        this.showInfo()
+                    }
                 })
             },
             showModify() {  //显示修改侧边栏
@@ -490,6 +548,8 @@
             showInfo() {  //显示信息侧边栏
                 this.isShowModifySide = false
                 this.isShowInfoSide = !this.isShowInfoSide
+                //保存信息侧边栏当前的打开状态，便于下次进入页面时恢复
+                this.$store.commit('setInfoSideStatus',{status: this.isShowInfoSide})
                 this.viewerWrapperMargin = this.isShowInfoSide ? '360px' : '0px'
                 if (this.isShowInfoSide) {
                     this.getPhotoInfo()  //获取照片详细信息
@@ -498,6 +558,7 @@
             },
             closeInfo() {  //关闭信息侧边栏
                 this.isShowInfoSide = false
+                this.$store.commit('setInfoSideStatus',{status: false})
                 this.viewerWrapperMargin = '0px'
                 // 将照片信息和所属影集列表恢复到初始值，便于信息侧边栏恢复到初始状态，避免打开侧边栏时会闪现上一张照片信息的问题
                 this.photoInfo = {}
@@ -513,20 +574,21 @@
                     }
                 }).then(response => {
                     const res = response.data
-                    console.log(res)
                     this.photoInfo = res
                     //将当前位置定位到地图
                     this.$nextTick(function () {
                         if (res.photo_lng && res.photo_lat) {
-                            this.baiduMap = new BMap.Map("map-core")
-                            this.baiduMap.enableScrollWheelZoom(true)
+                            this.baiduMap = new BMap.Map("map-core", {enableMapClick:false})
+                            // let top_left_navigation = new BMap.NavigationControl()  //左上角，添加默认缩放平移控件
+                            this.baiduMap.addControl(new BMap.NavigationControl())  //左上角，添加默认缩放平移控件
+                            //this.baiduMap.enableScrollWheelZoom(true)
                             // this.baiduMap.centerAndZoom(new BMap.Point(116.331398, 39.897445), 15)
                             this.baiduMap.clearOverlays()  //清除标注
                             let new_point = new BMap.Point(res.photo_lng, res.photo_lat)
+                            this.baiduMap.centerAndZoom(new_point, 15)
                             let marker = new BMap.Marker(new_point)  // 创建标注
                             this.baiduMap.addOverlay(marker)  // 将标注添加到地图中
                             this.baiduMap.panTo(new_point)  //定位到标注点
-                            this.baiduMap.centerAndZoom(new_point, 15)
                         }
                     })
                 })
@@ -540,8 +602,7 @@
                         photo_uuid: this.previewListOrder[this.index].uuid
                     }
                 }).then(response => {
-                    const res = response.data
-                    this.photoAlbums = res
+                    this.photoAlbums = response.data
                 })
             },
             addToFavorites() {
@@ -555,6 +616,7 @@
                         this.downloadPhoto()
                         break
                     case 'add_to_album':
+                        this.deviceSupportUninstall()
                         this.isShowAddToAlbumDialog = true
                         break
                     case 'remove_from_album':
@@ -625,10 +687,12 @@
             },
             removeFromAlbum() {
                 //从影集中移除照片
+                this.deviceSupportUninstall()
                 this.$confirm('您仍然可以在相册中找到该内容', '要移除此内容吗？', {
                     confirmButtonText: '移除',
                     cancelButtonText: '取消',
-                    type: 'warning'
+                    type: 'warning',
+                    closeOnClickModal: false,
                 }).then(() => {
                     this.$axios({
                         method: 'post',
@@ -643,23 +707,28 @@
                             message: msg,
                             type: 'success',
                         })
-                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                         //从当前预览列表中移除当前照片
                         this.previewListOrder.splice(this.index, 1)
-                        if (this.previewListOrder.length > 0)
-                            this.next()  //如果列表中还有照片，则显示下一张
+                        if (this.previewListOrder.length > 0) {
+                            if (this.index > this.previewListOrder.length - 1)
+                                this.index = 0
+                            this.currentImg = this.previewListOrder[this.index]
+                        }
                         else
                             this.close()  //否则关闭预览
                     })
                 }).catch(() => {
+                    this.deviceSupportInstall()
                 });
             },
             trashPhoto() {
                 //将照片移到回收站
+                this.deviceSupportUninstall()
                 this.$confirm('当需要的时候可以在回收站中恢复。', '确定要删除照片吗？', {
                     confirmButtonText: '移到回收站',
                     cancelButtonText: '取消',
-                    type: 'warning'
+                    type: 'warning',
+                    closeOnClickModal: false,
                 }).then(() => {
                     this.$axios({
                         method: 'post',
@@ -673,16 +742,18 @@
                             message: msg,
                             type: 'success',
                         })
-                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
-                        this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
                         //从当前预览列表中移除当前照片
                         this.previewListOrder.splice(this.index, 1)
-                        if (this.previewListOrder.length > 0)
-                            this.next()  //如果列表中还有照片，则显示下一张
+                        if (this.previewListOrder.length > 0) {
+                            if (this.index > this.previewListOrder.length - 1)
+                                this.index = 0
+                            this.currentImg = this.previewListOrder[this.index]
+                        }
                         else
                             this.close()  //否则关闭预览
                     })
                 }).catch(() => {
+                    this.deviceSupportInstall()
                 });
             },
             setAlbumCover() {
@@ -691,10 +762,12 @@
             },
             removePhoto() {
                 //永久删除照片
+                this.deviceSupportUninstall()
                 this.$confirm('内容一旦永久删除将无法恢复', '要永久删除选中的内容吗？', {
                     confirmButtonText: '删除',
                     cancelButtonText: '取消',
-                    type: 'warning'
+                    type: 'warning',
+                    closeOnClickModal: false,
                 }).then(() => {
                     this.$axios({
                         method: 'post',
@@ -708,15 +781,18 @@
                             message: msg,
                             type: 'success',
                         })
-                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                         //从当前预览列表中移除当前照片
                         this.previewListOrder.splice(this.index, 1)
-                        if (this.previewListOrder.length > 0)
-                            this.next()  //如果列表中还有照片，则显示下一张
+                        if (this.previewListOrder.length > 0) {
+                            if (this.index > this.previewListOrder.length - 1)
+                                this.index = 0
+                            this.currentImg = this.previewListOrder[this.index]
+                        }
                         else
                             this.close()  //否则关闭预览
                     })
                 }).catch(() => {
+                    this.deviceSupportInstall()
                 });
             },
             restorePhoto() {
@@ -733,13 +809,13 @@
                         message: msg,
                         type: 'success',
                     })
-                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
-                    this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
                     //从当前预览列表中移除当前照片
                     this.previewListOrder.splice(this.index, 1)
-                    if (this.previewListOrder.length > 0)
-                        this.next()  //如果列表中还有照片，则显示下一张
-                    else
+                    if (this.previewListOrder.length > 0) {
+                        if (this.index > this.previewListOrder.length - 1)
+                            this.index = 0
+                        this.currentImg = this.previewListOrder[this.index]
+                    } else
                         this.close()  //否则关闭预览
                 })
             },
@@ -748,11 +824,7 @@
                 this.deviceSupportUninstall()  //卸载键盘按键支持
                 this.$prompt('请输入照片说明：', {
                     inputValue: this.currentImg.comments,
-                    inputValidator: (value => {
-                        if (value.trim().length === 0)
-                            return false
-                    }),
-                    inputErrorMessage: '照片说明不能为空',
+                    closeOnClickModal: false,
                     callback: ((action, instance) => {
                         if (action === 'confirm') {
                             this.$axios({
@@ -764,16 +836,115 @@
                                 }
                             }).then(() => {
                                 this.currentImg.comments = instance.inputValue
-                                this.photoInfo.comments = instance.inputValue
-                                this.$message({
-                                    message: '成功为照片添加了说明 [' + instance.inputValue + ']',
-                                    type: 'success',
-                                })
-                                this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                                this.getPhotoInfo()  //刷新当前图片信息
+                                if (instance.inputValue) {
+                                    this.$message({
+                                        message: '成功为照片添加了说明 [' + instance.inputValue + ']',
+                                        type: 'success',
+                                    })
+                                }
+                                else {
+                                    this.$message({
+                                        message: '成功清除了照片的说明',
+                                        type: 'success',
+                                    })
+                                }
                             })
                         }
                         this.deviceSupportInstall()  //恢复键盘按键支持
                     })
+                })
+            },
+            showModifyDateTime() {
+                //显示修改日期和时间对话框
+                this.deviceSupportUninstall()  //卸载键盘按键支持，避免与dialog的esc关闭冲突
+                this.photoDateTime = this.photoInfo.exif_datetime
+                this.isShowModifyDateTimeDialog = true
+            },
+            modifyDateTime() {
+                //修改日期和时间
+                if (this.photoDateTime === null) {
+                    this.$message({
+                        message: '请输入正确的拍摄时间',
+                        type: 'error',
+                    })
+                    return false
+                }
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/photo_set_datetime',
+                    data: {
+                        photo_list: [this.photoInfo.uuid],
+                        photo_datetime: this.photoDateTime,
+                    }
+                }).then(() => {
+                    this.getPhotoInfo()  //刷新当前图片信息
+                    let msg = '成功将照片的拍摄时间修改为 ' + this.photoDateTime
+                    this.$message({
+                        message: msg,
+                        type: 'success',
+                    })
+                    this.isShowModifyDateTimeDialog = false
+                })
+            },
+            showModifyLocation(){
+                //显示修改位置信息对话框
+                this.deviceSupportUninstall()
+                this.photoLocation = ''
+                this.locationOptions = []
+                this.isShowModifyLocationDialog = true
+            },
+            getLocationList(query) {
+                //根据用户输入的关键字返回位置列表
+                if (query !== '') {
+                    this.locationLoading = true
+                    this.$axios({
+                        method: 'get',
+                        url: this.apiUrl + '/api/photo_query_location',
+                        params: {
+                            query: query,  //查询的关键字
+                        }
+                    }).then(response => {
+                        this.locationLoading = false
+                        this.locationOptions = response.data
+                    })
+                }
+            },
+            checkLocation() {
+                //检查输入的位置信息
+                if (this.photoLocation === '') {
+                    this.$message({
+                        message: '请输入正确的地理位置',
+                        type: 'error',
+                    })
+                    return false
+                }
+                this.modifyLocation()
+            },
+            modifyLocation() {
+                //修改照片的位置信息
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/photo_set_location',
+                    data: {
+                        photo_list: [this.photoInfo.uuid],
+                        location: this.photoLocation,
+                    }
+                }).then(response => {
+                    this.getPhotoInfo()  //刷新当前图片信息
+                    let res = response.data
+                    let msg
+                    if (res.address) {
+                        msg = '成功将照片的位置信息修改为 ' + res.address
+                    }
+                    else {
+                        msg = '成功删除了照片的位置信息'
+                    }
+                    this.$message({
+                        message: msg,
+                        type: 'success',
+                    })
+                    this.isShowModifyLocationDialog = false
                 })
             },
         }
@@ -919,7 +1090,7 @@
         position: fixed;
         top: 0;
         right: 0;
-        z-index: 2000;
+        z-index: 1;
         width: 360px;
         height: 100%;
         overflow: auto;
@@ -928,6 +1099,9 @@
     }
     .viewer-side >>> .el-row {
         padding: 15px 30px;
+    }
+    .viewer-side::-webkit-scrollbar {
+        display: none;
     }
     .side-close { /*侧边栏的关闭栏*/
         position: fixed;

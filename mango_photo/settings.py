@@ -154,3 +154,6 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "photos")  # 存放用户上传文件目录的绝对路径
 MEDIA_URL = '/photos/'
+
+# 百度地图api
+BMAP_AK = 'OoD6BEoc77sczG45r8Wfw1wfeMuCM7dW'

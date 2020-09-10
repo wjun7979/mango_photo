@@ -22,6 +22,8 @@ urlpatterns = [
     path('photo_empty_trash', photo_empty_trash),  # 清空回收站
     path('photo_set_comments', photo_set_comments),  # 为照片添加说明文字
     path('photo_set_datetime', photo_set_datetime),  # 修改照片的拍摄时间
+    path('photo_query_location', photo_query_location),  # 查询位置信息
+    path('photo_set_location', photo_set_location),  # 修改照片的位置信息
     path('album_list', album_list),  # 获取影集列表
     path('album_get', album_get),  # 获取指定的影集信息
     path('album_new', album_new),  # 创建影集
