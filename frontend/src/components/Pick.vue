@@ -52,6 +52,13 @@
             this.getAlbum()
             this.getAlbumPhotoList()
         },
+        created() {
+            //防抖
+            this._pickToAlbum = this.$lodash.debounce(this.pickToAlbum, this.$common.DEBOUNCE_TIMEOUT, {
+                leading: true,
+                trailing: false
+            })
+        },
         methods: {
             onClose() {
                 this.$router.back()
@@ -99,12 +106,12 @@
                         cancelButtonText: '取消',
                         type: 'warning'
                     }).then(() => {
-                        this.pickToAlbum()
+                        this._pickToAlbum()
                     }).catch(() => {
                     });
                 } else {
                     if (this.addList.length > 0) {
-                        this.pickToAlbum()
+                        this._pickToAlbum()
                     }
                     else {
                         this.$router.back()

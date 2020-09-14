@@ -20,7 +20,6 @@ from backend_api.views.album import album_auto_cover
 @transaction.atomic  # 数据库事务处理
 def upload_photo(request):
     """上传文件"""
-    save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
     response = {
         'success': [],  # 上传成功的文件
         'error': []  # 上传失败的文件
@@ -32,8 +31,10 @@ def upload_photo(request):
         file_list = request.FILES.getlist('file')  # 前端上传的文件对象
 
         for file in file_list:
-            photo_fullpath = ''  # 照片的完整路径
-            thumbnail_fullpath = ''  # 缩略图的完整路径
+            save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
+            fullpath_original = ''  # 照片的完整路径
+            fullpath_thumbnail_s = ''  # 小缩略图的完整路径
+            fullpath_thumbnail_l = ''  # 大缩略图的完整路径
             try:
                 # 获取文件md5值，然后检查是否已经存在，如果是在照片中添加就跳过，如果是在影集中添加则写入
                 file_md5 = __get_file_md5(file)
@@ -51,36 +52,38 @@ def upload_photo(request):
                         response['error'].append({'name': file.name, 'msg': '照片已存在，跳过'})
                         continue
 
-                # 根据当前日期创建文件夹 /photos/{userid}/current/年/月/日
+                # 根据当前日期创建文件夹 /photos/{userid}/original/年/月/日
                 now = datetime.now()  # 当前时间，用于创建目录
-                file_path = os.path.join('photos', userid, 'current', now.strftime('%Y'), now.strftime('%m'),
-                                         now.strftime('%d'))  # 相对路径
-                real_path = os.path.join(settings.BASE_DIR, file_path)  # 物理路径
-                if not os.path.exists(real_path):  # 如果目标文件夹不存在则创建
-                    os.makedirs(real_path, exist_ok=True)
+                path_original = os.path.join('photos', userid, 'original', now.strftime('%Y'), now.strftime('%m'),
+                                             now.strftime('%d'))  # 相对路径
+                realpath_original = os.path.join(settings.BASE_DIR, path_original)  # 物理路径
+                if not os.path.exists(realpath_original):  # 如果目标文件夹不存在则创建
+                    os.makedirs(realpath_original, exist_ok=True)
 
                 # 检查当前目录下是否有同名文件，如果存在则重命名
                 file_name = file.name  # 原始文件名
-                photo_fullpath = os.path.join(real_path, file_name)  # 包含路径的完整文件名
-                if os.path.exists(photo_fullpath):
-                    splitext = os.path.splitext(photo_fullpath)
-                    photo_fullpath = splitext[0] + '_' + str(uuid.uuid1()).replace('-', '') + splitext[1]
+                fullpath_original = os.path.join(realpath_original, file_name)  # 包含路径的完整文件名
+                if os.path.exists(fullpath_original):
+                    splitext = os.path.splitext(fullpath_original)
+                    fullpath_original = splitext[0] + '_' + str(uuid.uuid1()).replace('-', '') + splitext[1]
 
-                # 写入文件
+                # 写入原始文件
                 file.seek(0)  # 因为之前获取md5时读取过文件，所以这里要将指针定位到文件头
-                __write_file(photo_fullpath, file)
+                __write_file(fullpath_original, file)
 
                 # 创建缩略图
-                thumbnail = __create_thumbnail(userid, photo_fullpath)
-                thumbnail_fullpath = thumbnail[1]
+                thumbnail = __create_thumbnail(userid, fullpath_original, path_original)
+                fullpath_thumbnail_s = thumbnail[1]  # 小缩略图的完整路径
+                fullpath_thumbnail_l = thumbnail[3]  # 大缩略图的完整路径
 
                 # 获取照片的尺寸
-                im = Image.open(photo_fullpath)  # 打开原始照片文件
+                im = Image.open(fullpath_original)  # 打开原始照片文件
                 im_width = im.width
                 im_height = im.height
+                im.close()
 
                 # 获取照片的Exif信息
-                exif = __get_exif(photo_fullpath, request.POST.get(file.name))
+                exif = __get_exif(fullpath_original, request.POST.get(file.name))
                 # pprint.pprint(exif)
 
                 # 写入照片数据表
@@ -88,9 +91,10 @@ def upload_photo(request):
                 photo = Photo()
                 photo.uuid = photo_uuid
                 photo.userid = userid
-                photo.path = file_path
-                photo.path_thumbnail = thumbnail[0]
-                photo.name = os.path.split(photo_fullpath)[1]
+                photo.path_original = path_original.replace('\\', '/')
+                photo.path_thumbnail_s = thumbnail[0].replace('\\', '/')
+                photo.path_thumbnail_l = thumbnail[2].replace('\\', '/')
+                photo.name = os.path.split(fullpath_original)[1]
                 photo.md5 = file_md5
                 photo.size = file.size
                 photo.width = im_width
@@ -136,11 +140,14 @@ def upload_photo(request):
                 response['success'].append({'name': file.name})
             except Exception as e:
                 traceback.print_exc()  # 输出详细的错误信息
+                transaction.savepoint_rollback(save_tag)  # 回滚数据库事务
                 response['error'].append({'name': file.name, 'msg': str(e)})
-                if photo_fullpath and os.path.exists(photo_fullpath):  # 出错时删除可能已经上传的文件
-                    os.remove(photo_fullpath)
-                if thumbnail_fullpath and os.path.exists(thumbnail_fullpath):  # 出错时删除可能已经生成的缩略图
-                    os.remove(thumbnail_fullpath)
+                if fullpath_original and os.path.exists(fullpath_original):  # 出错时删除可能已经上传的文件
+                    os.remove(fullpath_original)
+                if fullpath_thumbnail_s and os.path.exists(fullpath_thumbnail_s):  # 出错时删除可能已经生成的缩略图
+                    os.remove(fullpath_thumbnail_s)
+                if fullpath_thumbnail_l and os.path.exists(fullpath_thumbnail_l):
+                    os.remove(fullpath_thumbnail_l)
                 continue
 
         # 所有文件上传完成之后，设置影集封面
@@ -177,21 +184,48 @@ def __get_file_md5(file):
         return hashlib.md5(data).hexdigest()
 
 
-def __create_thumbnail(userid, full_path):
+def __create_thumbnail(userid, fullpath_original, path_original):
     """创建照片缩略图"""
-    im = Image.open(full_path)  # 打开原始照片文件
-    im.thumbnail((500, 500))  # 创建大小不超过指定值的缩略图
-    # 根据当前日期创建文件夹 /photos/{userid}/thumbnail/年/月/日
     now = datetime.now()  # 当前时间，用于创建目录
-    file_path = os.path.join('photos', userid, 'thumbnail', now.strftime('%Y'), now.strftime('%m'),
-                             now.strftime('%d'))  # 相对路径
-    real_path = os.path.join(settings.BASE_DIR, file_path)  # 物理路径
-    if not os.path.exists(real_path):  # 如果目标文件夹不存在则创建
-        os.makedirs(real_path, exist_ok=True)
-    file_name = os.path.split(full_path)[1]
-    full_path = os.path.join(real_path, file_name)  # 完整路径
-    im.save(full_path)  # 保存缩略图
-    return file_path, full_path
+    im = Image.open(fullpath_original)  # 打开原始照片文件
+    file_name = os.path.split(fullpath_original)[1]
+    path_thumbnail_s = ''  # 小尺寸缩略图完整路径
+    path_thumbnail_l = ''  # 大尺寸缩略图完整路径
+    # 创建小尺寸缩略图
+    if im.width > 500 or im.height > 500:
+        im.thumbnail((500, 500))  # 创建大小不超过指定值的缩略图
+        # 根据当前日期创建文件夹 /photos/{userid}/thumbnail/s/年/月/日
+        path_thumbnail_s = os.path.join('photos', userid, 'thumbnail', 's', now.strftime('%Y'), now.strftime('%m'),
+                                        now.strftime('%d'))  # 相对路径
+        realpath_thumbnail_s = os.path.join(settings.BASE_DIR, path_thumbnail_s)  # 物理路径
+        if not os.path.exists(realpath_thumbnail_s):  # 如果目标文件夹不存在则创建
+            os.makedirs(realpath_thumbnail_s, exist_ok=True)
+        fullpath_thumbnail_s = os.path.join(realpath_thumbnail_s, file_name)  # 完整路径
+        im.save(fullpath_thumbnail_s)  # 保存缩略图
+        im.close()
+    else:
+        path_thumbnail_s = path_original
+        path_thumbnail_s = fullpath_original
+
+    # 创建大尺寸缩略图
+    im = Image.open(fullpath_original)  # 重新打开原始照片文件
+    if im.width > 1920 or im.height > 1920:
+        im.thumbnail((1920, 1920))  # 创建大小不超过指定值的缩略图
+        # 根据当前日期创建文件夹 /photos/{userid}/thumbnail/l/年/月/日
+        path_thumbnail_l = os.path.join('photos', userid, 'thumbnail', 'l', now.strftime('%Y'), now.strftime('%m'),
+                                        now.strftime('%d'))  # 相对路径
+        realpath_thumbnail_l = os.path.join(settings.BASE_DIR, path_thumbnail_l)  # 物理路径
+        if not os.path.exists(realpath_thumbnail_l):  # 如果目标文件夹不存在则创建
+            os.makedirs(realpath_thumbnail_l, exist_ok=True)
+        fullpath_thumbnail_l = os.path.join(realpath_thumbnail_l, file_name)  # 完整路径
+        im.save(fullpath_thumbnail_l)  # 保存缩略图
+        im.close()
+    else:
+        path_thumbnail_l = path_original
+        fullpath_thumbnail_l = fullpath_original
+
+    # 依次返回小尺寸缩略图目录和完整路径以及大尺寸缩略图目录和完整路径
+    return path_thumbnail_s, fullpath_thumbnail_s, path_thumbnail_l, fullpath_thumbnail_l
 
 
 def __get_exif(full_path: str, dt: str):

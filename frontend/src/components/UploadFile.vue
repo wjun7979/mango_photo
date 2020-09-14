@@ -151,6 +151,9 @@
                     this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
                     this.clearFiles()
                     this.onCompleted()  //上传完成后的回调
+                }).catch(() => {
+                    this.showUploadProgress = false
+                    this.clearFiles()
                 })
             },
             handleChange(file, fileList) {

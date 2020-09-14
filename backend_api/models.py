@@ -25,9 +25,10 @@ class Photo(models.Model):
     """照片"""
     uuid = models.CharField(primary_key=True, max_length=32)
     userid = models.CharField(max_length=50)  # 所属用户
-    path = models.CharField(max_length=500)  # 照片文件存储路径
-    path_thumbnail = models.CharField(null=True, max_length=500)  # 缩略图存储路径
-    path_original = models.CharField(null=True, max_length=500)  # 原始照片存储路径
+    path_original = models.CharField(max_length=500)  # 原始照片文件存储路径
+    path_modified = models.CharField(null=True, max_length=500)  # 修改后的原始照片存储路径
+    path_thumbnail_s = models.CharField(null=True, max_length=500)  # 小缩略图存储路径
+    path_thumbnail_l = models.CharField(null=True, max_length=500)  # 大缩略图存储路径
     name = models.CharField(max_length=200)  # 照片文件名
     md5 = models.CharField(max_length=32)  # 照片文件MD5值
     size = models.FloatField()  # 照片文件大小

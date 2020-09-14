@@ -38,6 +38,7 @@ def user_upload_avatar(request):
             os.makedirs(real_path, exist_ok=True)
         full_path = os.path.join(real_path, userid + ext_filename)  # 包含路径的完整文件名
         im.save(full_path)
+        im.close()
         # 将头像路径存入数据库
         user = User.objects.get(userid=userid)
         user.avatar = os.path.join(file_path, userid + ext_filename)

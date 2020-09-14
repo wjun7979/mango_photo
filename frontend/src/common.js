@@ -1,4 +1,5 @@
 export default {
+    DEBOUNCE_TIMEOUT: 3000,  //防抖函数延迟时间
     dateFormat(dt, fmt) {
         //将datetime对象格式化成指定格式的字符串
         if (typeof dt == 'string') {
@@ -43,7 +44,7 @@ export default {
     },
     bytesToSize(bytes) {
         //将字节转换为合适的容量单位
-        if (bytes === 0) return '0 B'
+        if (bytes === null || bytes === 0) return '0 B'
         let k = 1024, sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
             i = Math.floor(Math.log(bytes) / Math.log(k))
         return (bytes / Math.pow(k, i)).toPrecision(3) + ' ' + sizes[i]

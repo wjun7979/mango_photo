@@ -28,8 +28,8 @@ def photo_list(request):
             photos = photos.filter(albumphoto__album_uuid=album_uuid)
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
-    photos = photos.values('uuid', 'path', 'path_thumbnail', 'name', 'width', 'height', 'exif_datetime', 'comments',
-                           'address__address', 'address__poi_name')
+    photos = photos.values('uuid', 'path_original', 'path_modified', 'path_thumbnail_s', 'path_thumbnail_l', 'name',
+                           'width', 'height', 'exif_datetime', 'comments', 'address__address', 'address__poi_name')
     photos = photos.order_by('-exif_datetime')
 
     response = json.loads(json.dumps(list(photos), cls=DateEncoder))
@@ -58,7 +58,7 @@ def photo_get_albums(request):
     album_uuid_list = AlbumPhoto.objects.values('album_uuid').filter(photo_uuid=photo_uuid)
     # 然后再得到影集列表
     albums = Album.objects.filter(uuid__in=album_uuid_list)
-    albums = albums.values('uuid', 'name', cover_path=F('cover__path_thumbnail'),
+    albums = albums.values('uuid', 'name', cover_path=F('cover__path_thumbnail_s'),
                            cover_name=F('cover__name'))  # 通过外键关联查询封面路径
     # 影集中的照片数量通过外键表获取
     albums = albums.annotate(photos=Count('albumphoto', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
@@ -134,15 +134,18 @@ def photo_remove(request):
         photo_uuid_list = request_data.get('photo_list')
         photos = Photo.objects.filter(uuid__in=photo_uuid_list, is_deleted=True)
         for item in photos:
-            file_path = os.path.join(settings.BASE_DIR, item.path, item.name)
-            if os.path.exists(file_path):  # 删除上传的文件
+            file_path = os.path.join(settings.BASE_DIR, item.path_original, item.name)
+            if os.path.exists(file_path):  # 删除原图
                 os.remove(file_path)
-            file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail, item.name)
+            file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail_s, item.name)
             if os.path.exists(file_path):  # 删除生成的缩略图
                 os.remove(file_path)
-            if item.path_original:
-                file_path = os.path.join(settings.BASE_DIR, item.path_original, item.name)
-                if os.path.exists(file_path):  # 删除备份的原图
+            file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail_l, item.name)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            if item.path_modified:
+                file_path = os.path.join(settings.BASE_DIR, item.path_modified, item.name)
+                if os.path.exists(file_path):  # 删除修改后的原图
                     os.remove(file_path)
         AlbumPhoto.objects.filter(photo_uuid__in=photo_uuid_list).delete()
         Photo.objects.filter(uuid__in=photo_uuid_list).delete()
@@ -165,15 +168,18 @@ def photo_empty_trash(request):
         userid = request_data.get('userid')
         photos = Photo.objects.filter(userid=userid, is_deleted=True)
         for item in photos:
-            file_path = os.path.join(settings.BASE_DIR, item.path, item.name)
-            if os.path.exists(file_path):  # 删除上传的文件
+            file_path = os.path.join(settings.BASE_DIR, item.path_original, item.name)
+            if os.path.exists(file_path):  # 删除原图
                 os.remove(file_path)
-            file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail, item.name)
+            file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail_s, item.name)
             if os.path.exists(file_path):  # 删除生成的缩略图
                 os.remove(file_path)
-            if item.path_original:
-                file_path = os.path.join(settings.BASE_DIR, item.path_original, item.name)
-                if os.path.exists(file_path):  # 删除备份的原图
+            file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail_l, item.name)
+            if os.path.exists(file_path):
+                os.remove(file_path)
+            if item.path_modified:
+                file_path = os.path.join(settings.BASE_DIR, item.path_modified, item.name)
+                if os.path.exists(file_path):  # 删除修改后的原图
                     os.remove(file_path)
         AlbumPhoto.objects.filter(photo_uuid__in=photos).delete()
         Photo.objects.filter(userid=userid, is_deleted=True).delete()
@@ -227,6 +233,7 @@ def photo_query_location(request):
 def photo_set_location(request):
     """修改照片的位置信息"""
     save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
+    response = {}
     try:
         ak = settings.BMAP_AK
         request_data = json.loads(request.body)

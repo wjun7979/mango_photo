@@ -48,7 +48,7 @@
                                          @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photoGroup.timestamp)">
                             </el-checkbox>
                             <i class="el-icon-zoom-in btn-preview" @click="showPreview(img.uuid)"></i>
-                            <el-image :src="apiUrl + '/' + img.path_thumbnail + '/' + img.name"
+                            <el-image :src="apiUrl + '/' + img.path_thumbnail_s + '/' + img.name"
                                       lazy
                                       :alt="img.name"
                                       @click.exact="clickImage(img.uuid, photoGroup.timestamp)"
@@ -60,6 +60,7 @@
                                     </div>
                                 </div>
                             </el-image>
+                            <!--叠加显示位置信息和照片说明-->
                             <div v-if="img.comments||img.address__address" class="div-img-comments"
                                  @click="clickImage(img.uuid, photoGroup.timestamp)">
                                 <el-tooltip placement="bottom-start" :content="img.address__address">
@@ -72,9 +73,7 @@
                                 <el-tooltip placement="bottom-start" :content="img.comments">
                                     <span>{{img.comments}}</span>
                                 </el-tooltip>
-
                             </div>
-
                         </div>
                     </div>
                 </el-checkbox-group>
@@ -545,6 +544,7 @@
                     })
                     return false
                 }
+                this.isShowAddToAlbumDialog = false
                 this.$axios({
                     method: 'post',
                     url: this.apiUrl + '/api/album_add_photo',
@@ -559,7 +559,6 @@
                         message: msg,
                         type: 'success',
                     })
-                    this.isShowAddToAlbumDialog = false
                 })
             },
             removeFromAlbum() {
@@ -734,6 +733,7 @@
                     })
                     return false
                 }
+                this.isShowModifyDateTimeDialog = false
                 this.$axios({
                     method: 'post',
                     url: this.apiUrl + '/api/photo_set_datetime',
@@ -748,7 +748,6 @@
                         message: msg,
                         type: 'success',
                     })
-                    this.isShowModifyDateTimeDialog = false
                     this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                 })
             },
@@ -781,6 +780,7 @@
             },
             modifyLocation() {
                 //修改照片的位置信息
+                this.isShowModifyLocationDialog = false
                 this.$axios({
                     method: 'post',
                     url: this.apiUrl + '/api/photo_set_location',
@@ -802,7 +802,6 @@
                         message: msg,
                         type: 'success',
                     })
-                    this.isShowModifyLocationDialog = false
                     this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                 })
             },
@@ -818,6 +817,7 @@
         line-height: 200px;
         background: #f5f7fa;
         color: #909399;
+        font-size: 22px;
         text-align: center;
     }
     .images-wrap, .div-images { /*瀑布流照片*/

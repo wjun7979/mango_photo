@@ -18,12 +18,12 @@
                 <el-form-item prop="password" style="margin-bottom: 0">
                     <el-input type="password" ref="password" v-model="form.password" name="password" placeholder="请输入密码"
                               prefix-icon="el-icon-lock" :clearable="true" :show-password="true"
-                              @keypress.enter.native="login"></el-input>
+                              @keypress.enter.native="_login"></el-input>
                 </el-form-item>
             </div>
             <div class="div-btn">
                 <el-button @click="resetForm">重置</el-button>
-                <el-button type="primary" @click="login">登录</el-button>
+                <el-button type="primary" @click="_login">登录</el-button>
             </div>
         </el-form>
         <div class="bgimg-tools">
@@ -60,6 +60,13 @@
         },
         mounted() {
             this.getBackImg()
+        },
+        created() {
+            //防抖
+            this._login = this.$lodash.debounce(this.login, this.$common.DEBOUNCE_TIMEOUT, {
+                leading: true,
+                trailing: false
+            })
         },
         methods: {
             login() {

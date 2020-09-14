@@ -4,10 +4,11 @@ import router from './router.js'
 import store from "./store";
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
+import { Notification } from 'element-ui'
 import axios from 'axios'
+import lodash from 'lodash'
 import './assets/style/default.css'
 import common from './common.js'
-import { Notification } from 'element-ui'
 
 Vue.use(ElementUI)  //前端UI
 
@@ -57,6 +58,7 @@ axios.interceptors.response.use(response => {
 })
 
 Vue.prototype.$axios = axios //全局注册，使用方法为:this.$axios
+Vue.prototype.$lodash = lodash  //全局注册losash工具库
 Vue.prototype.$common = common  //引入公共js方法
 
 Vue.config.productionTip = false

@@ -36,6 +36,7 @@ body::-webkit-scrollbar {  /*隐藏滚动条*/
 
 .mp-page-main {  /*内容区的内容*/
     padding: 66px 0 10px 0;
+    overflow: hidden;
 }
 
 .err-notify {  /*包含详细错误信息的通知框*/

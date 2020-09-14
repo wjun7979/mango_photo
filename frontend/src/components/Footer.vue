@@ -49,10 +49,8 @@
                     }
                 }).then(response => {
                     let res = response.data
-                    if (res.nums > 0) {
-                        this.photoCount.nums = res.nums
-                        this.photoCount.size = this.$common.bytesToSize(res.size)
-                    }
+                    this.photoCount.nums = res.nums
+                    this.photoCount.size = this.$common.bytesToSize(res.size)
                     this.$store.commit('refreshPhotoStatistics', {show: false})  //重置“是否刷新照片库统计信息”标志
                 })
             },

@@ -522,7 +522,7 @@
                         previewList.push({
                             'uuid': item.uuid,
                             'name': item.name,
-                            'url': this.apiUrl + '/' + item.path + '/' + item.name,
+                            'url': this.apiUrl + '/' + item.path_thumbnail_l + '/' + item.name,
                             'comments': item.comments
                         })
                     }
@@ -665,6 +665,7 @@
                     })
                     return false
                 }
+                this.isShowAddToAlbumDialog = false
                 this.$axios({
                     method: 'post',
                     url: this.apiUrl + '/api/album_add_photo',
@@ -678,7 +679,6 @@
                         message: msg,
                         type: 'success',
                     })
-                    this.isShowAddToAlbumDialog = false
                     //如果信息侧边栏处于打开状态，则刷新该图片所属的影集列表
                     if (this.isShowInfoSide) {
                         this.getPhotoAlbums()
@@ -870,6 +870,7 @@
                     })
                     return false
                 }
+                this.isShowModifyDateTimeDialog = false
                 this.$axios({
                     method: 'post',
                     url: this.apiUrl + '/api/photo_set_datetime',
@@ -884,7 +885,6 @@
                         message: msg,
                         type: 'success',
                     })
-                    this.isShowModifyDateTimeDialog = false
                 })
             },
             showModifyLocation(){
@@ -923,6 +923,7 @@
             },
             modifyLocation() {
                 //修改照片的位置信息
+                this.isShowModifyLocationDialog = false
                 this.$axios({
                     method: 'post',
                     url: this.apiUrl + '/api/photo_set_location',
@@ -944,7 +945,6 @@
                         message: msg,
                         type: 'success',
                     })
-                    this.isShowModifyLocationDialog = false
                 })
             },
         }
@@ -1056,10 +1056,16 @@
         text-align: justify;
         cursor: default;
         font-size: 23px;
-        color: #fff;
+        color: #bbbbbb;
         display: flex;
         align-items: center;
         justify-content: space-around;
+    }
+    .viewer-actions-inner i {
+        cursor: pointer;
+    }
+    .viewer-actions-inner i:hover {
+        color: #fff;
     }
     /*工具栏*/
     .viewer-toolbar {

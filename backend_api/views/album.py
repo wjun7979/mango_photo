@@ -18,7 +18,7 @@ def album_list(request):
     parent_uuid = request.GET.get('parent_uuid')
 
     albums = Album.objects.filter(userid=userid, parent_uuid=parent_uuid)
-    albums = albums.values('uuid', 'name', cover_path=F('cover__path_thumbnail'),
+    albums = albums.values('uuid', 'name', cover_path=F('cover__path_thumbnail_s'),
                            cover_name=F('cover__name'))  # 通过外键关联查询封面路径
     # 影集中的照片数量通过外键表获取
     albums = albums.annotate(photos=Count('albumphoto', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
@@ -204,12 +204,6 @@ def album_auto_cover(album_uuid):
             album_photo = AlbumPhoto.objects.filter(album_uuid__in=albums, photo_uuid__is_deleted=False).order_by(
                 '-input_date').first()
             # 设置封面，如果影集和子集中没有任何照片时，则将封面设置为空
-            # album = Album.objects.get(uuid=item.uuid)
-            # if album_photo:
-            #     album.cover = album_photo.photo_uuid
-            # else:
-            #     album.cover = None
-            # album.save()
             if album_photo:
                 Album.objects.filter(uuid=item.uuid).update(cover=album_photo.photo_uuid)
             else:

@@ -54,7 +54,7 @@
         min-width: 1280px;
         padding: 0;
         background-color: #fff;
-        z-index: 2;
+        z-index: 1;
     }
 
     .div-menu {  /*菜单*/
