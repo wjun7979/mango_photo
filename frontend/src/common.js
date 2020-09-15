@@ -1,5 +1,5 @@
 export default {
-    DEBOUNCE_TIMEOUT: 3000,  //防抖函数延迟时间
+    DEBOUNCE_TIMEOUT: 2000,  //防抖函数延迟时间
     dateFormat(dt, fmt) {
         //将datetime对象格式化成指定格式的字符串
         if (typeof dt == 'string') {

@@ -1,30 +1,9 @@
 <template>
-    <div>
-        <el-popover placement="bottom-end" width="350">
+    <div style="float:right; width: 50px;">
+        <el-popover ref="popover" placement="bottom-end" width="350" :visible-arrow="true">
             <div style="text-align: center">
-                <el-row style="text-align: center;">
-                    <el-avatar
-                            :class="{
-                                    'user-avatar-large-one': userInfo.last_name.length === 1,
-                                    'user-avatar-large-two': userInfo.last_name.length > 1
-                            }"
-                            :src="userInfo.avatar"
-                            :key="userInfo.avatar"
-                            :size="80">
-                        {{userInfo.last_name}}
-                    </el-avatar>
-                    <el-upload class="upload-avatar"
-                               :action="apiUrl + '/api/user_upload_avatar'"
-                               accept="image/*"
-                               :show-file-list="false"
-                               :headers="headers"
-                               :data="upload_data"
-                               :before-upload="beforeUpload"
-                               :on-success="handleSuccess"
-                               :on-error="handleError">
-                        <el-button class="btn-avatar" icon="el-icon-camera-solid" circle size="mini"
-                                   title="修改用户头像"></el-button>
-                    </el-upload>
+                <el-row style="padding-left: 122px">
+                    <UserAvatar></UserAvatar>
                 </el-row>
                 <el-row>
                     <span class="user-name">{{userInfo.first_name + userInfo.last_name}}</span>
@@ -33,7 +12,7 @@
                     <span class="user-email">{{userInfo.email}}</span>
                 </el-row>
                 <el-row style="margin: 20px 0;">
-                    <el-button round>修改您的登录密码</el-button>
+                    <el-button round @click="showUserInfo">管理您的账号信息</el-button>
                 </el-row>
                 <el-divider></el-divider>
                 <el-row>
@@ -54,21 +33,18 @@
 </template>
 
 <script>
+    import UserAvatar from "./UserAvatar";
     export default {
         name: "UserCard",
+        components: {UserAvatar},
         data() {
             return {
-                headers: {userid: localStorage.getItem('userid'), token: localStorage.getItem('token')},
-                upload_data: {
-                    userid: localStorage.getItem('userid'),  //当前用户id
-                },
                 userInfo: {  //用户信息
                     first_name: '',
                     last_name: '',
                     email: '',
                     avatar: '',
                 },
-                avatar: '',
             }
         },
         computed: {
@@ -76,6 +52,17 @@
             apiUrl() {
                 return this.$store.state.apiUrl  //后台api调用地址
             },
+            refreshUserInfo() {
+                return this.$store.state.refreshUserInfo  //是否刷新照片列表
+            },
+        },
+        watch: {
+            refreshUserInfo() {
+                //有其它组件发出刷新用户基本信息的指令
+                if (this.refreshUserInfo) {
+                    this.getUser()
+                }
+            }
         },
         mounted() {
             this.getUser()
@@ -85,7 +72,7 @@
                 //获取当前用户信息
                 this.$axios({
                     method: 'get',
-                    url: this.apiUrl + '/api/user_getinfo',
+                    url: this.apiUrl + '/api/user_get_info',
                     params: {
                         userid: localStorage.getItem('userid')
                     }
@@ -94,48 +81,8 @@
                     if (this.userInfo.avatar) {
                         this.userInfo.avatar = this.apiUrl + '/' + this.userInfo.avatar
                     }
-                })
-            },
-            beforeUpload(file) {
-                //文件上传之前进行文件类型和大小检查
-                //上传文件的扩展名
-                const extension_name = file.name.substring(file.name.lastIndexOf('.') + 1).toLowerCase()
-                const accept_list = ['jpg', 'jpeg', 'png', 'bmp']  //允许上传的文件类型列表
-                const isImage = accept_list.indexOf(extension_name) !== -1
-                if (!isImage) {
-                    let msg = '不支持 ' + extension_name + ' 的文件格式'
-                    this.$message({
-                        message: msg,
-                        type: 'success',
-                    })
-                    return false
-                }
-                //检查文件大小
-                const isOverSize = file.size / 1024 / 1024 < 1
-                if (!isOverSize) {
-                    let msg = '不支持超过1MB的文件'
-                    this.$message({
-                        message: msg,
-                        type: 'success',
-                    })
-                    return false
-                }
-            },
-            handleSuccess(response) {
-                //文件上传成功时
-                this.userInfo.avatar = this.apiUrl + '/' + response.path
-                let msg = '用户头像修改成功'
-                this.$message({
-                    message: msg,
-                    type: 'success',
-                })
-            },
-            handleError(err) {
-                //头像文件上传失败时
-                const result =  JSON.parse(err.message)  //关键点，得用JSON.parse来解析err里面的内容
-                this.$message({
-                    message: result.msg,
-                    type: 'error',
+                    //用户基本信息读取完成后，将store.js中的refreshUserInfo值重置为false
+                    this.$store.commit('refreshUserInfo', {show: false})
                 })
             },
             logout() {
@@ -145,13 +92,20 @@
                     localStorage.removeItem('token')
                 }
                 this.$router.push('/login')  //路由跳转到登录页面
-            }
+            },
+            showUserInfo() {
+                //跳转到修改用户账号组件
+                this.$refs['popover'].doClose()
+                this.$router.push({
+                    name: 'user_info'
+                })
+            },
         }
     }
 </script>
 
 <style scoped>
-    .user-avatar-small-one, .user-avatar-small-two, .user-avatar-large-one, .user-avatar-large-two { /*用户头像*/
+    .user-avatar-small-one, .user-avatar-small-two { /*用户头像*/
         background-color: #33691E;
     }
 
@@ -160,19 +114,11 @@
     }
 
     .user-avatar-small-one {
-        font-size:20px;
+        font-size: 20px;
     }
 
     .user-avatar-small-two {
         font-size: 14px;
-    }
-
-    .user-avatar-large-one {
-        font-size: 42px;
-    }
-
-    .user-avatar-large-two {
-        font-size: 30px;
     }
 
     .user-name { /*用户名*/
@@ -182,18 +128,8 @@
         font-weight: 600;
     }
 
-    .user-email {  /*email*/
+    .user-email { /*email*/
         font-size: 14px;
         color: #5f6368;
-    }
-
-    .upload-avatar {  /*上传用户头像组件*/
-        position: absolute;
-        bottom: 0;
-        left: 175px;
-    }
-
-    .btn-avatar {  /*上传用户头像按钮*/
-        font-size: 18px;
     }
 </style>

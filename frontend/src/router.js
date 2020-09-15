@@ -1,6 +1,7 @@
 import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Login from './components/Login'
+import UserInfo from "./components/UserInfo";
 import Main from './components/Main'
 import Photos from "./components/Photos"
 import Photo from "./components/Photo";
@@ -8,6 +9,7 @@ import Albums from "./components/Albums";
 import Album from "./components/Album";
 import Pick from "./components/Pick";
 import Trash from "./components/Trash"
+import Favorites from "./components/Favorites";
 import NotFound from "./components/NotFound";
 
 //解决ElementUI导航栏中的vue-router重复点菜单报错问题
@@ -34,6 +36,11 @@ const routes = [
                 }
             },
             {
+                path: '/favorites', name: 'favorites', component: Favorites, meta: {
+                    title: '收藏夹'
+                }
+            },
+            {
                 path: '/albums', name: 'albums', component: Albums, meta: {
                     title: '影集'
                 }
@@ -46,6 +53,11 @@ const routes = [
             {
                 path: '/trash', name: 'trash', component: Trash, meta: {
                     title: '回收站'
+                }
+            },
+            {
+                path: '/user_info', name: 'user_info', component: UserInfo, meta: {
+                    title: '管理账号'
                 }
             },
         ]

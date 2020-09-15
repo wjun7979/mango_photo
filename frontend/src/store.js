@@ -9,6 +9,7 @@ const store = new Vuex.Store({
         refreshPhoto: false,  //是否刷新照片列表
         refreshAlbum: false,  //是否刷新影集列表
         refreshPhotoStatistics: false,  //是否刷新照片库统计信息
+        refreshUserInfo: false,  //是否刷新用户基本信息
         cancelSelectPhoto: false,  //是否取消已选中的照片
         infoSideStatus: true,  //信息侧边栏的最后一次显示状态
     },
@@ -29,6 +30,9 @@ const store = new Vuex.Store({
         },
         refreshPhotoStatistics(state, payload) {  //更改“是否刷新照片库统计信息”的值
             state.refreshPhotoStatistics = payload.show
+        },
+        refreshUserInfo(state, payload) {  //更改“是否刷新用户基本信息”的值
+            state.refreshUserInfo = payload.show
         },
         cancelSelectPhoto(state, payload) {  //更改“是否取消已选中的照片”的值
             state.cancelSelectPhoto = payload.action

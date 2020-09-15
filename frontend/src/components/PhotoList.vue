@@ -43,10 +43,12 @@
                              :style="{'width': img.width * imgHeight / img.height + 'px',
                                       'flex-grow':img.width * imgHeight / img.height}">
                             <i :style="{'padding-bottom': img.height / img.width * 100 + '%', 'display':'block'}"></i>
+                            <!--叠加选择框-->
                             <el-checkbox :label="img.uuid"
                                          @change="selectPhoto(img.uuid, photoGroup.timestamp)"
                                          @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photoGroup.timestamp)">
                             </el-checkbox>
+                            <!--叠加预览按钮-->
                             <i class="el-icon-zoom-in btn-preview" @click="showPreview(img.uuid)"></i>
                             <el-image :src="apiUrl + '/' + img.path_thumbnail_s + '/' + img.name"
                                       lazy
@@ -74,6 +76,8 @@
                                     <span>{{img.comments}}</span>
                                 </el-tooltip>
                             </div>
+                            <!--叠加收藏标志-->
+                            <i v-if="img.is_favorited" class="el-icon-star-on btn-favorited"></i>
                         </div>
                     </div>
                 </el-checkbox-group>
@@ -86,14 +90,15 @@
                 <span style="font-size: 1.125rem; padding-left: 7px;">选择了 {{checkList.length}} 张照片</span>
             </el-col>
             <el-col :span="12" style="text-align: right">
-                <div v-if="callMode==='photo'">
+                <div v-if="['photo','favorites'].indexOf(callMode)>-1">
                     <i class="el-icon-plus" title="添加到影集" @click="showAlbumTree"></i>
-                    <i class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
                     <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
                     <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
                         <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
                         <el-dropdown-menu slot="dropdown">
                             <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
+                            <el-dropdown-item v-if="noFavorited" icon="el-icon-star-on" command="favorites">收藏</el-dropdown-item>
+                            <el-dropdown-item v-if="!noFavorited" icon="el-icon-star-off" command="unfavorites">从收藏夹中移除</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-date" command="modify_datetime">修改日期和时间</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-location-outline" command="modify_location">修改位置信息
                             </el-dropdown-item>
@@ -102,12 +107,13 @@
                 </div>
                 <div v-if="callMode==='album'">
                     <i class="el-icon-remove-outline" title="从影集中移除" @click="removeFromAlbum"></i>
-                    <i class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
                     <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
                     <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
                         <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
                         <el-dropdown-menu slot="dropdown">
                             <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
+                            <el-dropdown-item v-if="noFavorited" icon="el-icon-star-on" command="favorites">收藏</el-dropdown-item>
+                            <el-dropdown-item v-if="!noFavorited" icon="el-icon-star-off" command="unfavorites">从收藏夹中移除</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-date" command="modify_datetime">修改日期和时间</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-location-outline" command="modify_location">修改位置信息
                             </el-dropdown-item>
@@ -207,6 +213,7 @@
                 checkGroupList: [],  //选中的分组列表
                 checkList: [],  //选中的照片列表
                 lastSelectedUUID: null,  //最后一次选中的照片uuid
+                noFavorited: false,  //选中列表中是否含有未收藏的内容，用于切换工具栏菜单
                 isShowAddToAlbumDialog: false,  //是否显示添加到影集对话框
                 isShowModifyDateTimeDialog: false,  //是否显示修改日期时间对话框
                 photoDateTime: null,  //照片的拍摄时间
@@ -220,7 +227,7 @@
         props: {
             callMode: {  //调用模式
                 type: String,
-                default: 'photo'  //photo:照片; album:影集; pick:挑选照片到影集
+                default: 'photo'  //photo:照片; album:影集; trash:回收站; pick:挑选照片到影集; favorites:收藏夹
             },
             albumUUID: {  //当调用模式为album时，必须指定影集uuid
                 type: String,
@@ -279,6 +286,17 @@
                     let removeList = albumPhotoList.filter(function(v){ return val.indexOf(v) === -1 })
                     let addList = val.filter(function(v){ return albumPhotoList.indexOf(v) === -1 })
                     this.onPick(removeList, addList)
+                }
+                //返回选中列表中是否包含未收藏的照片
+                if (['photo','album','favorites'].indexOf(this.callMode) > -1) {
+                    this.noFavorited = false
+                    for (let item of val) {
+                        let photo = this.photoList.find(t => t.uuid === item)
+                        if (!photo.is_favorited) {
+                            this.noFavorited = true
+                            break
+                        }
+                    }
                 }
             },
             groupType() {
@@ -590,10 +608,6 @@
                     this.deviceSupportInstall()
                 });
             },
-            addToFavorites() {
-                //收藏
-                this.$message('收藏功能还没做好呢:-)')
-            },
             trashPhoto() {
                 //将照片移到回收站
                 this.deviceSupportUninstall()
@@ -686,6 +700,12 @@
                     case 'download':
                         this.downloadPhoto()
                         break
+                    case 'favorites':
+                        this.addToFavorites()
+                        break
+                    case 'unfavorites':
+                        this.removeFromFavorites()
+                        break
                     case 'modify_datetime':
                         this.showModifyDateTime()
                         break
@@ -713,6 +733,42 @@
             downloadPhoto() {
                 //下载
                 this.$message('下载功能还没做好呢:-)')
+            },
+            addToFavorites() {
+                //收藏
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/photo_favorites',
+                    data: {
+                        photo_list: this.checkList
+                    }
+                }).then(() => {
+                    let msg = '已将' + this.checkList.length + ' 张照片添加到收藏夹'
+                    this.unselectPhoto()
+                    this.$message({
+                        message: msg,
+                        type: 'success',
+                    })
+                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                })
+            },
+            removeFromFavorites() {
+                //从收藏夹中移除
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/photo_unfavorites',
+                    data: {
+                        photo_list: this.checkList
+                    }
+                }).then(() => {
+                    let msg = '已将' + this.checkList.length + ' 张照片从收藏夹中移除'
+                    this.unselectPhoto()
+                    this.$message({
+                        message: msg,
+                        type: 'success',
+                    })
+                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                })
             },
             showModifyDateTime() {
                 //显示修改日期和时间对话框
@@ -945,6 +1001,15 @@
     }
     .btn-preview:hover {
         color: #fff;
+    }
+    .btn-favorited {  /*照片右上角的收藏标志*/
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        z-index: 1;
+        color: #fff;
+        font-size: 24px;
+        -webkit-text-stroke: 1px rgba(0, 0, 0, .1);
     }
     .btn-location {  /*照片的位置信息*/
         margin-right: 5px;

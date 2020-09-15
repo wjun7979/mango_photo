@@ -14,30 +14,30 @@
                     <div v-if="callMode === 'photo'">
                         <i class="el-icon-s-operation" title="修改" @click="showModify"></i>
                         <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
-                        <i class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
+                        <i v-if="currentImg.is_favorited" class="el-icon-star-on" title="收藏" @click="removeFromFavorites"></i>
+                        <i v-if="!currentImg.is_favorited" class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
+                        <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
                         <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
                             <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
                             <el-dropdown-menu slot="dropdown">
                                 <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
                                 <el-dropdown-item icon="el-icon-plus" command="add_to_album">添加到影集</el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-delete" command="trash_photo">移到回收站</el-dropdown-item>
                             </el-dropdown-menu>
                         </el-dropdown>
                     </div>
                     <div v-if="callMode === 'album'">
                         <i class="el-icon-s-operation" title="修改" @click="showModify"></i>
                         <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
-                        <i class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
+                        <i v-if="currentImg.is_favorited" class="el-icon-star-on" title="收藏" @click="removeFromFavorites"></i>
+                        <i v-if="!currentImg.is_favorited" class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
+                        <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
                         <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
                             <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
                             <el-dropdown-menu slot="dropdown">
                                 <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
                                 <el-dropdown-item icon="el-icon-plus" command="add_to_album">添加到影集</el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-remove-outline" command="remove_from_album">从影集中移除
-                                </el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-notebook-1" command="set_album_cover">设为影集封面
-                                </el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-delete" command="trash_photo">移到回收站</el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-remove-outline" command="remove_from_album">从影集中移除</el-dropdown-item>
+                                <el-dropdown-item icon="el-icon-notebook-1" command="set_album_cover">设为影集封面</el-dropdown-item>
                             </el-dropdown-menu>
                         </el-dropdown>
                     </div>
@@ -45,6 +45,9 @@
                         <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
                         <i class="el-icon-delete" title="永久删除" @click="removePhoto"></i>
                         <i class="el-icon-time" title="恢复" @click="restorePhoto"></i>
+                    </div>
+                    <div v-if="callMode === 'pick'">
+                        <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
                     </div>
                 </div>
                 <!-- 上一张、下一张 -->
@@ -89,10 +92,16 @@
                     <span style="font-size: 20px">信息</span>
                 </el-row>
                 <div style="padding-top: 70px">
-                    <el-row class="side-href" @click.native="setPhotoComments">
+                    <el-row v-if="['photo','album'].indexOf(callMode)>-1" class="side-href"
+                            @click.native="setPhotoComments">
                         <el-col :span="24" style="border-bottom: solid 1px #8c939d">
                             <span v-if="photoInfo.comments">{{photoInfo.comments}}</span>
                             <span v-else>添加说明</span>
+                        </el-col>
+                    </el-row>
+                    <el-row v-if="['photo','album'].indexOf(callMode)===-1 && photoInfo.comments">
+                        <el-col :span="24">
+                            <span>{{photoInfo.comments}}</span>
                         </el-col>
                     </el-row>
                     <el-row style="font-size: 12px" v-show="photoAlbums.length>0">影集</el-row>
@@ -108,7 +117,8 @@
                         </el-col>
                     </el-row>
                     <el-row style="font-size: 12px">详情</el-row>
-                    <el-row class="side-href" v-if="photoInfo.exif_datetime" @click.native="showModifyDateTime">
+                    <el-row :class="{'side-href':['photo','album'].indexOf(callMode)>-1}" v-if="photoInfo.exif_datetime"
+                            @click.native="showModifyDateTime">
                         <el-col :span="3">
                             <i class="el-icon-date" style="font-size: 24px; line-height: 44px"></i>
                         </el-col>
@@ -120,7 +130,7 @@
                             </p>
                         </el-col>
                         <el-col :span="3" style="text-align: right">
-                            <i class="el-icon-edit" style="font-size: 16px; line-height: 44px; color: #8c939d"></i>
+                            <i v-show="['photo','album'].indexOf(callMode)>-1" class="el-icon-edit" style="font-size: 16px; line-height: 44px; color: #8c939d"></i>
                         </el-col>
                     </el-row>
                     <el-row v-show="photoInfo.name">
@@ -149,7 +159,8 @@
                             </p>
                         </el-col>
                     </el-row>
-                    <el-row class="side-href" @click.native="showModifyLocation">
+                    <el-row :class="{'side-href':['photo','album'].indexOf(callMode)>-1}"
+                            @click.native="showModifyLocation">
                         <el-col :span="3">
                             <i class="el-icon-location" style="font-size: 24px;"></i>
                         </el-col>
@@ -161,7 +172,7 @@
                             <p v-else>这张照片是在哪里拍摄的？</p>
                         </el-col>
                         <el-col :span="3" style="text-align: right">
-                            <i class="el-icon-edit" style="font-size: 16px; color: #8c939d"></i>
+                            <i v-show="['photo','album'].indexOf(callMode)>-1" class="el-icon-edit" style="font-size: 16px; color: #8c939d"></i>
                         </el-col>
                     </el-row>
                     <el-row style="padding: 0" v-show="photoInfo.photo_address">
@@ -523,7 +534,8 @@
                             'uuid': item.uuid,
                             'name': item.name,
                             'url': this.apiUrl + '/' + item.path_thumbnail_l + '/' + item.name,
-                            'comments': item.comments
+                            'comments': item.comments,
+                            'is_favorited': item.is_favorited,
                         })
                     }
                     let index = previewList.findIndex(t => t.uuid === this.uuid)  //获取即将预览的照片索引
@@ -607,7 +619,35 @@
             },
             addToFavorites() {
                 //收藏
-                this.$message('收藏功能还没做好呢:-)')
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/photo_favorites',
+                    data: {
+                        photo_list: [this.currentImg.uuid]
+                    }
+                }).then(() => {
+                    this.$message({
+                        message: '已将照片添加到收藏夹',
+                        type: 'success',
+                    })
+                    this.currentImg.is_favorited = true
+                })
+            },
+            removeFromFavorites() {
+                //取消收藏
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/photo_unfavorites',
+                    data: {
+                        photo_list: [this.currentImg.uuid]
+                    }
+                }).then(() => {
+                    this.$message({
+                        message: '已将照片从收藏夹中移除',
+                        type: 'success',
+                    })
+                    this.currentImg.is_favorited = false
+                })
             },
             handCommand(command) {
                 //更多选项
@@ -621,9 +661,6 @@
                         break
                     case 'remove_from_album':
                         this.removeFromAlbum()
-                        break
-                    case 'trash_photo':
-                        this.trashPhoto()
                         break
                     case 'set_album_cover':
                         this.setAlbumCover()
@@ -857,6 +894,8 @@
             },
             showModifyDateTime() {
                 //显示修改日期和时间对话框
+                if (['photo','album'].indexOf(this.callMode) === -1)
+                    return false
                 this.deviceSupportUninstall()  //卸载键盘按键支持，避免与dialog的esc关闭冲突
                 this.photoDateTime = this.photoInfo.exif_datetime
                 this.isShowModifyDateTimeDialog = true
@@ -889,6 +928,8 @@
             },
             showModifyLocation(){
                 //显示修改位置信息对话框
+                if (['photo','album'].indexOf(this.callMode) === -1)
+                    return false
                 this.deviceSupportUninstall()
                 this.photoLocation = ''
                 this.locationOptions = []

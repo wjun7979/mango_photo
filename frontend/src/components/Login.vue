@@ -72,20 +72,19 @@
             login() {
                 //验证登录
                 this.$refs['loginForm'].validate((valid) => {
-                        if (!valid)  //首先做表单前台检验
-                            return false
-                        this.$axios({
-                            method: 'post',
-                            url: this.apiUrl + '/api/login',
-                            data: this.form
-                        }).then(response => {
-                            const res = response.data
-                            localStorage.userid = res.userid  //存储token
-                            localStorage.token = res.token
-                            this.$router.push('/photos')
-                        })
-                    }
-                )
+                    if (!valid)  //首先做表单前台检验
+                        return false
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/login',
+                        data: this.form
+                    }).then(response => {
+                        const res = response.data
+                        localStorage.userid = res.userid  //存储token
+                        localStorage.token = res.token
+                        this.$router.push('/photos')
+                    })
+                })
             },
             resetForm() {
                 //重置表单

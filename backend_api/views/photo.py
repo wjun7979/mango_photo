@@ -19,17 +19,21 @@ def photo_list(request):
     call_mode = request.GET.get('call_mode')
     userid = request.GET.get('userid')
     album_uuid = request.GET.get('album_uuid')
+    print(call_mode)
 
     photos = Photo.objects.distinct()
     photos = photos.filter(userid=userid)
-    if call_mode in ['photo', 'album']:
+    if call_mode in ['photo', 'album', 'pick', 'favorites']:
         photos = photos.filter(is_deleted=False)
         if call_mode == 'album':  # 在影集中调用
             photos = photos.filter(albumphoto__album_uuid=album_uuid)
+        if call_mode == 'favorites':  # 在收藏夹中调用
+            photos = photos.filter(is_favorited=True)
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
     photos = photos.values('uuid', 'path_original', 'path_modified', 'path_thumbnail_s', 'path_thumbnail_l', 'name',
-                           'width', 'height', 'exif_datetime', 'comments', 'address__address', 'address__poi_name')
+                           'width', 'height', 'exif_datetime', 'is_favorited', 'comments', 'address__address',
+                           'address__poi_name')
     photos = photos.order_by('-exif_datetime')
 
     response = json.loads(json.dumps(list(photos), cls=DateEncoder))
@@ -272,3 +276,21 @@ def photo_set_location(request):
         transaction.savepoint_rollback(save_tag)  # 回滚数据库事务
         response['msg'] = str(e)
         return JsonResponse(response, status=500)
+
+
+@require_http_methods(['POST'])
+def photo_favorites(request):
+    """收藏"""
+    request_data = json.loads(request.body)
+    photo_uuid_list = request_data.get('photo_list')
+    Photo.objects.filter(uuid__in=photo_uuid_list).update(is_favorited=True)  # 修改收藏标志
+    return JsonResponse({}, safe=False, status=200)
+
+
+@require_http_methods(['POST'])
+def photo_unfavorites(request):
+    """取消收藏"""
+    request_data = json.loads(request.body)
+    photo_uuid_list = request_data.get('photo_list')
+    Photo.objects.filter(uuid__in=photo_uuid_list).update(is_favorited=False)  # 修改收藏标志
+    return JsonResponse({}, safe=False, status=200)
