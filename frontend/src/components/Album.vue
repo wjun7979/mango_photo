@@ -2,8 +2,9 @@
     <el-container>
         <el-header class="mp-page-header" height="56px">
             <el-col class="mp-page-header-title" :span="8">
-                <i class="el-icon-back alumb-back" @click="$router.back()"></i>
-                <span>{{albumName}}</span>
+                <div style="float: left;width: 40px"><i class="el-icon-back alumb-back" @click="$router.back()"></i></div>
+                <div class="album-cover" :style="{'background-image':'url('+apiUrl+'/'+album.cover_path+'/'+album.cover_name+')'}"></div>
+                <div style="float: left">{{album.name}}</div>
             </el-col>
             <el-col :span="16" style="text-align: right">
                 <el-form :inline="true" style="margin-top: 2px;">
@@ -33,7 +34,11 @@
         data() {
             return {
                 albumUUID: this.$route.params.uuid,  //影集uuid
-                albumName: '',  //影集标题
+                album: {  //影集信息
+                    name: '',
+                    cover_path: '',
+                    cover_name: '',
+                },
             }
         },
         props: [
@@ -58,7 +63,7 @@
                     }
                 }).then(response => {
                     const result = response.data
-                    this.albumName = result.name
+                    this.album = result
                 })
             },
             openPick() {
@@ -83,5 +88,18 @@
     .alumb-back:hover {
         background-color: #e5e5e5;
         border-radius: 50%;
+    }
+
+    .album-cover {  /*影集封面*/
+        float: left;
+        margin-top: 9px;
+        margin-right: 10px;
+        width: 30px;
+        height: 30px;
+        background-color: #80868b;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        border-radius: 5px;
     }
 </style>

@@ -11,7 +11,7 @@ const store = new Vuex.Store({
         refreshPhotoStatistics: false,  //是否刷新照片库统计信息
         refreshUserInfo: false,  //是否刷新用户基本信息
         cancelSelectPhoto: false,  //是否取消已选中的照片
-        infoSideStatus: true,  //信息侧边栏的最后一次显示状态
+        infoSideStatus: false,  //信息侧边栏的最后一次显示状态
     },
     mutations: {
         setApiUrl(state) {  //根据客户端访问地址改变API请求地址

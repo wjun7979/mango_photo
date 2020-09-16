@@ -30,6 +30,7 @@ urlpatterns = [
     path('photo_favorites', photo_favorites),  # 收藏
     path('photo_unfavorites', photo_unfavorites),  # 取消收藏
     path('album_list', album_list),  # 获取影集列表
+    path('album_target_list', album_target_list),  # 获取影集列表（用于影集移动）
     path('album_get', album_get),  # 获取指定的影集信息
     path('album_new', album_new),  # 创建影集
     path('album_add_photo', album_add_photo),  # 添加照片到影集
@@ -37,4 +38,6 @@ urlpatterns = [
     path('album_pick_photo', album_pick_photo),  # 选择照片到影集，包括添加和移除
     path('album_remove', album_remove),  # 删除影集
     path('album_rename', album_rename),  # 重命名影集
+    path('album_move', album_move),  # 移动影集
+    path('album_set_cover', album_set_cover),  # 手动设置影集封面
 ]

@@ -3,8 +3,7 @@ import json
 import traceback
 import requests  # 调用api
 from django.db import transaction
-from django.db.models import Count, Sum, Q
-from django.db.models import F
+from django.db.models import Count, Sum, Q, F, Min, Max
 from django.http import JsonResponse
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
@@ -19,16 +18,25 @@ def photo_list(request):
     call_mode = request.GET.get('call_mode')
     userid = request.GET.get('userid')
     album_uuid = request.GET.get('album_uuid')
-    print(call_mode)
 
     photos = Photo.objects.distinct()
     photos = photos.filter(userid=userid)
-    if call_mode in ['photo', 'album', 'pick', 'favorites']:
+    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover']:
         photos = photos.filter(is_deleted=False)
         if call_mode == 'album':  # 在影集中调用
             photos = photos.filter(albumphoto__album_uuid=album_uuid)
         if call_mode == 'favorites':  # 在收藏夹中调用
             photos = photos.filter(is_favorited=True)
+        if call_mode == 'cover':  # 在设置影集封面中调用
+            albums = Album.objects.raw('''
+                WITH RECURSIVE tmp_albums AS (
+                    SELECT uuid AS rootId FROM m_album WHERE uuid= %s
+                    UNION ALL
+                    SELECT uuid FROM m_album a,tmp_albums b WHERE a.parent_uuid = b.rootId
+                )
+                SELECT uuid FROM m_album WHERE EXISTS(SELECT uuid FROM tmp_albums WHERE rootId = uuid)
+            ''', [album_uuid])
+            photos = photos.filter(albumphoto__album_uuid__in=albums)
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
     photos = photos.values('uuid', 'path_original', 'path_modified', 'path_thumbnail_s', 'path_thumbnail_l', 'name',
@@ -66,9 +74,13 @@ def photo_get_albums(request):
                            cover_name=F('cover__name'))  # 通过外键关联查询封面路径
     # 影集中的照片数量通过外键表获取
     albums = albums.annotate(photos=Count('albumphoto', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
+    albums = albums.annotate(
+        min_time=Min('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
+    albums = albums.annotate(
+        max_time=Max('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
     albums = albums.order_by('name')
     # 返回结果
-    response = json.loads(json.dumps(list(albums)))
+    response = json.loads(json.dumps(list(albums), cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)
 
 

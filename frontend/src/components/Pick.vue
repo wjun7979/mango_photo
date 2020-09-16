@@ -21,7 +21,7 @@
             </el-col>
         </el-header>
         <el-main style="padding-top: 56px">
-            <PhotoList callMode="pick" :albumUUID="albumUUID" :albumName="albumName" :albumPhotoList="albumPhotoList"
+            <PhotoList callMode="pick" :albumUUID="albumUUID" :albumPhotoList="albumPhotoList"
                        :on-pick="onPick"></PhotoList>
         </el-main>
     </el-container>
@@ -32,7 +32,7 @@
     import UploadFile from "./UploadFile";
 
     export default {
-        name: "AddPhotoToAlbum",
+        name: "Pick",
         data() {
             return {
                 albumUUID: this.$route.params.albumUUID,
@@ -141,7 +141,6 @@
                         message: msg,
                         type: 'success',
                     })
-                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                     this.onClose()
                 })
             },

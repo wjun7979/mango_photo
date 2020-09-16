@@ -27,10 +27,11 @@
         </div>
         <!--照片列表-->
         <el-checkbox-group v-model="checkGroupList" class="images-wrap">
-            <el-row v-for="(photoGroup, index) of photoListGroup" :key="index" style="margin-right: 28px;">
-                <el-checkbox class="chk-group" :label="photoGroup.timestamp"
+            <el-row v-for="(photoGroup, index) of photoListGroup" :key="index" style="margin-right: 28px">
+                <el-checkbox v-if="multiple" class="chk-group" :label="photoGroup.timestamp"
                              @change="selectPhotoGroup(photoGroup.timestamp)">
                 </el-checkbox>
+                <span v-if="!multiple" class="chk-group-label">{{photoGroup.timestamp}}</span>
                 <el-checkbox-group v-model="checkList">
                     <!--瀑布流样式的照片列表-->
                     <div class="div-images">
@@ -44,7 +45,7 @@
                                       'flex-grow':img.width * imgHeight / img.height}">
                             <i :style="{'padding-bottom': img.height / img.width * 100 + '%', 'display':'block'}"></i>
                             <!--叠加选择框-->
-                            <el-checkbox :label="img.uuid"
+                            <el-checkbox v-if="multiple" :label="img.uuid"
                                          @change="selectPhoto(img.uuid, photoGroup.timestamp)"
                                          @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photoGroup.timestamp)">
                             </el-checkbox>
@@ -84,7 +85,7 @@
             </el-row>
         </el-checkbox-group>
         <!--选中照片后的工具栏-->
-        <el-row class="chk-toolbar" v-show="callMode!=='pick' && checkList.length>0">
+        <el-row class="chk-toolbar" v-show="['pick','cover'].indexOf(this.callMode) === -1 && checkList.length>0">
             <el-col :span="12">
                 <i class="el-icon-close" style="color: #202124;" @click="unselectPhoto"></i>
                 <span style="font-size: 1.125rem; padding-left: 7px;">选择了 {{checkList.length}} 张照片</span>
@@ -145,7 +146,10 @@
                     <div style="float: left">
                         <p class="album-tree-title">{{data.name}}</p>
                         <p class="album-tree-photos" v-if="data.photos === 0">没有内容</p>
-                        <p class="album-tree-photos" v-else>{{data.photos}}项</p>
+                        <p class="album-tree-photos" v-else>
+                            <span>{{$common.dateFormat(data.min_time,'yyyy年MM月dd日')}}至{{$common.dateFormat(data.max_time,'yyyy年MM月dd日')}}</span>
+                            <span style="margin-left: 10px">{{data.photos}}项</span>
+                        </p>
                     </div>
                 </div>
             </el-tree>
@@ -211,6 +215,7 @@
                 isShowTips: false,  //是否显示上传提示
                 groupType: 'day',  //分组类型 day, month, year
                 checkGroupList: [],  //选中的分组列表
+                multiple: true,  //是否允许多选
                 checkList: [],  //选中的照片列表
                 lastSelectedUUID: null,  //最后一次选中的照片uuid
                 noFavorited: false,  //选中列表中是否含有未收藏的内容，用于切换工具栏菜单
@@ -287,6 +292,9 @@
                     let addList = val.filter(function(v){ return albumPhotoList.indexOf(v) === -1 })
                     this.onPick(removeList, addList)
                 }
+                if (this.callMode === 'cover') {
+                    this.onPick(this.checkList)
+                }
                 //返回选中列表中是否包含未收藏的照片
                 if (['photo','album','favorites'].indexOf(this.callMode) > -1) {
                     this.noFavorited = false
@@ -317,9 +325,10 @@
                 this.getAlbum()
             }
             this.showPhotos()  //获取并显示照片列表
-            if (this.callMode !== 'pick') {
+            if (['pick','cover'].indexOf(this.callMode) === -1)
                 this.deviceSupportInstall()  //注册键盘按键支持
-            }
+            if (this.callMode === 'cover')  //设置影集封面模式下，只允许单选
+                this.multiple = false
             this.setImgHeight()
             window.addEventListener('resize', this.listenResize)
         },
@@ -421,18 +430,22 @@
                 if (this.checkList.length > 0) {  //当前有照片被选中了
                     let idx = this.checkList.indexOf(uuid)
                     if (idx === -1) {
+                        if (!this.multiple)  //单选模式下先清空已选择的照片
+                            this.checkList = []
                         this.checkList.push(uuid)
                     } else {
                         this.checkList.splice(idx, 1)
                     }
                     this.selectPhoto(uuid, timestamp)  //触发照片选择事件
                 } else {
-                    if (this.callMode === 'pick') {
-                        this.checkList.push(uuid)
-                        this.selectPhoto(uuid, timestamp)  //触发照片选择事件
-                    }
-                    else {  //没有照片被选中时，点击照片就是预览
-                        this.showPreview(uuid)
+                    switch (this.callMode) {
+                        case 'pick':  //添加照片到影集、设置影集封面模式下，点击照片不是预览，而是选中
+                        case 'cover':
+                            this.checkList.push(uuid)
+                            this.selectPhoto(uuid, timestamp)  //触发照片选择事件
+                            break
+                        default:
+                            this.showPreview(uuid)  //没有照片被选中时，点击照片就是预览
                     }
                 }
             },
@@ -497,6 +510,7 @@
                 this.$store.commit('cancelSelectPhoto', {action: false})  //重置vuex的值
             },
             multiSelectPhotos(e, uuid, timestamp) {
+                if (!this.multiple) return false
                 //连续选择照片，当按下shift时才触发该事件
                 if (e.target.tagName === 'SPAN') return  //因为原生click事件会执行两次，第一次在label标签上，第二次在input标签上，故此处理
                 //当起始照片uuid不存在时，不执行连续选择操作
@@ -880,6 +894,9 @@
         display: flex;
         flex-wrap: wrap;
     }
+    .images-wrap {
+        margin-top: 15px;
+    }
     .div-images::after {
         content: '';
         flex-grow: 999999999;
@@ -895,7 +912,6 @@
         vertical-align: bottom;
     }
     .chk-group { /*分组选择*/
-        margin-top: 15px;
         margin-bottom: 10px;
     }
     .chk-group >>> .el-checkbox__input { /*修正分组选择勾选框的位置偏移*/
@@ -921,6 +937,12 @@
     }
     .chk-group >>> .is-checked + .el-checkbox__label {
         color: #606266;
+    }
+
+    .chk-group-label {  /*单选模式下的分组标签*/
+        display: inline-block;
+        font-size: 14px;
+        margin-bottom: 10px
     }
     .div-images >>> .el-checkbox { /*选择控件*/
         visibility: hidden; /*控件默认隐藏*/
@@ -1089,6 +1111,8 @@
         font-size: 16px;
     }
     .album-tree-photos { /*影集中照片的数量*/
+        margin-top: 5px;
+        color: #909399;
         font-size: 12px;
     }
 

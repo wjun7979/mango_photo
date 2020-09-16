@@ -8,6 +8,7 @@ import Photo from "./components/Photo";
 import Albums from "./components/Albums";
 import Album from "./components/Album";
 import Pick from "./components/Pick";
+import Cover from "./components/Cover";
 import Trash from "./components/Trash"
 import Favorites from "./components/Favorites";
 import NotFound from "./components/NotFound";
@@ -70,6 +71,11 @@ const routes = [
     {
         path: '/pick/:albumUUID', name: 'pick', component: Pick, meta: {
             title: '添加照片到影集'
+        }
+    },
+    {
+        path: '/cover/:albumUUID', name: 'cover', component: Cover, meta: {
+            title: '选择影集封面'
         }
     },
     {path: '*', component: NotFound},

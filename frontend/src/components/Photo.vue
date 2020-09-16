@@ -11,7 +11,7 @@
                 <span v-show="currentImg.comments" class="viewer-comments" @click="setPhotoComments">{{currentImg.comments}}</span>
                 <!--工具栏-->
                 <div class="viewer-toolbar">
-                    <div v-if="callMode === 'photo'">
+                    <div v-if="['photo','favorites'].indexOf(callMode)>-1">
                         <i class="el-icon-s-operation" title="修改" @click="showModify"></i>
                         <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
                         <i v-if="currentImg.is_favorited" class="el-icon-star-on" title="收藏" @click="removeFromFavorites"></i>
@@ -46,7 +46,7 @@
                         <i class="el-icon-delete" title="永久删除" @click="removePhoto"></i>
                         <i class="el-icon-time" title="恢复" @click="restorePhoto"></i>
                     </div>
-                    <div v-if="callMode === 'pick'">
+                    <div v-if="['pick','cover'].indexOf(callMode)>-1">
                         <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
                     </div>
                 </div>
@@ -92,14 +92,14 @@
                     <span style="font-size: 20px">信息</span>
                 </el-row>
                 <div style="padding-top: 70px">
-                    <el-row v-if="['photo','album'].indexOf(callMode)>-1" class="side-href"
+                    <el-row v-if="['photo','album','favorites'].indexOf(callMode)>-1" class="side-href"
                             @click.native="setPhotoComments">
                         <el-col :span="24" style="border-bottom: solid 1px #8c939d">
                             <span v-if="photoInfo.comments">{{photoInfo.comments}}</span>
                             <span v-else>添加说明</span>
                         </el-col>
                     </el-row>
-                    <el-row v-if="['photo','album'].indexOf(callMode)===-1 && photoInfo.comments">
+                    <el-row v-if="['photo','album','favorites'].indexOf(callMode)===-1 && photoInfo.comments">
                         <el-col :span="24">
                             <span>{{photoInfo.comments}}</span>
                         </el-col>
@@ -113,11 +113,14 @@
                         <el-col :span="20">
                             <p>{{album.name}}</p>
                             <p style="font-size: 14px; color: #8c939d" v-if="album.photos === 0">没有内容</p>
-                            <p style="font-size: 14px; color: #8c939d" v-else>{{album.photos}}项</p>
+                            <p class="album-tree-photos" v-else>
+                                <span>{{$common.dateFormat(album.min_time,'yyyy年MM月dd日')}}至{{$common.dateFormat(album.max_time,'yyyy年MM月dd日')}}</span>
+                                <span style="margin-left: 10px">{{album.photos}}项</span>
+                            </p>
                         </el-col>
                     </el-row>
                     <el-row style="font-size: 12px">详情</el-row>
-                    <el-row :class="{'side-href':['photo','album'].indexOf(callMode)>-1}" v-if="photoInfo.exif_datetime"
+                    <el-row :class="{'side-href':['photo','album','favorites'].indexOf(callMode)>-1}" v-if="photoInfo.exif_datetime"
                             @click.native="showModifyDateTime">
                         <el-col :span="3">
                             <i class="el-icon-date" style="font-size: 24px; line-height: 44px"></i>
@@ -159,7 +162,7 @@
                             </p>
                         </el-col>
                     </el-row>
-                    <el-row :class="{'side-href':['photo','album'].indexOf(callMode)>-1}"
+                    <el-row :class="{'side-href':['photo','album','favorites'].indexOf(callMode)>-1}"
                             @click.native="showModifyLocation">
                         <el-col :span="3">
                             <i class="el-icon-location" style="font-size: 24px;"></i>
@@ -203,7 +206,10 @@
                         <div style="float: left">
                             <p class="album-tree-title">{{data.name}}</p>
                             <p class="album-tree-photos" v-if="data.photos === 0">没有内容</p>
-                            <p class="album-tree-photos" v-else>{{data.photos}}项</p>
+                            <p class="album-tree-photos" v-else>
+                                <span>{{$common.dateFormat(data.min_time,'yyyy年MM月dd日')}}至{{$common.dateFormat(data.max_time,'yyyy年MM月dd日')}}</span>
+                                <span style="margin-left: 10px">{{data.photos}}项</span>
+                            </p>
                         </div>
                     </div>
                 </el-tree>
@@ -795,7 +801,24 @@
             },
             setAlbumCover() {
                 //设为影集封面
-                this.$message('设为影集封面功能还没做好呢:-)')
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/album_set_cover',
+                    data: {
+                        album_uuid: this.albumUUID,
+                        photo_uuid: this.currentImg.uuid
+                    }
+                }).then(() => {
+                    let msg = '成功将照片' + this.currentImg.name + '设置为影集 [' + this.albumName + '] 的封面'
+                    this.$message({
+                        message: msg,
+                        type: 'success',
+                    })
+                    //如果信息侧边栏处于打开状态，则刷新该图片所属的影集列表
+                    if (this.isShowInfoSide) {
+                        this.getPhotoAlbums()
+                    }
+                })
             },
             removePhoto() {
                 //永久删除照片
@@ -894,7 +917,7 @@
             },
             showModifyDateTime() {
                 //显示修改日期和时间对话框
-                if (['photo','album'].indexOf(this.callMode) === -1)
+                if (['photo','album','favorites'].indexOf(this.callMode) === -1)
                     return false
                 this.deviceSupportUninstall()  //卸载键盘按键支持，避免与dialog的esc关闭冲突
                 this.photoDateTime = this.photoInfo.exif_datetime
@@ -928,7 +951,7 @@
             },
             showModifyLocation(){
                 //显示修改位置信息对话框
-                if (['photo','album'].indexOf(this.callMode) === -1)
+                if (['photo','album','favorites'].indexOf(this.callMode) === -1)
                     return false
                 this.deviceSupportUninstall()
                 this.photoLocation = ''
@@ -1218,6 +1241,8 @@
         font-size: 16px;
     }
     .album-tree-photos { /*影集中照片的数量*/
+        margin-top: 5px;
+        color: #909399;
         font-size: 12px;
     }
 </style>

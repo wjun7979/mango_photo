@@ -1,13 +1,13 @@
 import json
 import traceback
 import uuid
-
 from django.db import transaction
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Min, Max
 from django.db.models import F
 from django.forms import model_to_dict
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
+from backend_api.common.date_encoder import DateEncoder
 from backend_api.models import Album, AlbumPhoto, Photo
 
 
@@ -18,13 +18,40 @@ def album_list(request):
     parent_uuid = request.GET.get('parent_uuid')
 
     albums = Album.objects.filter(userid=userid, parent_uuid=parent_uuid)
-    albums = albums.values('uuid', 'name', cover_path=F('cover__path_thumbnail_s'),
+    albums = albums.values('uuid', 'name', 'parent_uuid', cover_path=F('cover__path_thumbnail_s'),
                            cover_name=F('cover__name'))  # 通过外键关联查询封面路径
     # 影集中的照片数量通过外键表获取
     albums = albums.annotate(photos=Count('albumphoto', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
+    albums = albums.annotate(
+        min_time=Min('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
+    albums = albums.annotate(
+        max_time=Max('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
     albums = albums.order_by('name')
 
-    response = json.loads(json.dumps(list(albums)))
+    response = json.loads(json.dumps(list(albums), cls=DateEncoder))
+    return JsonResponse(response, safe=False, status=200)
+
+
+@require_http_methods(['GET'])
+def album_target_list(request):
+    """获取影集列表（用于影集移动）"""
+    userid = request.GET.get('userid')
+    parent_uuid = request.GET.get('parent_uuid')
+    curr_album_uuid = request.GET.get('curr_album_uuid')
+
+    albums = Album.objects.filter(userid=userid, parent_uuid=parent_uuid)
+    albums = albums.filter(~Q(uuid=curr_album_uuid))  # 目标影集不能是自己或者子集
+    albums = albums.values('uuid', 'name', 'parent_uuid', cover_path=F('cover__path_thumbnail_s'),
+                           cover_name=F('cover__name'))  # 通过外键关联查询封面路径
+    # 影集中的照片数量通过外键表获取
+    albums = albums.annotate(photos=Count('albumphoto', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
+    albums = albums.annotate(
+        min_time=Min('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
+    albums = albums.annotate(
+        max_time=Max('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
+    albums = albums.order_by('name')
+
+    response = json.loads(json.dumps(list(albums), cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)
 
 
@@ -32,9 +59,9 @@ def album_list(request):
 def album_get(request):
     """获取指定的影集信息"""
     album_uuid = request.GET.get('uuid')
-    album = Album.objects.get(uuid=album_uuid)
-    response = model_to_dict(album)
-    return JsonResponse(response, safe=False, status=200)
+    album = Album.objects.values('uuid', 'name', cover_path=F('cover__path_thumbnail_s'),
+                                 cover_name=F('cover__name')).get(uuid=album_uuid)
+    return JsonResponse(album, safe=False, status=200)
 
 
 @require_http_methods(['POST'])
@@ -176,6 +203,18 @@ def album_rename(request):
     return JsonResponse({}, status=200)
 
 
+@require_http_methods(['POST'])
+def album_move(request):
+    """移动影集"""
+    request_data = json.loads(request.body)
+    album_uuid = request_data.get('uuid')
+    parent_uuid = request_data.get('parent_uuid')
+    album = Album.objects.get(uuid=album_uuid)
+    album.parent_uuid = parent_uuid
+    album.save()
+    return JsonResponse({}, status=200)
+
+
 @transaction.atomic  # 数据库事务处理
 def album_auto_cover(album_uuid):
     """自动设置指定影集及其父集的封面"""
@@ -191,7 +230,7 @@ def album_auto_cover(album_uuid):
         ORDER BY t1.lvl DESC
     ''', [album_uuid])
     for item in albums:
-        if item.cover_from != 'user':
+        if item.cover_from != 'manual':
             # 以该影集及其子集中最后一次添加的照片作为封面
             albums = Album.objects.raw('''
                 WITH RECURSIVE tmp_albums AS (
@@ -208,3 +247,16 @@ def album_auto_cover(album_uuid):
                 Album.objects.filter(uuid=item.uuid).update(cover=album_photo.photo_uuid)
             else:
                 Album.objects.filter(uuid=item.uuid).update(cover=None)
+
+
+@require_http_methods(['POST'])
+def album_set_cover(request):
+    """手动设置影集封面"""
+    request_data = json.loads(request.body)
+    album_uuid = request_data.get('album_uuid')
+    photo_uuid = request_data.get('photo_uuid')
+    album = Album.objects.get(uuid=album_uuid)
+    album.cover = Photo.objects.get(uuid=photo_uuid)
+    album.cover_from = 'manual'
+    album.save()
+    return JsonResponse({}, status=200)
