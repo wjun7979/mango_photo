@@ -12,6 +12,7 @@ class User(models.Model):
     avatar = models.CharField(null=True, max_length=500)  # 用户头像
     last_login_time = models.DateTimeField(null=True, auto_now=True)  # 最后一次登录时间
     last_login_ip = models.CharField(null=True, max_length=50)  # 最后一次登录IP
+    celery_working = models.BooleanField(default=False)  # 是否正在执行后台任务
     is_active = models.BooleanField(default=True)  # 有效标志
 
     class Meta:
@@ -30,6 +31,7 @@ class Photo(models.Model):
     path_thumbnail_s = models.CharField(null=True, max_length=500)  # 小缩略图存储路径
     path_thumbnail_l = models.CharField(null=True, max_length=500)  # 大缩略图存储路径
     name = models.CharField(max_length=200)  # 照片文件名
+    name_original = models.CharField(max_length=200)  # 原始文件名
     md5 = models.CharField(max_length=32)  # 照片文件MD5值
     size = models.FloatField()  # 照片文件大小
     width = models.IntegerField()  # 照片宽度
@@ -49,6 +51,7 @@ class Photo(models.Model):
     comments = models.CharField(null=True, max_length=500)  # 备注
     is_favorited = models.BooleanField(default=False)  # 收藏标志
     is_deleted = models.BooleanField(default=False)  # 删除标志
+    is_detect_face = models.BooleanField(default=False)  # 是否已进行过人脸检测
     input_date = models.DateTimeField(auto_now_add=True)  # 录入时间
     update_date = models.DateTimeField(auto_now=True)  # 修改时间
 
@@ -100,8 +103,8 @@ class Album(models.Model):
 class AlbumPhoto(models.Model):
     """影集中的照片"""
     uuid = models.CharField(primary_key=True, max_length=32)
-    album_uuid = models.ForeignKey('Album', on_delete=models.CASCADE, db_column='album_uuid')  # 影集uuid
-    photo_uuid = models.ForeignKey('Photo', on_delete=models.CASCADE, db_column='photo_uuid')  # 照片uuid
+    album_uuid = models.ForeignKey('Album', on_delete=models.CASCADE, db_column='album_uuid')  # 所属影集uuid
+    photo_uuid = models.ForeignKey('Photo', on_delete=models.CASCADE, db_column='photo_uuid')  # 所属照片uuid
     input_date = models.DateTimeField(auto_now_add=True)  # 添加时间
 
     class Meta:
@@ -109,3 +112,40 @@ class AlbumPhoto(models.Model):
 
     def __str__(self):
         return 'album_photo:' + self.uuid
+
+
+class People(models.Model):
+    """人物"""
+    uuid = models.CharField(primary_key=True, max_length=32)
+    userid = models.CharField(max_length=50)  # 所属用户
+    name = models.CharField(max_length=200)  # 人物姓名
+    cover = models.ForeignKey('PeopleFace', null=True, on_delete=models.CASCADE, db_column='cover')  # 封面
+    cover_from = models.CharField(default='auto', max_length=10)  # 封面产生的方式:auto自动产生,user用户指定
+    input_date = models.DateTimeField(auto_now_add=True)  # 创建时间
+    update_date = models.DateTimeField(auto_now=True)  # 修改时间
+
+    class Meta:
+        db_table = 'm_people'
+
+    def __str__(self):
+        return 'm_people:' + self.uuid
+
+
+class PeopleFace(models.Model):
+    """人物中的人脸"""
+    uuid = models.CharField(primary_key=True, max_length=32)
+    photo_uuid = models.ForeignKey('Photo', on_delete=models.CASCADE, db_column='photo_uuid')  # 所属照片uuid
+    people_uuid = models.ForeignKey('People', null=True, on_delete=models.CASCADE, db_column='people_uuid')  # 所属人物uuid
+    path = models.CharField(max_length=500)  # 人脸图片存储路径
+    path_thumbnail = models.CharField(max_length=500)  # 缩略图存储路径
+    name = models.CharField(max_length=200)  # 人脸文件名
+    encoding = models.CharField(max_length=10000)  # 128维面部编码
+    input_date = models.DateTimeField(auto_now_add=True)  # 添加时间
+    is_feature = models.BooleanField(default=False)  # 是否属于人物特征
+    is_active = models.BooleanField(default=True)  # 有效标志
+
+    class Meta:
+        db_table = 'm_people_face'
+
+    def __str__(self):
+        return 'm_people_face:' + self.uuid

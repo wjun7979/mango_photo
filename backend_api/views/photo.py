@@ -8,8 +8,9 @@ from django.http import JsonResponse
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
 from backend_api.common.date_encoder import DateEncoder
-from backend_api.models import Photo, AlbumPhoto, Album, Address
+from backend_api.models import Photo, AlbumPhoto, Album, Address, People, PeopleFace
 from backend_api.views.album import album_auto_cover
+from backend_api.views.people import people_auto_cover, people_check
 
 
 @require_http_methods(['GET'])
@@ -53,10 +54,11 @@ def photo_list(request):
 def photo_get_info(request):
     """获取指定照片详细信息"""
     photo_uuid = request.GET.get('photo_uuid')
-    photo = Photo.objects.values('uuid', 'name', 'width', 'height', 'size', 'exif_datetime', 'exif_make', 'exif_model',
-                                 'exif_fnumber', 'exif_exposuretime', 'exif_focallength', 'exif_isospeedratings',
-                                 'comments', photo_address=F('address__address'), photo_poi_name=F('address__poi_name'),
-                                 photo_lat=F('address__lat'), photo_lng=F('address__lng'))
+    photo = Photo.objects.values('uuid', 'name', 'name_original', 'width', 'height', 'size', 'exif_datetime',
+                                 'exif_make', 'exif_model', 'exif_fnumber', 'exif_exposuretime', 'exif_focallength',
+                                 'exif_isospeedratings', 'comments', photo_address=F('address__address'),
+                                 photo_poi_name=F('address__poi_name'), photo_lat=F('address__lat'),
+                                 photo_lng=F('address__lng'))
     photo = photo.get(uuid=photo_uuid)
     photo['exif_datetime'] = photo['exif_datetime'].strftime('%Y-%m-%d %H:%M:%S')  # 对日期型字段进行转换
     return JsonResponse(photo, safe=False, status=200)
@@ -163,8 +165,24 @@ def photo_remove(request):
                 file_path = os.path.join(settings.BASE_DIR, item.path_modified, item.name)
                 if os.path.exists(file_path):  # 删除修改后的原图
                     os.remove(file_path)
-        AlbumPhoto.objects.filter(photo_uuid__in=photo_uuid_list).delete()
-        Photo.objects.filter(uuid__in=photo_uuid_list).delete()
+            # 删除人脸图像
+            people_face = PeopleFace.objects.filter(photo_uuid=item.uuid)
+            for face in people_face:
+                file_path = os.path.join(settings.BASE_DIR, face.path, face.name)
+                if os.path.exists(file_path):  # 删除原图
+                    os.remove(file_path)
+                file_path = os.path.join(settings.BASE_DIR, face.path_thumbnail, face.name)
+                if os.path.exists(file_path):  # 删除缩略图
+                    os.remove(file_path)
+        # 删除与人物相关的数据
+        peoples = People.objects.filter(cover__photo_uuid__in=photos)
+        for item in peoples:
+            People.objects.filter(uuid=item.uuid).update(cover=None, cover_from='auto')  # 取消人物封面
+            PeopleFace.objects.filter(photo_uuid__in=photos).delete()  # 删除人脸
+            people_auto_cover(item.uuid)  # 重新生成人物封面
+            people_check(item.uuid)  # 人物检测
+        # 删除照片，Address、AlbumPhoto将会被级联删除
+        Photo.objects.filter(uuid__in=photos).delete()
         return JsonResponse(response, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息
@@ -197,7 +215,23 @@ def photo_empty_trash(request):
                 file_path = os.path.join(settings.BASE_DIR, item.path_modified, item.name)
                 if os.path.exists(file_path):  # 删除修改后的原图
                     os.remove(file_path)
-        AlbumPhoto.objects.filter(photo_uuid__in=photos).delete()
+            # 删除人脸图像
+            people_face = PeopleFace.objects.filter(photo_uuid=item.uuid)
+            for face in people_face:
+                file_path = os.path.join(settings.BASE_DIR, face.path, face.name)
+                if os.path.exists(file_path):  # 删除原图
+                    os.remove(file_path)
+                file_path = os.path.join(settings.BASE_DIR, face.path_thumbnail, face.name)
+                if os.path.exists(file_path):  # 删除缩略图
+                    os.remove(file_path)
+        # 删除与人物相关的数据
+        peoples = People.objects.filter(cover__photo_uuid__in=photos)
+        for item in peoples:
+            People.objects.filter(uuid=item.uuid).update(cover=None, cover_from='auto')  # 取消人物封面
+            PeopleFace.objects.filter(photo_uuid__in=photos).delete()  # 删除人脸
+            people_auto_cover(item.uuid)  # 重新生成人物封面
+            people_check(item.uuid)  # 人物检测
+        # 删除照片，Address、AlbumPhoto将会被级联删除
         Photo.objects.filter(userid=userid, is_deleted=True).delete()
         return JsonResponse(response, status=200)
     except Exception as e:
@@ -306,3 +340,15 @@ def photo_unfavorites(request):
     photo_uuid_list = request_data.get('photo_list')
     Photo.objects.filter(uuid__in=photo_uuid_list).update(is_favorited=False)  # 修改收藏标志
     return JsonResponse({}, safe=False, status=200)
+
+
+@require_http_methods(['GET'])
+def photo_get_faces(request):
+    """获取指定照片中的人脸列表"""
+    photo_uuid = request.GET.get('photo_uuid')
+    people_face = PeopleFace.objects.filter(photo_uuid=photo_uuid, is_active=True)
+    people_face = people_face.values('uuid', 'path', 'path_thumbnail', 'name', 'input_date',
+                                     people_name=F('people_uuid__name'))
+    people_face = people_face.order_by('input_date')
+    response = json.loads(json.dumps(list(people_face), cls=DateEncoder))
+    return JsonResponse(response, safe=False, status=200)

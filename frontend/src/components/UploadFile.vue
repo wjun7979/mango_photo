@@ -132,7 +132,7 @@
                         })
                     }
                     else {
-                        msg += '<div style="width: 350px; height: 250px; overflow: auto">'
+                        msg += '<div style="width: 350px; max-height: 250px; overflow: auto">'
                         for (let error of res.error) {
                             msg += '<br/>' + error.name + '上传失败: ' + error.msg
                         }

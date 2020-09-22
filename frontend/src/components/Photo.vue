@@ -5,7 +5,7 @@
                  :style="{'margin-right': viewerWrapperMargin}">
                 <div class="viewer-mask"></div>
                 <!-- 关闭按钮 -->
-                <span class="viewer-btn viewer-close" @click="$router.back()">
+                <span class="viewer-btn viewer-close" @click="close">
                     <i class="el-icon-back"></i>
                 </span>
                 <span v-show="currentImg.comments" class="viewer-comments" @click="setPhotoComments">{{currentImg.comments}}</span>
@@ -92,6 +92,7 @@
                     <span style="font-size: 20px">信息</span>
                 </el-row>
                 <div style="padding-top: 70px">
+                    <!--照片说明-->
                     <el-row v-if="['photo','album','favorites'].indexOf(callMode)>-1" class="side-href"
                             @click.native="setPhotoComments">
                         <el-col :span="24" style="border-bottom: solid 1px #8c939d">
@@ -99,12 +100,33 @@
                             <span v-else>添加说明</span>
                         </el-col>
                     </el-row>
-                    <el-row v-if="['photo','album','favorites'].indexOf(callMode)===-1 && photoInfo.comments">
+                    <el-row v-if="['trash','pick','cover'].indexOf(callMode)>-1 && photoInfo.comments">
                         <el-col :span="24">
                             <span>{{photoInfo.comments}}</span>
                         </el-col>
                     </el-row>
-                    <el-row style="font-size: 12px" v-show="photoAlbums.length>0">影集</el-row>
+                    <el-row v-show="photoFaces.length>0" style="font-size: 12px">人物</el-row>
+                    <el-row v-show="photoFaces.length>0" :gutter="15">
+                        <el-col v-for="(face, index) of this.photoFaces" :key="index" :span="6">
+                            <img :src="apiUrl+'/'+face.path_thumbnail+'/'+face.name" alt="" class="face-img"/>
+                            <el-dropdown trigger="click" placement="bottom-start" @command="faceCommand">
+                              <span class="face-name" v-if="face.people_name">
+                                {{face.people_name}}<i class="el-icon-arrow-down el-icon--right"></i>
+                              </span>
+                              <span class="face-name" v-else>Ta是谁<i class="el-icon-arrow-down el-icon--right"></i>
+                              </span>
+                                <el-dropdown-menu slot="dropdown" v-if="face.people_name">
+                                    <el-dropdown-item :command="beforeFaceCommand(face.uuid, face.people_name, 'removeName')">Ta不是{{face.people_name}}</el-dropdown-item>
+                                    <el-dropdown-item>隐藏该人物</el-dropdown-item>
+                                </el-dropdown-menu>
+                                <el-dropdown-menu slot="dropdown" v-else>
+                                    <el-dropdown-item :command="beforeFaceCommand(face.uuid, face.people_name, 'setName')">添加姓名</el-dropdown-item>
+                                    <el-dropdown-item>隐藏该人物</el-dropdown-item>
+                                </el-dropdown-menu>
+                            </el-dropdown>
+                        </el-col>
+                    </el-row>
+                    <el-row v-show="photoAlbums.length>0" style="font-size: 12px">影集</el-row>
                     <el-row v-for="(album, index) of this.photoAlbums" :key="index">
                         <el-col :span="4">
                             <div class="side-album-cover"
@@ -141,7 +163,7 @@
                             <i class="el-icon-picture" style="font-size: 24px; line-height: 44px"></i>
                         </el-col>
                         <el-col :span="21">
-                            <p :title="photoInfo.name" class="side-title">{{photoInfo.name}}</p>
+                            <p :title="photoInfo.name" class="side-title">{{photoInfo.name_original}}</p>
                             <p style="font-size: 14px; color: #8c939d">
                                 <span style="margin-right: 10px;">{{photoInfo.width}} × {{photoInfo.height}}</span>
                                 <span>{{$common.bytesToSize(photoInfo.size)}}</span>
@@ -162,6 +184,7 @@
                             </p>
                         </el-col>
                     </el-row>
+                    <!--位置信息-->
                     <el-row :class="{'side-href':['photo','album','favorites'].indexOf(callMode)>-1}"
                             @click.native="showModifyLocation">
                         <el-col :span="3">
@@ -274,7 +297,7 @@
     };
     const mousewheelEventName = isFirefox() ? 'DOMMouseScroll' : 'mousewheel';
     export default {
-        name: "Preview",
+        name: "Photo",
         data() {
             return {
                 uuid: this.$route.params.uuid,  //当前点击的照片uuid
@@ -298,6 +321,7 @@
                 viewerWrapperMargin: '0px',  //最外层容器右边距
                 photoInfo: {},  //当前照片的详细信息
                 photoAlbums: [],  //当前照片所属的影集列表
+                photoFaces: [],  //当前照片中的人脸列表
                 baiduMap: null,  //百度地图对象
                 isShowAddToAlbumDialog: false,  //是否显示添加到影集对话框
                 isShowModifyDateTimeDialog: false,  //是否显示修改日期时间对话框
@@ -449,6 +473,9 @@
                 this.mode = Mode[modeNames[nextIndex]];
                 this.reset();
             },
+            close() {
+                this.$router.back()
+            },
             prev() {  //上一张
                 const len = this.previewListOrder.length;
                 this.index = (this.index - 1 + len) % len;
@@ -463,6 +490,7 @@
                 if (this.isShowInfoSide) {
                     this.getPhotoInfo()  //重新获取照片详细信息
                     this.getPhotoAlbums()  //重新获取照片所属的影集列表
+                    this.getPhotoFaces()  //重新获取照片中的人物
                 }
             },
             next() {  //下一张
@@ -479,6 +507,7 @@
                 if (this.isShowInfoSide) {
                     this.getPhotoInfo()  //重新获取照片详细信息
                     this.getPhotoAlbums()  //重新获取照片所属的影集列表
+                    this.getPhotoFaces()  //重新获取照片中的人物
                 }
             },
             handleActions(action, options = {}) {  //对图片进行缩放和旋转操作
@@ -572,6 +601,7 @@
                 if (this.isShowInfoSide) {
                     this.getPhotoInfo()  //获取照片详细信息
                     this.getPhotoAlbums()  //获取照片所属的影集列表
+                    this.getPhotoFaces()  //获取照片中的人脸列表
                 }
             },
             closeInfo() {  //关闭信息侧边栏
@@ -588,7 +618,7 @@
                     method: 'get',
                     url: this.apiUrl + '/api/photo_get_info',
                     params: {
-                        photo_uuid: this.previewListOrder[this.index].uuid
+                        photo_uuid: this.currentImg.uuid
                     }
                 }).then(response => {
                     const res = response.data
@@ -617,10 +647,22 @@
                     method: 'get',
                     url: this.apiUrl + '/api/photo_get_albums',
                     params: {
-                        photo_uuid: this.previewListOrder[this.index].uuid
+                        photo_uuid: this.currentImg.uuid
                     }
                 }).then(response => {
                     this.photoAlbums = response.data
+                })
+            },
+            getPhotoFaces() {
+                //获取指定照片中的人脸列表
+                this.$axios({
+                    method: 'get',
+                    url: this.apiUrl + '/api/photo_get_faces',
+                    params: {
+                        photo_uuid: this.currentImg.uuid
+                    }
+                }).then(response => {
+                    this.photoFaces = response.data
                 })
             },
             addToFavorites() {
@@ -756,6 +798,11 @@
                             if (this.index > this.previewListOrder.length - 1)
                                 this.index = 0
                             this.currentImg = this.previewListOrder[this.index]
+                            if (this.isShowInfoSide) {
+                                this.getPhotoInfo()  //重新获取照片详细信息
+                                this.getPhotoAlbums()  //重新获取照片所属的影集列表
+                                this.getPhotoFaces()  //重新获取照片中的人物
+                            }
                         }
                         else
                             this.close()  //否则关闭预览
@@ -791,6 +838,11 @@
                             if (this.index > this.previewListOrder.length - 1)
                                 this.index = 0
                             this.currentImg = this.previewListOrder[this.index]
+                            if (this.isShowInfoSide) {
+                                this.getPhotoInfo()  //重新获取照片详细信息
+                                this.getPhotoAlbums()  //重新获取照片所属的影集列表
+                                this.getPhotoFaces()  //重新获取照片中的人物
+                            }
                         }
                         else
                             this.close()  //否则关闭预览
@@ -847,6 +899,11 @@
                             if (this.index > this.previewListOrder.length - 1)
                                 this.index = 0
                             this.currentImg = this.previewListOrder[this.index]
+                            if (this.isShowInfoSide) {
+                                this.getPhotoInfo()  //重新获取照片详细信息
+                                this.getPhotoAlbums()  //重新获取照片所属的影集列表
+                                this.getPhotoFaces()  //重新获取照片中的人物
+                            }
                         }
                         else
                             this.close()  //否则关闭预览
@@ -875,6 +932,11 @@
                         if (this.index > this.previewListOrder.length - 1)
                             this.index = 0
                         this.currentImg = this.previewListOrder[this.index]
+                        if (this.isShowInfoSide) {
+                            this.getPhotoInfo()  //重新获取照片详细信息
+                            this.getPhotoAlbums()  //重新获取照片所属的影集列表
+                            this.getPhotoFaces()  //重新获取照片中的人物
+                        }
                     } else
                         this.close()  //否则关闭预览
                 })
@@ -1007,6 +1069,72 @@
                     }
                     this.$message({
                         message: msg,
+                        type: 'success',
+                    })
+                })
+            },
+            beforeFaceCommand(uuid, name, command) {
+                return {
+                    'uuid': uuid,
+                    'name': name,
+                    'command': command
+                }
+            },
+            faceCommand(command) {
+                switch (command.command) {
+                    case 'setName':  //设置人物姓名
+                        this.setPeopleName(command.uuid, command.name)
+                        break
+                    case 'removeName':  //清除人物姓名
+                        this.removePeopleName(command.uuid)
+                        break
+                }
+            },
+            setPeopleName(uuid, name) {
+                // 设置人物姓名
+                this.deviceSupportUninstall()  //卸载键盘按键支持
+                if (name === null) name = ''
+                this.$prompt('请输入人物姓名：', {
+                    inputValue: name,
+                    closeOnClickModal: false,
+                    inputValidator: (value => {
+                        if (value.trim().length === 0)
+                            return '人物姓名不能为空'
+                    }),
+                    callback: ((action, instance) => {
+                        if (action === 'confirm') {
+                            this.$axios({
+                                method: 'post',
+                                url: this.apiUrl + '/api/people_add_feature',
+                                data: {
+                                    userid: localStorage.getItem('userid'),
+                                    face_uuid: uuid,
+                                    name: instance.inputValue,
+                                }
+                            }).then(() => {
+                                this.getPhotoFaces()
+                                this.$message({
+                                    message: '成功为人物命名为 [' + instance.inputValue + ']',
+                                    type: 'success',
+                                })
+                            })
+                        }
+                        this.deviceSupportInstall()  //恢复键盘按键支持
+                    })
+                })
+            },
+            removePeopleName(uuid) {
+                // 清除人物姓名
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/people_remove_feature',
+                    data: {
+                        face_uuid: [uuid],
+                    }
+                }).then(() => {
+                    this.getPhotoFaces()
+                    this.$message({
+                        message: '成功清除了人物姓名',
                         type: 'success',
                     })
                 })
@@ -1244,5 +1372,15 @@
         margin-top: 5px;
         color: #909399;
         font-size: 12px;
+    }
+
+    .face-img {  /*人脸图像*/
+        width: 100%;
+        border-radius: 8px;
+    }
+    .face-name {  /*人物姓名*/
+        color: #d9d9d9;
+        font-size: 12px;
+        cursor: pointer;
     }
 </style>

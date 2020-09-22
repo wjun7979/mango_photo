@@ -154,6 +154,7 @@
                 //重命令影集
                 this.$prompt('请输入影集标题：', {
                     inputValue: command.name,
+                    closeOnClickModal: false,
                     inputValidator: (value => {
                         if (value.trim().length === 0)
                             return false

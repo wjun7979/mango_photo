@@ -26,7 +26,8 @@
             <img src="../assets/images/empty.png" alt=""/>
         </div>
         <!--照片列表-->
-        <el-checkbox-group v-model="checkGroupList" class="images-wrap">
+        <el-checkbox-group v-model="checkGroupList" class="images-wrap"
+                           :class="{'show-checkbox': checkList.length > 0}">
             <el-row v-for="(photoGroup, index) of photoListGroup" :key="index" style="margin-right: 28px">
                 <el-checkbox v-if="multiple" class="chk-group" :label="photoGroup.timestamp"
                              @change="selectPhotoGroup(photoGroup.timestamp)">
@@ -39,8 +40,7 @@
                              :key="img.uuid"
                              class="div-img"
                              :class="{'chk-checked': checkList.indexOf(img.uuid) !== -1,
-                                      'chk-last-checked': lastSelectedUUID === img.uuid,
-                                      'show-checkbox': checkList.length > 0}"
+                                      'chk-last-checked': lastSelectedUUID === img.uuid}"
                              :style="{'width': img.width * imgHeight / img.height + 'px',
                                       'flex-grow':img.width * imgHeight / img.height}">
                             <i :style="{'padding-bottom': img.height / img.width * 100 + '%', 'display':'block'}"></i>
@@ -232,7 +232,8 @@
         props: {
             callMode: {  //调用模式
                 type: String,
-                default: 'photo'  //photo:照片; album:影集; trash:回收站; pick:挑选照片到影集; favorites:收藏夹
+                //photo:照片; album:影集; trash:回收站; pick:挑选照片到影集; favorites:收藏夹; cover:设置影集封面
+                default: 'photo'
             },
             albumUUID: {  //当调用模式为album时，必须指定影集uuid
                 type: String,
@@ -894,9 +895,6 @@
         display: flex;
         flex-wrap: wrap;
     }
-    .images-wrap {
-        margin-top: 15px;
-    }
     .div-images::after {
         content: '';
         flex-grow: 999999999;
@@ -912,10 +910,25 @@
         vertical-align: bottom;
     }
     .chk-group { /*分组选择*/
+        margin-top: 15px;
         margin-bottom: 10px;
     }
-    .chk-group >>> .el-checkbox__input { /*修正分组选择勾选框的位置偏移*/
-        margin-top: -2px;
+    .chk-group >>> .el-checkbox__input { /*分组标签的复选框默认隐藏*/
+        margin-top: -2px;  /*修正分组选择勾选框的位置偏移*/
+        margin-left: -10px;
+        width: 0;
+        visibility: hidden;
+        transition: width 0.2s;
+    }
+    .chk-group:hover >>> .el-checkbox__input {  /*鼠标移到分组标签上时，显示复选框*/
+        margin-left: 0;
+        width: 20px;
+        visibility: visible;
+    }
+    .show-checkbox >>> .el-checkbox__input {  /*当选择了照片时，所有的勾选控件都显示出来*/
+        margin-left: 0;
+        width: 20px;
+        visibility: visible;
     }
     .chk-group >>> .el-checkbox__inner { /*分组选择控件外观*/
         width: 20px;
@@ -942,6 +955,7 @@
     .chk-group-label {  /*单选模式下的分组标签*/
         display: inline-block;
         font-size: 14px;
+        margin-top: 15px;
         margin-bottom: 10px
     }
     .div-images >>> .el-checkbox { /*选择控件*/

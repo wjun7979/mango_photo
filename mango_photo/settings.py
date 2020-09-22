@@ -121,7 +121,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'handlers': {
         'console': {
-            'level': 'DEBUG',
+            'level': 'ERROR',
             'class': 'logging.StreamHandler',
         },
     },
@@ -129,7 +129,7 @@ LOGGING = {
         'django.db.backends': {
             'handlers': ['console'],
             'propagate': True,
-            'level': 'DEBUG',
+            'level': 'ERROR',
         },
     }
 }
@@ -154,6 +154,14 @@ STATIC_URL = '/static/'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "photos")  # 存放用户上传文件目录的绝对路径
 MEDIA_URL = '/photos/'
+
+# 消息队列相关配置
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+# CELERYD_CONCURRENCY = 1  # 并发worker数
 
 # 百度地图api
 BMAP_AK = 'OoD6BEoc77sczG45r8Wfw1wfeMuCM7dW'

@@ -4,6 +4,7 @@ from backend_api.views.upload_file import *
 from backend_api.views.photo import *
 from backend_api.views.user import *
 from backend_api.views.album import *
+from backend_api.views.people import *
 
 urlpatterns = [
     path('login', login),  # 用户登录
@@ -29,6 +30,7 @@ urlpatterns = [
     path('photo_set_location', photo_set_location),  # 修改照片的位置信息
     path('photo_favorites', photo_favorites),  # 收藏
     path('photo_unfavorites', photo_unfavorites),  # 取消收藏
+    path('photo_get_faces', photo_get_faces),  # 获取指定照片中的人脸列表
     path('album_list', album_list),  # 获取影集列表
     path('album_target_list', album_target_list),  # 获取影集列表（用于影集移动）
     path('album_get', album_get),  # 获取指定的影集信息
@@ -40,4 +42,6 @@ urlpatterns = [
     path('album_rename', album_rename),  # 重命名影集
     path('album_move', album_move),  # 移动影集
     path('album_set_cover', album_set_cover),  # 手动设置影集封面
+    path('people_add_feature', people_add_feature),  # 新增人物特征
+    path('people_remove_feature', people_remove_feature),  # 删除人物特征
 ]

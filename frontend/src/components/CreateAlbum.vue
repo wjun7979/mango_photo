@@ -25,11 +25,12 @@
                 this.$store.commit('cancelSelectPhoto', {action: true})  //取消已选中的照片
                 //创建影集
                 this.$prompt('请输入影集标题', {
+                    inputValue: '',
+                    closeOnClickModal: false,
                     inputValidator: (value => {
                         if (value.trim().length === 0)
-                            return false
+                            return '影集标题不能为空'
                     }),
-                    inputErrorMessage: '影集标题不能为空'
                 }).then(({value}) => {
                     this.$axios({
                         method: 'post',
