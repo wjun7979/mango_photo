@@ -74,9 +74,8 @@
                 //完成选择
                 this.$axios({
                     method: 'post',
-                    url: this.apiUrl + '/api/people_add_face',
+                    url: this.apiUrl + '/api/people_add_faces',
                     data: {
-                        userid: localStorage.getItem('userid'),
                         people_uuid: this.peopleUUID,
                         face_list: this.addList,
                     }

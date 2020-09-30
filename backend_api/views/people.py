@@ -223,20 +223,22 @@ def people_get(request):
                                    cover_name=F('cover__name'))
     people = people.annotate(photos=Count('peopleface__photo_uuid', distinct=True))
     people = people.annotate(faces=Count('peopleface'))
+    people = people.annotate(features=Count('peopleface__feature_token'))
     people = people.filter(uuid=people_uuid).first()
     return JsonResponse(people, safe=False, status=200)
 
 
 @require_http_methods(['POST'])
-def people_add_feature(request):
-    """新增人物特征"""
+def people_add_face(request):
+    """向人物中增加面孔"""
     response = {}
+    request_data = json.loads(request.body)
+    userid = request_data.get('userid')  # 当前用户id
+    face_uuid = request_data.get('face_uuid')  # 人脸uuid
+    name = request_data.get('name')  # 人物姓名
+    is_feature = request_data.get('is_feature')  # 是否设为人物特征
     try:
         with transaction.atomic():  # 开启事务处理
-            request_data = json.loads(request.body)
-            userid = request_data.get('userid')  # 当前用户id
-            face_uuid = request_data.get('face_uuid')  # 人脸uuid
-            name = request_data.get('name')  # 人物姓名
             # 如果人物不存在则创建
             people_uuid = str(uuid.uuid1()).replace('-', '')
             people = People.objects.filter(name=name)
@@ -248,42 +250,38 @@ def people_add_feature(request):
                 people.save()
             else:
                 people_uuid = people[0].uuid
-
             # 写入人脸对应的人物
             people_face = PeopleFace.objects.get(uuid=face_uuid)
             people_face.people_uuid = People.objects.get(uuid=people_uuid)
+            people_face.feature_token = 'wait...'
             people_face.save()
             # 删除人工排除项
             PeopleFaceExcept.objects.filter(face_uuid=face_uuid).delete()
             # 设置人物封面
             people_auto_cover(people_uuid)
-            # 向人脸库中注册照片
-            baidu_ai_facelib_add.delay(face_uuid)
-            return JsonResponse({}, safe=False, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息
         response['msg'] = str(e)
         return JsonResponse(response, status=500)
+    # 向人脸库中注册照片
+    if is_feature:
+        baidu_ai_facelib_add.delay(face_uuid)
+    return JsonResponse({}, safe=False, status=200)
 
 
 @require_http_methods(['POST'])
-def people_add_face(request):
-    """添加面孔"""
+def people_add_faces(request):
+    """批量添加面孔"""
     response = {}
     try:
         with transaction.atomic():  # 开启事务处理
             request_data = json.loads(request.body)
-            userid = request_data.get('userid')  # 当前用户id
             people_uuid = request_data.get('people_uuid')  # 人物uuid
             face_uuid_list = request_data.get('face_list')  # 人脸uuid
 
             # 写入人脸对应的人物
             PeopleFace.objects.filter(uuid__in=face_uuid_list).update(
                 people_uuid=People.objects.get(uuid=people_uuid))
-
-            # 将第一张面孔设为人物特征
-            feature = PeopleFace.objects.get(uuid=face_uuid_list[0])
-            baidu_ai_facelib_add.delay(feature.uuid)  # 向人脸库中注册照片
 
             # 删除人工排除项
             PeopleFaceExcept.objects.filter(face_uuid__in=face_uuid_list).delete()
@@ -298,8 +296,8 @@ def people_add_face(request):
 
 
 @require_http_methods(['POST'])
-def people_remove_feature(request):
-    """删除人物特征"""
+def people_remove_face(request):
+    """删除面孔"""
     response = {}
     try:
         with transaction.atomic():  # 开启事务处理
@@ -338,12 +336,38 @@ def people_remove_feature(request):
             # 如果有人物封面使用了该人脸，则重新生成人物封面
             People.objects.filter(cover__in=face_uuid_list).update(cover_from='auto')
             people_auto_cover(people_uuid)
-            people_check(people_uuid)  # 人物检测
             return JsonResponse({}, safe=False, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息
         response['msg'] = str(e)
         return JsonResponse(response, status=500)
+
+
+@require_http_methods(['POST'])
+def people_add_feature(request):
+    """增加人物特征"""
+    request_data = json.loads(request.body)
+    face_uuid = request_data.get('face_uuid')  # 人脸uuid
+    face = PeopleFace.objects.get(uuid=face_uuid)
+    face.feature_token = 'wait...'
+    face.save()
+    baidu_ai_facelib_add.delay(face_uuid)
+    return JsonResponse({}, safe=False, status=200)
+
+
+@require_http_methods(['POST'])
+def people_remove_feature(request):
+    """删除人物特征"""
+    request_data = json.loads(request.body)
+    face_uuid = request_data.get('face_uuid')  # 人脸uuid
+    face = PeopleFace.objects.get(uuid=face_uuid)
+    # 从人脸库中删除
+    baidu_ai_facelib_delete.delay(face.userid.userid, face.people_uuid.uuid, face.feature_token)
+    # 写入数据库
+    face.feature_token = None
+    face.feature_ctime = None
+    face.save()
+    return JsonResponse({}, safe=False, status=200)
 
 
 def people_auto_cover(people_uuid):
@@ -368,17 +392,6 @@ def people_set_cover(request):
     people.cover_from = 'manual'
     people.save()
     return JsonResponse({}, status=200)
-
-
-def people_check(people_uuid):
-    """人物检测：保证至少有1个特征"""
-    people_face = PeopleFace.objects.filter(people_uuid=people_uuid)
-    if len(people_face) > 0:
-        people_feature = PeopleFace.objects.filter(people_uuid=people_uuid, feature_token__isnull=False)
-        if len(people_feature) == 0:
-            feature = PeopleFace.objects.filter(people_uuid=people_uuid).order_by('-input_date').first()
-            # 向人脸库中注册照片
-            baidu_ai_facelib_add.delay(feature.uuid)
 
 
 @require_http_methods(['GET'])
@@ -426,7 +439,8 @@ def people_remove(request):
                 baidu_ai_facelib_delete.delay(userid, people_uuid, feature.feature_token)
 
             PeopleFaceExcept.objects.filter(people_uuid=people_uuid).delete()
-            PeopleFace.objects.filter(people_uuid=people_uuid).update(people_uuid=None)
+            PeopleFace.objects.filter(people_uuid=people_uuid).update(people_uuid=None, feature_token=None,
+                                                                      feature_ctime=None)
             People.objects.filter(uuid=people_uuid).delete()
             return JsonResponse({}, status=200)
     except Exception as e:

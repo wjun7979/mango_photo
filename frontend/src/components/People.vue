@@ -1,7 +1,7 @@
 <template>
     <el-container>
         <el-header class="mp-page-header" height="56px">
-            <el-col class="mp-page-header-title" :span="8">
+            <el-col class="mp-page-header-title" :span="12">
                 <div style="float: left;width: 40px"><i class="el-icon-back people-back" @click="$router.back()"></i></div>
                 <div class="people-cover" :style="{'background-image':'url('+apiUrl+'/'+people.cover_path+'/'+people.cover_name+')'}"></div>
                 <div style="float: left">{{people.name}}
@@ -9,7 +9,7 @@
                     <span v-if="showType==='face'">({{people.faces}}个面孔)</span>
                 </div>
             </el-col>
-            <el-col :span="16" style="text-align: right; padding: 7px 20px 0 0">
+            <el-col :span="12" style="text-align: right; padding: 7px 20px 0 0">
                 <el-button v-if="showType==='face'" icon="el-icon-user-solid" size="small" type="success"
                            @click="openPick" style="margin-right: 20px">确认其他面孔
                 </el-button>
@@ -20,6 +20,10 @@
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
+            <div v-if="people.features===0" class="no-feature">
+                <i class="el-icon-info"></i>
+                <span style="margin-left: 10px">注意：该人物没有特征照片，将无法进行智能匹配！</span>
+            </div>
             <PhotoList v-if="showType==='photo'" callMode="people" :peopleUUID="peopleUUID"></PhotoList>
             <FaceList v-if="showType==='face'" callMode="people" :peopleUUID="peopleUUID"></FaceList>
         </el-main>
@@ -119,5 +123,13 @@
         background-position: center;
         background-repeat: no-repeat;
         border-radius: 5px;
+    }
+
+    .no-feature {  /*人物没有特征时的警告信息*/
+        padding: 10px;
+        margin: 10px 20px;
+        color: #F56C6C;
+        background-color: #fde2e2;
+        border-radius: 8px;
     }
 </style>

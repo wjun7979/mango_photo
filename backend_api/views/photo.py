@@ -10,7 +10,7 @@ from django.views.decorators.http import require_http_methods
 from backend_api.common.date_encoder import DateEncoder
 from backend_api.models import Photo, AlbumPhoto, Album, Address, People, PeopleFace
 from backend_api.views.album import album_auto_cover
-from backend_api.views.people import people_auto_cover, people_check, baidu_ai_facelib_delete
+from backend_api.views.people import people_auto_cover, baidu_ai_facelib_delete
 
 
 @require_http_methods(['GET'])
@@ -181,7 +181,6 @@ def photo_remove(request):
                 People.objects.filter(uuid=item.uuid).update(cover=None, cover_from='auto')  # 取消人物封面
                 PeopleFace.objects.filter(photo_uuid__in=photos).delete()  # 删除人脸
                 people_auto_cover(item.uuid)  # 重新生成人物封面
-                people_check(item.uuid)  # 人物检测
             # 删除照片，Address、AlbumPhoto将会被级联删除
             Photo.objects.filter(uuid__in=photos).delete()
             return JsonResponse(response, status=200)
@@ -232,7 +231,6 @@ def photo_empty_trash(request):
                 People.objects.filter(uuid=item.uuid).update(cover=None, cover_from='auto')  # 取消人物封面
                 PeopleFace.objects.filter(photo_uuid__in=photos).delete()  # 删除人脸
                 people_auto_cover(item.uuid)  # 重新生成人物封面
-                people_check(item.uuid)  # 人物检测
             # 删除照片，Address、AlbumPhoto将会被级联删除
             Photo.objects.filter(userid=userid, is_deleted=True).delete()
             return JsonResponse(response, status=200)
@@ -347,7 +345,7 @@ def photo_get_faces(request):
     photo_uuid = request.GET.get('photo_uuid')
     people_face = PeopleFace.objects.filter(photo_uuid=photo_uuid)
     people_face = people_face.values('uuid', 'path', 'path_thumbnail', 'name', 'input_date', 'people_uuid',
-                                     people_name=F('people_uuid__name'))
+                                     'feature_token', people_name=F('people_uuid__name'))
     people_face = people_face.order_by('-people_uuid', 'input_date')
     response = json.loads(json.dumps(list(people_face), cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)

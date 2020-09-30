@@ -923,7 +923,7 @@
                 }).then(() => {
                     this.$axios({
                         method: 'post',
-                        url: this.apiUrl + '/api/people_remove_feature',
+                        url: this.apiUrl + '/api/people_remove_face',
                         data: {
                             filter_type: 'photo',
                             people_uuid: this.peopleUUID,

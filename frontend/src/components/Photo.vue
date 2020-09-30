@@ -110,6 +110,8 @@
                         <div style="position:relative; padding-top: 100%">
                             <img :src="apiUrl+'/'+face.path_thumbnail+'/'+face.name" alt=""
                                  :class="{'face-img':true, 'face-img-unknow':!face.people_uuid}"/>
+                            <!--叠加特征标志-->
+                            <i v-if="face.feature_token" class="el-icon-star-on face-feature"></i>
                         </div>
                         <el-dropdown v-if="['photo','album','favorites','people'].indexOf(callMode)>-1"
                                      trigger="click"
@@ -127,6 +129,14 @@
                                 <el-dropdown-item v-if="face.people_name"
                                                   :command="beforeFaceCommand(face.uuid, face.people_uuid, 'removeName')">
                                     Ta不是{{face.people_name}}
+                                </el-dropdown-item>
+                                <el-dropdown-item v-if="face.people_name && face.feature_token===null"
+                                                  :command="beforeFaceCommand(face.uuid, face.people_uuid, 'addFeature')">
+                                    将Ta作为人物特征
+                                </el-dropdown-item>
+                                <el-dropdown-item v-if="face.people_name && face.feature_token"
+                                                  :command="beforeFaceCommand(face.uuid, face.people_uuid, 'removeFeature')">
+                                    取消作为人物特征
                                 </el-dropdown-item>
                                 <el-dropdown-item v-if="face.people_name"
                                                   :command="beforeFaceCommand(face.uuid, face.people_uuid, 'setCover')">
@@ -301,6 +311,16 @@
                            :value="item.name">
                 </el-option>
             </el-select>
+            <el-checkbox v-if="photoFaces.length===1" v-model="setPeopleFeature" style="margin-top: 20px">
+                <span>同时设为该人物的特征</span>
+                <el-tooltip effect="light" placement="bottom-start" style="margin-left: 10px;">
+                    <div slot="content" style="font-size: 14px; line-height: 22px">
+                        人物有了特征照片之后，系统就能自动查找与之匹配的其他照片。<br/>
+                        为了提高识别率，建议您选取清晰的正面照作为特征。<br/>
+                    </div>
+                    <i class="el-icon-info" style="font-size: 16px"></i>
+                </el-tooltip>
+            </el-checkbox>
             <span slot="footer">
                 <el-button size="small" @click="isShowPeopleDialog=false">取消</el-button>
                 <el-button type="primary" size="small" @click="setPeopleName">确定</el-button>
@@ -364,6 +384,7 @@
                     face_uuid: '',
                     name: ''
                 },
+                setPeopleFeature: false,  //是否同时设为该人物的特征
                 peopleOptions: [],  //人物的检索结果
             }
         },
@@ -1118,12 +1139,19 @@
                             face_uuid: command.uuid,
                             name: '',
                         }
+                        this.setPeopleFeature = false
                         this.getPeopleList()
                         this.deviceSupportUninstall()  //卸载键盘按键支持
                         this.isShowPeopleDialog = true
                         break
                     case 'removeName':  //清除人物姓名
                         this.removePeopleName(command.uuid, command.people_uuid)
+                        break
+                    case 'addFeature':  //添加特征
+                        this.addPeopleFeature(command.uuid)
+                        break
+                    case 'removeFeature':  //删除特征
+                        this.removePeopleFeature(command.uuid)
                         break
                     case 'setCover':  //设为人物封面
                         this.setPeopleCover(command.uuid, command.people_uuid)
@@ -1154,11 +1182,12 @@
                 this.isShowPeopleDialog = false  //关闭对话框
                 this.$axios({
                     method: 'post',
-                    url: this.apiUrl + '/api/people_add_feature',
+                    url: this.apiUrl + '/api/people_add_face',
                     data: {
                         userid: localStorage.getItem('userid'),
                         face_uuid: this.currFace.face_uuid,
                         name: this.currFace.name,
+                        is_feature: this.setPeopleFeature,  //是否设为特征
                     }
                 }).then(() => {
                     this.getPhotoFaces()  //刷新人脸列表
@@ -1172,7 +1201,7 @@
                 // 清除人物姓名
                 this.$axios({
                     method: 'post',
-                    url: this.apiUrl + '/api/people_remove_feature',
+                    url: this.apiUrl + '/api/people_remove_face',
                     data: {
                         filter_type: 'face',
                         people_uuid: people_uuid,
@@ -1182,6 +1211,38 @@
                     this.getPhotoFaces()
                     this.$message({
                         message: '成功清除了人物姓名',
+                        type: 'success',
+                    })
+                })
+            },
+            addPeopleFeature(uuid) {
+                //添加特征
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/people_add_feature',
+                    data: {
+                        face_uuid: uuid,
+                    }
+                }).then(() => {
+                    this.getPhotoFaces()
+                    this.$message({
+                        message: '成功添加了人物特征',
+                        type: 'success',
+                    })
+                })
+            },
+            removePeopleFeature(uuid) {
+                //删除特征
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/people_remove_feature',
+                    data: {
+                        face_uuid: uuid,
+                    }
+                }).then(() => {
+                    this.getPhotoFaces()
+                    this.$message({
+                        message: '成功删除了人物特征',
                         type: 'success',
                     })
                 })
@@ -1453,5 +1514,14 @@
     .face-name {  /*人物姓名*/
         color: #d9d9d9;
         font-size: 12px;
+    }
+    .face-feature {  /*面孔右上角的特征标志*/
+        position: absolute;
+        left: 3px;
+        bottom: 3px;
+        z-index: 1;
+        color: #fff;
+        font-size: 18px;
+        -webkit-text-stroke: 1px rgba(0, 0, 0, .1);
     }
 </style>

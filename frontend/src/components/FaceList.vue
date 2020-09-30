@@ -258,7 +258,7 @@
                 }).then(() => {
                     this.$axios({
                         method: 'post',
-                        url: this.apiUrl + '/api/people_remove_feature',
+                        url: this.apiUrl + '/api/people_remove_face',
                         data: {
                             filter_type: 'face',
                             people_uuid: this.peopleUUID,
@@ -389,8 +389,8 @@
     }
     .btn-feature {  /*面孔右上角的特征标志*/
         position: absolute;
-        top: 8px;
-        right: 8px;
+        left: 8px;
+        bottom: 8px;
         z-index: 1;
         color: #fff;
         font-size: 24px;
