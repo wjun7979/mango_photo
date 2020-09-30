@@ -17,6 +17,14 @@
                         <span>收藏夹</span>
                     </div>
                 </el-col>
+                <el-col :span="3">
+                    <router-link to="/peoples">
+                        <div class="group people"></div>
+                    </router-link>
+                    <div class="group-title">
+                        <span>人物</span>
+                    </div>
+                </el-col>
                 <el-col :span="3" style="display: none">
                     <div class="group"></div>
                     <div class="group-title">地点</div>
@@ -54,6 +62,12 @@
     }
     .favorites {
         background-image: url('../assets/images/sys-group/favorites.png');
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: 50%;
+    }
+    .people {
+        background-image: url('../assets/images/sys-group/people.png');
         background-position: center;
         background-repeat: no-repeat;
         background-size: 50%;

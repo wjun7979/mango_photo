@@ -90,6 +90,7 @@
                     this.$message.warning('请选取文件')
                     return
                 }
+
                 this.showUploadDialog = false  //关闭上传对话框
 
                 let formData = new FormData()

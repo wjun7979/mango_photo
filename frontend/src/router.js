@@ -7,10 +7,13 @@ import Photos from "./components/Photos"
 import Photo from "./components/Photo";
 import Albums from "./components/Albums";
 import Album from "./components/Album";
-import Pick from "./components/Pick";
+import PickPhoto from "./components/PickPhoto";
 import Cover from "./components/Cover";
 import Trash from "./components/Trash"
 import Favorites from "./components/Favorites";
+import Peoples from "./components/Peoples";
+import People from "./components/People";
+import PickFace from "./components/PickFace";
 import NotFound from "./components/NotFound";
 
 //解决ElementUI导航栏中的vue-router重复点菜单报错问题
@@ -30,7 +33,7 @@ const routes = [
         }
     },
     {
-        path: '/photos', component: Main, children: [
+        path: '/main', component: Main, children: [
             {
                 path: '/photos', name: 'photos', component: Photos, meta: {
                     title: '照片'
@@ -52,6 +55,16 @@ const routes = [
                 }
             },
             {
+                path: '/peoples', name: 'peoples', component: Peoples, meta: {
+                    title: '人物'
+                }
+            },
+            {
+                path: '/people/:uuid/:type', name: 'people', component: People, meta: {
+                    title: '人物'
+                }
+            },
+            {
                 path: '/trash', name: 'trash', component: Trash, meta: {
                     title: '回收站'
                 }
@@ -64,18 +77,23 @@ const routes = [
         ]
     },
     {
-        path: '/photo/:uuid/:callMode/:albumUUID?', name: 'photo', component: Photo, meta: {
+        path: '/photo/:uuid/:callMode/:albumUUID/:peopleUUID', name: 'photo', component: Photo, meta: {
             title: '照片'
         }
     },
     {
-        path: '/pick/:albumUUID', name: 'pick', component: Pick, meta: {
+        path: '/pick_photo/:albumUUID', name: 'pick_photo', component: PickPhoto, meta: {
             title: '添加照片到影集'
         }
     },
     {
         path: '/cover/:albumUUID', name: 'cover', component: Cover, meta: {
             title: '选择影集封面'
+        }
+    },
+    {
+        path: '/pick_face/:peopleUUID', name: 'pick_face', component: PickFace, meta: {
+            title: '添加面孔到人物'
         }
     },
     {path: '*', component: NotFound},

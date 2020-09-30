@@ -12,7 +12,8 @@ class User(models.Model):
     avatar = models.CharField(null=True, max_length=500)  # 用户头像
     last_login_time = models.DateTimeField(null=True, auto_now=True)  # 最后一次登录时间
     last_login_ip = models.CharField(null=True, max_length=50)  # 最后一次登录IP
-    celery_working = models.BooleanField(default=False)  # 是否正在执行后台任务
+    working_face_detect = models.BooleanField(default=False)  # 是否正在执行人脸检测的后台任务
+    working_face_compare = models.BooleanField(default=False)  # 是否正在执人脸识别的行后台任务
     is_active = models.BooleanField(default=True)  # 有效标志
 
     class Meta:
@@ -25,7 +26,7 @@ class User(models.Model):
 class Photo(models.Model):
     """照片"""
     uuid = models.CharField(primary_key=True, max_length=32)
-    userid = models.CharField(max_length=50)  # 所属用户
+    userid = models.ForeignKey('user', on_delete=models.CASCADE, db_column='userid')  # 所属用户
     path_original = models.CharField(max_length=500)  # 原始照片文件存储路径
     path_modified = models.CharField(null=True, max_length=500)  # 修改后的原始照片存储路径
     path_thumbnail_s = models.CharField(null=True, max_length=500)  # 小缩略图存储路径
@@ -85,7 +86,7 @@ class Address(models.Model):
 class Album(models.Model):
     """影集"""
     uuid = models.CharField(primary_key=True, max_length=32)
-    userid = models.CharField(max_length=50)  # 所属用户
+    userid = models.ForeignKey('user', on_delete=models.CASCADE, db_column='userid')  # 所属用户
     name = models.CharField(max_length=200)  # 影集名称
     cover = models.ForeignKey('Photo', null=True, on_delete=models.CASCADE, db_column='cover')  # 封面
     cover_from = models.CharField(default='auto', max_length=10)  # 封面产生的方式:auto自动产生,user用户指定
@@ -117,9 +118,9 @@ class AlbumPhoto(models.Model):
 class People(models.Model):
     """人物"""
     uuid = models.CharField(primary_key=True, max_length=32)
-    userid = models.CharField(max_length=50)  # 所属用户
+    userid = models.ForeignKey('user', on_delete=models.CASCADE, db_column='userid')  # 所属用户
     name = models.CharField(max_length=200)  # 人物姓名
-    cover = models.ForeignKey('PeopleFace', null=True, on_delete=models.CASCADE, db_column='cover')  # 封面
+    cover = models.ForeignKey('PeopleFace', null=True, on_delete=models.SET_NULL, db_column='cover')  # 封面
     cover_from = models.CharField(default='auto', max_length=10)  # 封面产生的方式:auto自动产生,user用户指定
     input_date = models.DateTimeField(auto_now_add=True)  # 创建时间
     update_date = models.DateTimeField(auto_now=True)  # 修改时间
@@ -134,18 +135,42 @@ class People(models.Model):
 class PeopleFace(models.Model):
     """人物中的人脸"""
     uuid = models.CharField(primary_key=True, max_length=32)
+    userid = models.ForeignKey('user', on_delete=models.CASCADE, db_column='userid')  # 所属用户
     photo_uuid = models.ForeignKey('Photo', on_delete=models.CASCADE, db_column='photo_uuid')  # 所属照片uuid
     people_uuid = models.ForeignKey('People', null=True, on_delete=models.CASCADE, db_column='people_uuid')  # 所属人物uuid
     path = models.CharField(max_length=500)  # 人脸图片存储路径
     path_thumbnail = models.CharField(max_length=500)  # 缩略图存储路径
     name = models.CharField(max_length=200)  # 人脸文件名
-    encoding = models.CharField(max_length=10000)  # 128维面部编码
+    location = models.JSONField(max_length=500)  # 人脸区域坐标值
+    ai_age = models.IntegerField(null=True)  # AI_年龄
+    ai_beauty = models.FloatField(null=True)  # AI_颜值
+    ai_expression = models.CharField(null=True, max_length=100)  # AI_表情
+    ai_emotion = models.CharField(null=True, max_length=100)  # AI_情绪
+    ai_glasses = models.CharField(null=True, max_length=100)  # AI_是否戴眼镜
+    ai_mask = models.BooleanField(null=True)  # AI_是否戴口罩
+    face_token = models.CharField(max_length=100)  # 人脸token
+    feature_token = models.CharField(null=True, max_length=100)  # 人脸库token
+    feature_ctime = models.DateTimeField(null=True)  # 注册到人脸库的时间
+    is_compared = models.BooleanField(default=False)  # 是否已执行过人脸识别
     input_date = models.DateTimeField(auto_now_add=True)  # 添加时间
-    is_feature = models.BooleanField(default=False)  # 是否属于人物特征
-    is_active = models.BooleanField(default=True)  # 有效标志
 
     class Meta:
         db_table = 'm_people_face'
 
     def __str__(self):
         return 'm_people_face:' + self.uuid
+
+
+class PeopleFaceExcept(models.Model):
+    """人工指定人脸的排除项"""
+    uuid = models.CharField(primary_key=True, max_length=32)
+    face_uuid = models.ForeignKey('PeopleFace', null=True, on_delete=models.CASCADE, db_column='face_uuid')  # 人脸uuid
+    people_uuid = models.ForeignKey('People', null=True, on_delete=models.CASCADE, db_column='people_uuid')  # 排除的人物uuid
+    input_date = models.DateTimeField(auto_now_add=True)  # 添加时间
+
+    class Meta:
+        db_table = 'm_people_face_except'
+
+    def __str__(self):
+        return 'm_people_face_except:' + self.uuid
+

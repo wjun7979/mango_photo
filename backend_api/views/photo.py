@@ -10,7 +10,7 @@ from django.views.decorators.http import require_http_methods
 from backend_api.common.date_encoder import DateEncoder
 from backend_api.models import Photo, AlbumPhoto, Album, Address, People, PeopleFace
 from backend_api.views.album import album_auto_cover
-from backend_api.views.people import people_auto_cover, people_check
+from backend_api.views.people import people_auto_cover, people_check, baidu_ai_facelib_delete
 
 
 @require_http_methods(['GET'])
@@ -19,10 +19,11 @@ def photo_list(request):
     call_mode = request.GET.get('call_mode')
     userid = request.GET.get('userid')
     album_uuid = request.GET.get('album_uuid')
+    people_uuid = request.GET.get('people_uuid')
 
     photos = Photo.objects.distinct()
     photos = photos.filter(userid=userid)
-    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover']:
+    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people']:
         photos = photos.filter(is_deleted=False)
         if call_mode == 'album':  # 在影集中调用
             photos = photos.filter(albumphoto__album_uuid=album_uuid)
@@ -38,6 +39,8 @@ def photo_list(request):
                 SELECT uuid FROM m_album WHERE EXISTS(SELECT uuid FROM tmp_albums WHERE rootId = uuid)
             ''', [album_uuid])
             photos = photos.filter(albumphoto__album_uuid__in=albums)
+        if call_mode == 'people':  # 在人物中调用
+            photos = photos.filter(peopleface__people_uuid=people_uuid)
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
     photos = photos.values('uuid', 'path_original', 'path_modified', 'path_thumbnail_s', 'path_thumbnail_l', 'name',
@@ -95,148 +98,146 @@ def photo_statistics(request):
 
 
 @require_http_methods(['POST'])
-@transaction.atomic  # 数据库事务处理
 def photo_trash(request):
     """将照片移到回收站"""
-    save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
     response = {}
     try:
-        request_data = json.loads(request.body)
-        photo_uuid_list = request_data.get('photo_list')
-        Photo.objects.filter(uuid__in=photo_uuid_list).update(is_deleted=True)  # 修改删除标志
-        # 如果有影集封面使用了该照片，则重新生成影集封面
-        Album.objects.filter(cover__in=photo_uuid_list).update(cover_from='auto')
-        albums = Album.objects.filter(cover__in=photo_uuid_list)
-        for item in albums:
-            album_auto_cover(item.uuid)  # 设置影集封面
-        return JsonResponse({}, safe=False, status=200)
+        with transaction.atomic():  # 开启事务处理
+            request_data = json.loads(request.body)
+            photo_uuid_list = request_data.get('photo_list')
+            Photo.objects.filter(uuid__in=photo_uuid_list).update(is_deleted=True)  # 修改删除标志
+            # 如果有影集封面使用了该照片，则重新生成影集封面
+            Album.objects.filter(cover__in=photo_uuid_list).update(cover_from='auto')
+            albums = Album.objects.filter(cover__in=photo_uuid_list)
+            for item in albums:
+                album_auto_cover(item.uuid)  # 设置影集封面
+            return JsonResponse({}, safe=False, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息
-        transaction.savepoint_rollback(save_tag)  # 回滚数据库事务
         response['msg'] = str(e)
         return JsonResponse(response, status=500)
 
 
 @require_http_methods(['POST'])
-@transaction.atomic  # 数据库事务处理
 def photo_restore(request):
     """将照片从回收站恢复"""
-    save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
     response = {}
     try:
-        request_data = json.loads(request.body)
-        photo_uuid_list = request_data.get('photo_list')
-        Photo.objects.filter(uuid__in=photo_uuid_list).update(is_deleted=False)  # 修改删除标志
-        # 如果有影集添加了该照片，则重新生成影集封面
-        albums = AlbumPhoto.objects.distinct().filter(photo_uuid__in=photo_uuid_list,
-                                                      photo_uuid__is_deleted=False).values('album_uuid')
-        for item in albums:
-            Album.objects.filter(cover=item['album_uuid']).update(cover_from='auto')
-            album_auto_cover(item['album_uuid'])  # 设置影集封面
-        return JsonResponse({}, safe=False, status=200)
+        with transaction.atomic():  # 开启事务处理
+            request_data = json.loads(request.body)
+            photo_uuid_list = request_data.get('photo_list')
+            Photo.objects.filter(uuid__in=photo_uuid_list).update(is_deleted=False)  # 修改删除标志
+            # 如果有影集添加了该照片，则重新生成影集封面
+            albums = AlbumPhoto.objects.distinct().filter(photo_uuid__in=photo_uuid_list,
+                                                          photo_uuid__is_deleted=False).values('album_uuid')
+            for item in albums:
+                Album.objects.filter(cover=item['album_uuid']).update(cover_from='auto')
+                album_auto_cover(item['album_uuid'])  # 设置影集封面
+            return JsonResponse({}, safe=False, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息
-        transaction.savepoint_rollback(save_tag)  # 回滚数据库事务
         response['msg'] = str(e)
         return JsonResponse(response, status=500)
 
 
 @require_http_methods(['POST'])
-@transaction.atomic  # 数据库事务处理
 def photo_remove(request):
     """永久删除照片"""
-    save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
     response = {}
     try:
-        request_data = json.loads(request.body)
-        photo_uuid_list = request_data.get('photo_list')
-        photos = Photo.objects.filter(uuid__in=photo_uuid_list, is_deleted=True)
-        for item in photos:
-            file_path = os.path.join(settings.BASE_DIR, item.path_original, item.name)
-            if os.path.exists(file_path):  # 删除原图
-                os.remove(file_path)
-            file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail_s, item.name)
-            if os.path.exists(file_path):  # 删除生成的缩略图
-                os.remove(file_path)
-            file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail_l, item.name)
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            if item.path_modified:
-                file_path = os.path.join(settings.BASE_DIR, item.path_modified, item.name)
-                if os.path.exists(file_path):  # 删除修改后的原图
-                    os.remove(file_path)
-            # 删除人脸图像
-            people_face = PeopleFace.objects.filter(photo_uuid=item.uuid)
-            for face in people_face:
-                file_path = os.path.join(settings.BASE_DIR, face.path, face.name)
+        with transaction.atomic():  # 开启事务处理
+            request_data = json.loads(request.body)
+            photo_uuid_list = request_data.get('photo_list')
+            photos = Photo.objects.filter(uuid__in=photo_uuid_list, is_deleted=True)
+            for item in photos:
+                file_path = os.path.join(settings.BASE_DIR, item.path_original, item.name)
                 if os.path.exists(file_path):  # 删除原图
                     os.remove(file_path)
-                file_path = os.path.join(settings.BASE_DIR, face.path_thumbnail, face.name)
-                if os.path.exists(file_path):  # 删除缩略图
+                file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail_s, item.name)
+                if os.path.exists(file_path):  # 删除生成的缩略图
                     os.remove(file_path)
-        # 删除与人物相关的数据
-        peoples = People.objects.filter(cover__photo_uuid__in=photos)
-        for item in peoples:
-            People.objects.filter(uuid=item.uuid).update(cover=None, cover_from='auto')  # 取消人物封面
-            PeopleFace.objects.filter(photo_uuid__in=photos).delete()  # 删除人脸
-            people_auto_cover(item.uuid)  # 重新生成人物封面
-            people_check(item.uuid)  # 人物检测
-        # 删除照片，Address、AlbumPhoto将会被级联删除
-        Photo.objects.filter(uuid__in=photos).delete()
-        return JsonResponse(response, status=200)
+                file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail_l, item.name)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                if item.path_modified:
+                    file_path = os.path.join(settings.BASE_DIR, item.path_modified, item.name)
+                    if os.path.exists(file_path):  # 删除修改后的原图
+                        os.remove(file_path)
+                # 删除人脸图像
+                people_face = PeopleFace.objects.filter(photo_uuid=item.uuid)
+                for face in people_face:
+                    file_path = os.path.join(settings.BASE_DIR, face.path, face.name)
+                    if os.path.exists(file_path):  # 删除原图
+                        os.remove(file_path)
+                    file_path = os.path.join(settings.BASE_DIR, face.path_thumbnail, face.name)
+                    if os.path.exists(file_path):  # 删除缩略图
+                        os.remove(file_path)
+                    # 在人脸库中删除照片
+                    if face.feature_token:
+                        baidu_ai_facelib_delete.delay(face.userid.userid, face.people_uuid.uuid, face.feature_token)
+            # 删除与人物相关的数据
+            peoples = People.objects.filter(cover__photo_uuid__in=photos)
+            for item in peoples:
+                People.objects.filter(uuid=item.uuid).update(cover=None, cover_from='auto')  # 取消人物封面
+                PeopleFace.objects.filter(photo_uuid__in=photos).delete()  # 删除人脸
+                people_auto_cover(item.uuid)  # 重新生成人物封面
+                people_check(item.uuid)  # 人物检测
+            # 删除照片，Address、AlbumPhoto将会被级联删除
+            Photo.objects.filter(uuid__in=photos).delete()
+            return JsonResponse(response, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息
-        transaction.savepoint_rollback(save_tag)  # 回滚数据库事务
         response['msg'] = str(e)
         return JsonResponse(response, status=500)
 
 
 @require_http_methods(['POST'])
-@transaction.atomic  # 数据库事务处理
 def photo_empty_trash(request):
     """清空回收站"""
-    save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
     response = {}
     try:
-        request_data = json.loads(request.body)
-        userid = request_data.get('userid')
-        photos = Photo.objects.filter(userid=userid, is_deleted=True)
-        for item in photos:
-            file_path = os.path.join(settings.BASE_DIR, item.path_original, item.name)
-            if os.path.exists(file_path):  # 删除原图
-                os.remove(file_path)
-            file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail_s, item.name)
-            if os.path.exists(file_path):  # 删除生成的缩略图
-                os.remove(file_path)
-            file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail_l, item.name)
-            if os.path.exists(file_path):
-                os.remove(file_path)
-            if item.path_modified:
-                file_path = os.path.join(settings.BASE_DIR, item.path_modified, item.name)
-                if os.path.exists(file_path):  # 删除修改后的原图
-                    os.remove(file_path)
-            # 删除人脸图像
-            people_face = PeopleFace.objects.filter(photo_uuid=item.uuid)
-            for face in people_face:
-                file_path = os.path.join(settings.BASE_DIR, face.path, face.name)
+        with transaction.atomic():  # 开启事务处理
+            request_data = json.loads(request.body)
+            userid = request_data.get('userid')
+            photos = Photo.objects.filter(userid=userid, is_deleted=True)
+            for item in photos:
+                file_path = os.path.join(settings.BASE_DIR, item.path_original, item.name)
                 if os.path.exists(file_path):  # 删除原图
                     os.remove(file_path)
-                file_path = os.path.join(settings.BASE_DIR, face.path_thumbnail, face.name)
-                if os.path.exists(file_path):  # 删除缩略图
+                file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail_s, item.name)
+                if os.path.exists(file_path):  # 删除生成的缩略图
                     os.remove(file_path)
-        # 删除与人物相关的数据
-        peoples = People.objects.filter(cover__photo_uuid__in=photos)
-        for item in peoples:
-            People.objects.filter(uuid=item.uuid).update(cover=None, cover_from='auto')  # 取消人物封面
-            PeopleFace.objects.filter(photo_uuid__in=photos).delete()  # 删除人脸
-            people_auto_cover(item.uuid)  # 重新生成人物封面
-            people_check(item.uuid)  # 人物检测
-        # 删除照片，Address、AlbumPhoto将会被级联删除
-        Photo.objects.filter(userid=userid, is_deleted=True).delete()
-        return JsonResponse(response, status=200)
+                file_path = os.path.join(settings.BASE_DIR, item.path_thumbnail_l, item.name)
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                if item.path_modified:
+                    file_path = os.path.join(settings.BASE_DIR, item.path_modified, item.name)
+                    if os.path.exists(file_path):  # 删除修改后的原图
+                        os.remove(file_path)
+                # 删除人脸图像
+                people_face = PeopleFace.objects.filter(photo_uuid=item.uuid)
+                for face in people_face:
+                    file_path = os.path.join(settings.BASE_DIR, face.path, face.name)
+                    if os.path.exists(file_path):  # 删除原图
+                        os.remove(file_path)
+                    file_path = os.path.join(settings.BASE_DIR, face.path_thumbnail, face.name)
+                    if os.path.exists(file_path):  # 删除缩略图
+                        os.remove(file_path)
+                    # 在人脸库中删除照片
+                    if face.feature_token:
+                        baidu_ai_facelib_delete.delay(face.userid.userid, face.people_uuid.uuid, face.feature_token)
+            # 删除与人物相关的数据
+            peoples = People.objects.filter(cover__photo_uuid__in=photos)
+            for item in peoples:
+                People.objects.filter(uuid=item.uuid).update(cover=None, cover_from='auto')  # 取消人物封面
+                PeopleFace.objects.filter(photo_uuid__in=photos).delete()  # 删除人脸
+                people_auto_cover(item.uuid)  # 重新生成人物封面
+                people_check(item.uuid)  # 人物检测
+            # 删除照片，Address、AlbumPhoto将会被级联删除
+            Photo.objects.filter(userid=userid, is_deleted=True).delete()
+            return JsonResponse(response, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息
-        transaction.savepoint_rollback(save_tag)  # 回滚数据库事务
         response['msg'] = str(e)
         return JsonResponse(response, status=500)
 
@@ -271,55 +272,53 @@ def photo_query_location(request):
     # 地点输入提示服务
     baidu_map_api = 'http://api.map.baidu.com/place/v2/suggestion?ak={0}&query={1}' \
                     '&region=全国&output=json'.format(ak, query)
-    response = requests.get(baidu_map_api)
-    result = response.json()
+    res = requests.get(baidu_map_api)
+    result = res.json()
     if result['status'] != 0:  # 接口调用失败
         raise Exception(result['message'])  # 抛出异常
     return JsonResponse(result['result'], safe=False, status=200)
 
 
 @require_http_methods(['POST'])
-@transaction.atomic  # 数据库事务处理
 def photo_set_location(request):
     """修改照片的位置信息"""
-    save_tag = transaction.savepoint()  # 设置保存点，用于数据库事务回滚
     response = {}
     try:
-        ak = settings.BMAP_AK
-        request_data = json.loads(request.body)
-        photo_uuid_list = request_data.get('photo_list')
-        location = request_data.get('location')
-        Address.objects.filter(uuid__in=photo_uuid_list).delete()  # 先删除再插入
-        if location:
-            lat = location.split(',')[0]
-            lng = location.split(',')[1]
-            poi_name = location.split(',')[2]
-            # 全球逆地理编码服务
-            baidu_map_api = 'http://api.map.baidu.com/reverse_geocoding/v3/?ak={0}&output=json&coordtype=wgs84ll' \
-                            '&location={1},{2}'.format(ak, lat, lng)
-            response = requests.get(baidu_map_api)
-            result = response.json()
-            if result['status'] != 0:  # 接口调用失败
-                raise Exception(result['message'])  # 抛出异常
-            for item in photo_uuid_list:
-                address = Address()
-                address.uuid = Photo.objects.get(uuid=item)
-                address.lat = lat
-                address.lng = lng
-                address.address = result['result']['formatted_address']
-                address.poi_name = poi_name
-                address.country = result['result']['addressComponent']['country']
-                address.province = result['result']['addressComponent']['province']
-                address.city = result['result']['addressComponent']['city']
-                address.district = result['result']['addressComponent']['district']
-                address.town = result['result']['addressComponent']['town']
-                address.save()
-            return JsonResponse({'address': poi_name}, safe=False, status=200)
-        else:  # 删除位置信息
-            return JsonResponse({'address': ''}, safe=False, status=200)
+        with transaction.atomic():  # 开启事务处理
+            ak = settings.BMAP_AK
+            request_data = json.loads(request.body)
+            photo_uuid_list = request_data.get('photo_list')
+            location = request_data.get('location')
+            Address.objects.filter(uuid__in=photo_uuid_list).delete()  # 先删除再插入
+            if location:
+                lat = location.split(',')[0]
+                lng = location.split(',')[1]
+                poi_name = location.split(',')[2]
+                # 全球逆地理编码服务
+                baidu_map_api = 'http://api.map.baidu.com/reverse_geocoding/v3/?ak={0}&output=json&coordtype=wgs84ll' \
+                                '&location={1},{2}'.format(ak, lat, lng)
+                res = requests.get(baidu_map_api)
+                result = res.json()
+                if result['status'] != 0:  # 接口调用失败
+                    raise Exception(result['message'])  # 抛出异常
+                for item in photo_uuid_list:
+                    address = Address()
+                    address.uuid = Photo.objects.get(uuid=item)
+                    address.lat = lat
+                    address.lng = lng
+                    address.address = result['result']['formatted_address']
+                    address.poi_name = poi_name
+                    address.country = result['result']['addressComponent']['country']
+                    address.province = result['result']['addressComponent']['province']
+                    address.city = result['result']['addressComponent']['city']
+                    address.district = result['result']['addressComponent']['district']
+                    address.town = result['result']['addressComponent']['town']
+                    address.save()
+                return JsonResponse({'address': poi_name}, safe=False, status=200)
+            else:  # 删除位置信息
+                return JsonResponse({'address': ''}, safe=False, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息
-        transaction.savepoint_rollback(save_tag)  # 回滚数据库事务
         response['msg'] = str(e)
         return JsonResponse(response, status=500)
 
@@ -346,9 +345,9 @@ def photo_unfavorites(request):
 def photo_get_faces(request):
     """获取指定照片中的人脸列表"""
     photo_uuid = request.GET.get('photo_uuid')
-    people_face = PeopleFace.objects.filter(photo_uuid=photo_uuid, is_active=True)
-    people_face = people_face.values('uuid', 'path', 'path_thumbnail', 'name', 'input_date',
+    people_face = PeopleFace.objects.filter(photo_uuid=photo_uuid)
+    people_face = people_face.values('uuid', 'path', 'path_thumbnail', 'name', 'input_date', 'people_uuid',
                                      people_name=F('people_uuid__name'))
-    people_face = people_face.order_by('input_date')
+    people_face = people_face.order_by('-people_uuid', 'input_date')
     response = json.loads(json.dumps(list(people_face), cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)

@@ -92,7 +92,7 @@
             </el-col>
             <el-col :span="12" style="text-align: right">
                 <div v-if="['photo','favorites'].indexOf(callMode)>-1">
-                    <i class="el-icon-plus" title="添加到影集" @click="showAlbumTree"></i>
+                    <i class="el-icon-folder-add" title="添加到影集" @click="showAlbumTree"></i>
                     <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
                     <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
                         <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
@@ -107,7 +107,7 @@
                     </el-dropdown>
                 </div>
                 <div v-if="callMode==='album'">
-                    <i class="el-icon-remove-outline" title="从影集中移除" @click="removeFromAlbum"></i>
+                    <i class="el-icon-folder-delete" title="从影集中移除" @click="removeFromAlbum"></i>
                     <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
                     <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
                         <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
@@ -115,6 +115,22 @@
                             <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
                             <el-dropdown-item v-if="noFavorited" icon="el-icon-star-on" command="favorites">收藏</el-dropdown-item>
                             <el-dropdown-item v-if="!noFavorited" icon="el-icon-star-off" command="unfavorites">从收藏夹中移除</el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-date" command="modify_datetime">修改日期和时间</el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-location-outline" command="modify_location">修改位置信息
+                            </el-dropdown-item>
+                        </el-dropdown-menu>
+                    </el-dropdown>
+                </div>
+                <div v-if="callMode==='people'">
+                    <i class="el-icon-document-remove" title="从人物中移除" @click="removeFromPeople"></i>
+                    <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
+                    <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
+                        <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
+                        <el-dropdown-menu slot="dropdown">
+                            <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
+                            <el-dropdown-item v-if="noFavorited" icon="el-icon-star-on" command="favorites">收藏</el-dropdown-item>
+                            <el-dropdown-item v-if="!noFavorited" icon="el-icon-star-off" command="unfavorites">从收藏夹中移除</el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-folder-add" command="add_to_album">添加到影集</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-date" command="modify_datetime">修改日期和时间</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-location-outline" command="modify_location">修改位置信息
                             </el-dropdown-item>
@@ -195,6 +211,8 @@
                 <el-button type="primary" size="small" @click="checkLocation">确定</el-button>
             </span>
         </el-dialog>
+        <!--回到顶部-->
+        <el-backtop :bottom="60"></el-backtop>
     </div>
 </template>
 
@@ -211,12 +229,12 @@
                 imgHeight: 200,  //照片的高度
                 albumName: '',  //当callMode为album时，影集的名称
                 photoList: [],  //照片列表
+                checkList: [],  //选中的照片列表
                 photoListGroup: [],  //分组后的照片列表
                 isShowTips: false,  //是否显示上传提示
                 groupType: 'day',  //分组类型 day, month, year
                 checkGroupList: [],  //选中的分组列表
                 multiple: true,  //是否允许多选
-                checkList: [],  //选中的照片列表
                 lastSelectedUUID: null,  //最后一次选中的照片uuid
                 noFavorited: false,  //选中列表中是否含有未收藏的内容，用于切换工具栏菜单
                 isShowAddToAlbumDialog: false,  //是否显示添加到影集对话框
@@ -233,20 +251,25 @@
             callMode: {  //调用模式
                 type: String,
                 //photo:照片; album:影集; trash:回收站; pick:挑选照片到影集; favorites:收藏夹; cover:设置影集封面
+                //people:人物
                 default: 'photo'
             },
             albumUUID: {  //当调用模式为album时，必须指定影集uuid
                 type: String,
-                default: undefined
+                default: 'none'
             },
             albumPhotoList: {  //影集中的照片列表
                 type: Array,
                 default: () => []
             },
+            peopleUUID: {  //当调用模式为people时，必须指定人物uuid
+                type: String,
+                default: 'none'
+            },
             onPick: {
                 type: Function,
                 default: () => {}
-            }
+            },
         },
         computed: {
             //重要：vuex中定义的数据一定要在这里绑定，放在data()里视图不会更新
@@ -297,7 +320,7 @@
                     this.onPick(this.checkList)
                 }
                 //返回选中列表中是否包含未收藏的照片
-                if (['photo','album','favorites'].indexOf(this.callMode) > -1) {
+                if (['photo','album','favorites','people'].indexOf(this.callMode) > -1) {
                     this.noFavorited = false
                     for (let item of val) {
                         let photo = this.photoList.find(t => t.uuid === item)
@@ -334,7 +357,7 @@
             window.addEventListener('resize', this.listenResize)
         },
         beforeDestroy() {
-            if (this.callMode !== 'pick') {
+            if (['pick','cover'].indexOf(this.callMode) === -1) {
                 this.deviceSupportUninstall()  //卸载键盘按键支持
             }
             window.removeEventListener('resize', this.listenResize)
@@ -389,6 +412,7 @@
                         userid: localStorage.getItem('userid'),
                         call_mode: this.callMode,
                         album_uuid: this.albumUUID,
+                        people_uuid: this.peopleUUID,
                     }
                 }).then(response => {
                     this.photoList = response.data
@@ -397,6 +421,12 @@
                         this.photoList[index]['timestamp'] = this.getGroupLabel(this.photoList[index]['exif_datetime'])
                     }
                     this.creatPhotoGroup()  //创建照片分组
+                    //从vuex中读取上次选中的照片列表
+                    let lastCheckList = this.$store.state.photoCheckList
+                    if (lastCheckList.length > 0) {
+                        this.checkList = lastCheckList
+                        this.$store.commit('setPhotoCheckList', {'checkList': []})
+                    }
                     // 当没有照片时显示上传提示
                     this.isShowTips = this.photoList.length === 0
                     //照片读取完成后，将store.js中的refreshPhoto值重置为false
@@ -417,12 +447,15 @@
             },
             showPreview(uuid) {
                 //显示大图预览
+                //记录当前选中的列表，便于从预览页面返回时重新将其选中
+                this.$store.commit('setPhotoCheckList', {'checkList': this.checkList})
                 this.$router.push({
                     name: 'photo',
                     params: {
                         uuid: uuid,
                         callMode: this.callMode,
-                        albumUUID: this.albumUUID
+                        albumUUID: this.albumUUID,
+                        peopleUUID: this.peopleUUID,
                     }
                 })
             },
@@ -597,7 +630,7 @@
             removeFromAlbum() {
                 //从影集中移除照片
                 this.deviceSupportUninstall()
-                this.$confirm('您仍然可以在相册中找到该内容', '要移除此内容吗？', {
+                this.$confirm('从影集中移除并不会删除照片，您仍然可以在相册中找到该内容', '要移除此内容吗？', {
                     confirmButtonText: '移除',
                     cancelButtonText: '取消',
                     type: 'warning',
@@ -720,6 +753,9 @@
                         break
                     case 'unfavorites':
                         this.removeFromFavorites()
+                        break
+                    case 'add_to_album':
+                        this.showAlbumTree()
                         break
                     case 'modify_datetime':
                         this.showModifyDateTime()
@@ -875,6 +911,36 @@
                     })
                     this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                 })
+            },
+            removeFromPeople() {
+                // 从人物中移除
+                this.deviceSupportUninstall()
+                this.$confirm('从人物中移除并不会删除照片，您仍然可以在相册中找到该内容', '要移除此内容吗？', {
+                    confirmButtonText: '移除',
+                    cancelButtonText: '取消',
+                    type: 'warning',
+                    closeOnClickModal: false,
+                }).then(() => {
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/people_remove_feature',
+                        data: {
+                            filter_type: 'photo',
+                            people_uuid: this.peopleUUID,
+                            photo_list: this.checkList,
+                        }
+                    }).then(() => {
+                        let msg = '已将' + this.checkList.length + ' 张照片从人物中移除'
+                        this.unselectPhoto()
+                        this.$message({
+                            message: msg,
+                            type: 'success',
+                        })
+                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                    })
+                }).catch(() => {
+                    this.deviceSupportInstall()
+                });
             },
         }
     }

@@ -43,5 +43,12 @@ urlpatterns = [
     path('album_move', album_move),  # 移动影集
     path('album_set_cover', album_set_cover),  # 手动设置影集封面
     path('people_add_feature', people_add_feature),  # 新增人物特征
+    path('people_add_face', people_add_face),  # 添加面孔
     path('people_remove_feature', people_remove_feature),  # 删除人物特征
+    path('people_list', people_list),  # 获取人物列表
+    path('people_get', people_get),  # 获取指定的人物信息
+    path('people_set_cover', people_set_cover),  # 手动设置人物封面
+    path('people_get_faces', people_get_faces),  # 获取面孔列表
+    path('people_rename', people_rename),  # 重命名人物
+    path('people_remove', people_remove),  # 删除人物
 ]

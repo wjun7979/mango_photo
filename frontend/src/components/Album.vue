@@ -4,7 +4,9 @@
             <el-col class="mp-page-header-title" :span="8">
                 <div style="float: left;width: 40px"><i class="el-icon-back alumb-back" @click="$router.back()"></i></div>
                 <div class="album-cover" :style="{'background-image':'url('+apiUrl+'/'+album.cover_path+'/'+album.cover_name+')'}"></div>
-                <div style="float: left">{{album.name}}</div>
+                <div style="float: left">{{album.name}}
+                    <span v-if="album.photos>0">({{album.photos}} 张照片)</span>
+                </div>
             </el-col>
             <el-col :span="16" style="text-align: right">
                 <el-form :inline="true" style="margin-top: 2px;">
@@ -38,6 +40,7 @@
                     name: '',
                     cover_path: '',
                     cover_name: '',
+                    photos: 0,
                 },
             }
         },
@@ -47,6 +50,17 @@
         computed: {
             apiUrl() {
                 return this.$store.state.apiUrl  //后台api调用地址
+            },
+            refreshPhoto() {
+                return this.$store.state.refreshPhoto  //是否刷新照片列表
+            },
+        },
+        watch: {
+            refreshPhoto() {
+                //有其它组件发出刷新照片的指令
+                if (this.refreshPhoto) {
+                    this.getAlbum()
+                }
             },
         },
         mounted() {
@@ -68,7 +82,7 @@
             },
             openPick() {
                 this.$router.push({
-                    name: 'pick',
+                    name: 'pick_photo',
                     params: {albumUUID: this.albumUUID}
                 })
             },

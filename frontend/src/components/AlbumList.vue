@@ -169,7 +169,7 @@
                             name: value
                         }
                     }).then(() => {
-                        this.$store.commit('refreshAlbum', {show: true})
+                        this.showAlbums()  //刷新影集列表
                         this.$message({
                             message: '影集 [' + command.name + '] 成功重命名为 [' + value + ']',
                             type: 'success',
@@ -252,7 +252,8 @@
                 this.$confirm('即将删除影集和所有的子影集。影集一经删除便无法恢复。不过，已删除影集中的照片仍会保留在您的相册中。', '要删除影集吗？', {
                     confirmButtonText: '删除',
                     cancelButtonText: '保留影集',
-                    type: 'warning'
+                    closeOnClickModal: false,
+                    type: 'warning',
                 }).then(() => {
                     this.$axios({
                         method: 'post',

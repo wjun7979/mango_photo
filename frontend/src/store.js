@@ -8,10 +8,14 @@ const store = new Vuex.Store({
         apiUrl: 'http://127.0.0.1:8000',  //后台api调用地址
         refreshPhoto: false,  //是否刷新照片列表
         refreshAlbum: false,  //是否刷新影集列表
+        refreshFace: false,  //是否刷新面孔列表
         refreshPhotoStatistics: false,  //是否刷新照片库统计信息
         refreshUserInfo: false,  //是否刷新用户基本信息
         cancelSelectPhoto: false,  //是否取消已选中的照片
         infoSideStatus: false,  //信息侧边栏的最后一次显示状态
+        photoCheckList: [],  //选中的照片列表
+        faceCheckList: [],  //选中的面孔列表
+        cancelSelectFace: false,  //是否取消已选中的面孔
     },
     mutations: {
         setApiUrl(state) {  //根据客户端访问地址改变API请求地址
@@ -28,6 +32,9 @@ const store = new Vuex.Store({
         refreshAlbum(state, payload) {  //更改"是否刷新影集列表"的值
             state.refreshAlbum = payload.show
         },
+        refreshFace(state, payload) {  //更改"是否刷新面孔列表"的值
+            state.refreshFace = payload.show
+        },
         refreshPhotoStatistics(state, payload) {  //更改“是否刷新照片库统计信息”的值
             state.refreshPhotoStatistics = payload.show
         },
@@ -39,7 +46,16 @@ const store = new Vuex.Store({
         },
         setInfoSideStatus(state, payload) {  //更改“信息侧边栏的最后一次显示状态”的值
             state.infoSideStatus = payload.status
-        }
+        },
+        setPhotoCheckList(state, payload) {  //更改”选中的照片列表“的值
+            state.photoCheckList = payload.checkList
+        },
+        setFaceCheckList(state, payload) {  //更改”选中的面孔列表“的值
+            state.faceCheckList = payload.checkList
+        },
+        cancelSelectFace(state, payload) {  //更改“是否取消已选中的面孔”的值
+            state.cancelSelectFace = payload.action
+        },
     }
 })
 store.commit('setApiUrl')

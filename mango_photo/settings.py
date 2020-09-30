@@ -15,6 +15,7 @@ from corsheaders.defaults import default_headers
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+BASE_HOST = 'http://wlon.vicp.net:7080'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/3.0/howto/deployment/checklist/
@@ -161,7 +162,7 @@ CELERY_ACCEPT_CONTENT = ['json']
 CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
-# CELERYD_CONCURRENCY = 1  # 并发worker数
+CELERYD_CONCURRENCY = 1  # 并发worker数
 
 # 百度地图api
 BMAP_AK = 'OoD6BEoc77sczG45r8Wfw1wfeMuCM7dW'

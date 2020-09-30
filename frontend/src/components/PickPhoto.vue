@@ -32,7 +32,7 @@
     import UploadFile from "./UploadFile";
 
     export default {
-        name: "Pick",
+        name: "PickPhoto",
         data() {
             return {
                 albumUUID: this.$route.params.albumUUID,

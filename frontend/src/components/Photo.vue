@@ -1,284 +1,312 @@
 <template>
-    <transition name="el-fade-in-linear">
-        <div>
-            <div ref="viewer-wrapper" class="viewer-wrapper"
-                 :style="{'margin-right': viewerWrapperMargin}">
-                <div class="viewer-mask"></div>
-                <!-- 关闭按钮 -->
-                <span class="viewer-btn viewer-close" @click="close">
-                    <i class="el-icon-back"></i>
+    <div>
+        <div ref="viewer-wrapper" class="viewer-wrapper"
+             :style="{'margin-right': viewerWrapperMargin}">
+            <div class="viewer-mask"></div>
+            <!-- 关闭按钮 -->
+            <span class="viewer-btn viewer-close" @click="close">
+                <i class="el-icon-back"></i>
+            </span>
+            <span v-show="currentImg.comments" class="viewer-comments" @click="setPhotoComments">{{currentImg.comments}}</span>
+            <!--工具栏-->
+            <div class="viewer-toolbar">
+                <div v-if="['photo','favorites','people'].indexOf(callMode)>-1">
+                    <i class="el-icon-s-operation" title="修改" @click="showModify"></i>
+                    <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
+                    <i v-if="currentImg.is_favorited" class="el-icon-star-on" title="收藏" @click="removeFromFavorites"></i>
+                    <i v-if="!currentImg.is_favorited" class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
+                    <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
+                    <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
+                        <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
+                        <el-dropdown-menu slot="dropdown">
+                            <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-folder-add" command="add_to_album">添加到影集</el-dropdown-item>
+                        </el-dropdown-menu>
+                    </el-dropdown>
+                </div>
+                <div v-if="callMode === 'album'">
+                    <i class="el-icon-s-operation" title="修改" @click="showModify"></i>
+                    <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
+                    <i v-if="currentImg.is_favorited" class="el-icon-star-on" title="收藏" @click="removeFromFavorites"></i>
+                    <i v-if="!currentImg.is_favorited" class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
+                    <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
+                    <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
+                        <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
+                        <el-dropdown-menu slot="dropdown">
+                            <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-plus" command="add_to_album">添加到影集</el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-folder-delete" command="remove_from_album">从影集中移除</el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-notebook-1" command="set_album_cover">设为影集封面</el-dropdown-item>
+                        </el-dropdown-menu>
+                    </el-dropdown>
+                </div>
+                <div v-if="callMode === 'trash'">
+                    <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
+                    <i class="el-icon-delete" title="永久删除" @click="removePhoto"></i>
+                    <i class="el-icon-time" title="恢复" @click="restorePhoto"></i>
+                </div>
+                <div v-if="['pick','cover'].indexOf(callMode)>-1">
+                    <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
+                </div>
+            </div>
+            <!-- 上一张、下一张 -->
+            <template v-if="!isSingle">
+                <span class="viewer-btn viewer-prev"
+                      @click="prev">
+                    <i class="el-icon-arrow-left"/>
                 </span>
-                <span v-show="currentImg.comments" class="viewer-comments" @click="setPhotoComments">{{currentImg.comments}}</span>
-                <!--工具栏-->
-                <div class="viewer-toolbar">
-                    <div v-if="['photo','favorites'].indexOf(callMode)>-1">
-                        <i class="el-icon-s-operation" title="修改" @click="showModify"></i>
-                        <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
-                        <i v-if="currentImg.is_favorited" class="el-icon-star-on" title="收藏" @click="removeFromFavorites"></i>
-                        <i v-if="!currentImg.is_favorited" class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
-                        <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
-                        <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
-                            <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
-                            <el-dropdown-menu slot="dropdown">
-                                <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-plus" command="add_to_album">添加到影集</el-dropdown-item>
-                            </el-dropdown-menu>
-                        </el-dropdown>
-                    </div>
-                    <div v-if="callMode === 'album'">
-                        <i class="el-icon-s-operation" title="修改" @click="showModify"></i>
-                        <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
-                        <i v-if="currentImg.is_favorited" class="el-icon-star-on" title="收藏" @click="removeFromFavorites"></i>
-                        <i v-if="!currentImg.is_favorited" class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
-                        <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
-                        <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
-                            <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
-                            <el-dropdown-menu slot="dropdown">
-                                <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-plus" command="add_to_album">添加到影集</el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-remove-outline" command="remove_from_album">从影集中移除</el-dropdown-item>
-                                <el-dropdown-item icon="el-icon-notebook-1" command="set_album_cover">设为影集封面</el-dropdown-item>
-                            </el-dropdown-menu>
-                        </el-dropdown>
-                    </div>
-                    <div v-if="callMode === 'trash'">
-                        <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
-                        <i class="el-icon-delete" title="永久删除" @click="removePhoto"></i>
-                        <i class="el-icon-time" title="恢复" @click="restorePhoto"></i>
-                    </div>
-                    <div v-if="['pick','cover'].indexOf(callMode)>-1">
-                        <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
-                    </div>
-                </div>
-                <!-- 上一张、下一张 -->
-                <template v-if="!isSingle">
-                    <span class="viewer-btn viewer-prev"
-                          @click="prev">
-                        <i class="el-icon-arrow-left"/>
-                    </span>
-                    <span class="viewer-btn viewer-next"
-                          @click="next">
-                        <i class="el-icon-arrow-right"/>
-                    </span>
-                </template>
-                <!-- 动作按钮 -->
-                <div class="viewer-btn viewer-actions">
-                    <div class="viewer-actions-inner">
-                        <i class="el-icon-zoom-out" @click="handleActions('zoomOut')"></i>
-                        <i class="el-icon-zoom-in" @click="handleActions('zoomIn')"></i>
-                        <i class="el-image-viewer__actions__divider"></i>
-                        <i :class="mode.icon" @click="toggleMode"></i>
-                        <i class="el-image-viewer__actions__divider"></i>
-                        <i class="el-icon-refresh-left" @click="handleActions('anticlocelise')"></i>
-                        <i class="el-icon-refresh-right" @click="handleActions('clocelise')"></i>
-                    </div>
-                </div>
-                <!--大图显示-->
-                <div class="viewer-canvas">
-                    <img class="viewer-img" ref="img" :src="currentImg.url" alt="" :style="imgStyle"
-                         @load="handleImgLoad" @error="handleImgError" @mousedown="handleMouseDown"/>
+                <span class="viewer-btn viewer-next"
+                      @click="next">
+                    <i class="el-icon-arrow-right"/>
+                </span>
+            </template>
+            <!-- 动作按钮 -->
+            <div class="viewer-btn viewer-actions">
+                <div class="viewer-actions-inner">
+                    <i class="el-icon-zoom-out" @click="handleActions('zoomOut')"></i>
+                    <i class="el-icon-zoom-in" @click="handleActions('zoomIn')"></i>
+                    <i class="el-image-viewer__actions__divider"></i>
+                    <i :class="mode.icon" @click="toggleMode"></i>
+                    <i class="el-image-viewer__actions__divider"></i>
+                    <i class="el-icon-refresh-left" @click="handleActions('anticlocelise')"></i>
+                    <i class="el-icon-refresh-right" @click="handleActions('clocelise')"></i>
                 </div>
             </div>
-            <!--修改侧边栏-->
-            <div class="viewer-side" v-show="isShowModifySide">
-                <el-row>
-                    <i class="el-icon-close side-btn-close" @click="closeModify"/>
-                </el-row>
+            <!--大图显示-->
+            <div class="viewer-canvas">
+                <img class="viewer-img" ref="img" :src="currentImg.url" alt="" :style="imgStyle"
+                     @load="handleImgLoad" @error="handleImgError" @mousedown="handleMouseDown"/>
             </div>
-            <!--信息侧边栏-->
-            <div class="viewer-side" v-show="isShowInfoSide">
-                <el-row class="side-close">
-                    <i class="el-icon-close side-btn-close" @click="closeInfo"/>
-                    <span style="font-size: 20px">信息</span>
+        </div>
+        <!--修改侧边栏-->
+        <div class="viewer-side" v-show="isShowModifySide">
+            <el-row>
+                <i class="el-icon-close side-btn-close" @click="closeModify"/>
+            </el-row>
+        </div>
+        <!--信息侧边栏-->
+        <div class="viewer-side" v-show="isShowInfoSide">
+            <el-row class="side-close">
+                <i class="el-icon-close side-btn-close" @click="closeInfo"/>
+                <span style="font-size: 20px">信息</span>
+            </el-row>
+            <div style="padding-top: 70px">
+                <!--照片说明-->
+                <el-row v-if="['photo','album','favorites','people'].indexOf(callMode)>-1" class="side-href"
+                        @click.native="setPhotoComments">
+                    <el-col :span="24" style="border-bottom: solid 1px #8c939d">
+                        <span v-if="photoInfo.comments">{{photoInfo.comments}}</span>
+                        <span v-else>添加说明</span>
+                    </el-col>
                 </el-row>
-                <div style="padding-top: 70px">
-                    <!--照片说明-->
-                    <el-row v-if="['photo','album','favorites'].indexOf(callMode)>-1" class="side-href"
-                            @click.native="setPhotoComments">
-                        <el-col :span="24" style="border-bottom: solid 1px #8c939d">
-                            <span v-if="photoInfo.comments">{{photoInfo.comments}}</span>
-                            <span v-else>添加说明</span>
-                        </el-col>
-                    </el-row>
-                    <el-row v-if="['trash','pick','cover'].indexOf(callMode)>-1 && photoInfo.comments">
-                        <el-col :span="24">
-                            <span>{{photoInfo.comments}}</span>
-                        </el-col>
-                    </el-row>
-                    <el-row v-show="photoFaces.length>0" style="font-size: 12px">人物</el-row>
-                    <el-row v-show="photoFaces.length>0" :gutter="15">
-                        <el-col v-for="(face, index) of this.photoFaces" :key="index" :span="6">
-                            <img :src="apiUrl+'/'+face.path_thumbnail+'/'+face.name" alt="" class="face-img"/>
-                            <el-dropdown trigger="click" placement="bottom-start" @command="faceCommand">
+                <el-row v-if="['trash','pick','cover'].indexOf(callMode)>-1 && photoInfo.comments">
+                    <el-col :span="24">
+                        <span>{{photoInfo.comments}}</span>
+                    </el-col>
+                </el-row>
+                <el-row v-show="photoFaces.length>0" style="font-size: 12px">人物</el-row>
+                <el-row v-show="photoFaces.length>0" :gutter="15" style="padding: 15px 30px 0 30px">
+                    <el-col v-for="(face, index) of this.photoFaces" :key="index" :span="6" style="margin-bottom: 15px">
+                        <div style="position:relative; padding-top: 100%">
+                            <img :src="apiUrl+'/'+face.path_thumbnail+'/'+face.name" alt=""
+                                 :class="{'face-img':true, 'face-img-unknow':!face.people_uuid}"/>
+                        </div>
+                        <el-dropdown v-if="['photo','album','favorites','people'].indexOf(callMode)>-1"
+                                     trigger="click"
+                                     placement="bottom-start" @command="faceCommand" style="cursor: pointer">
                               <span class="face-name" v-if="face.people_name">
                                 {{face.people_name}}<i class="el-icon-arrow-down el-icon--right"></i>
                               </span>
-                              <span class="face-name" v-else>Ta是谁<i class="el-icon-arrow-down el-icon--right"></i>
+                            <span class="face-name" v-else>Ta是谁<i class="el-icon-arrow-down el-icon--right"></i>
                               </span>
-                                <el-dropdown-menu slot="dropdown" v-if="face.people_name">
-                                    <el-dropdown-item :command="beforeFaceCommand(face.uuid, face.people_name, 'removeName')">Ta不是{{face.people_name}}</el-dropdown-item>
-                                    <el-dropdown-item>隐藏该人物</el-dropdown-item>
-                                </el-dropdown-menu>
-                                <el-dropdown-menu slot="dropdown" v-else>
-                                    <el-dropdown-item :command="beforeFaceCommand(face.uuid, face.people_name, 'setName')">添加姓名</el-dropdown-item>
-                                    <el-dropdown-item>隐藏该人物</el-dropdown-item>
-                                </el-dropdown-menu>
-                            </el-dropdown>
-                        </el-col>
-                    </el-row>
-                    <el-row v-show="photoAlbums.length>0" style="font-size: 12px">影集</el-row>
-                    <el-row v-for="(album, index) of this.photoAlbums" :key="index">
-                        <el-col :span="4">
-                            <div class="side-album-cover"
-                                 :style="{'background-image':'url('+apiUrl+'/'+album.cover_path+'/'+album.cover_name+')'}"></div>
-                        </el-col>
-                        <el-col :span="20">
-                            <p>{{album.name}}</p>
-                            <p style="font-size: 14px; color: #8c939d" v-if="album.photos === 0">没有内容</p>
-                            <p class="album-tree-photos" v-else>
-                                <span>{{$common.dateFormat(album.min_time,'yyyy年MM月dd日')}}至{{$common.dateFormat(album.max_time,'yyyy年MM月dd日')}}</span>
-                                <span style="margin-left: 10px">{{album.photos}}项</span>
-                            </p>
-                        </el-col>
-                    </el-row>
-                    <el-row style="font-size: 12px">详情</el-row>
-                    <el-row :class="{'side-href':['photo','album','favorites'].indexOf(callMode)>-1}" v-if="photoInfo.exif_datetime"
-                            @click.native="showModifyDateTime">
-                        <el-col :span="3">
-                            <i class="el-icon-date" style="font-size: 24px; line-height: 44px"></i>
-                        </el-col>
-                        <el-col :span="18">
-                            <p>{{$common.dateFormat(photoInfo.exif_datetime, 'yyyy年M月d日')}}</p>
-                            <p style="font-size: 14px; color: #8c939d">
-                                <span>{{$common.dateFormat(photoInfo.exif_datetime, '周w')}}，</span>
-                                <span>{{$common.dateFormat(photoInfo.exif_datetime, 'hh:mm:ss')}}</span>
-                            </p>
-                        </el-col>
-                        <el-col :span="3" style="text-align: right">
-                            <i v-show="['photo','album'].indexOf(callMode)>-1" class="el-icon-edit" style="font-size: 16px; line-height: 44px; color: #8c939d"></i>
-                        </el-col>
-                    </el-row>
-                    <el-row v-show="photoInfo.name">
-                        <el-col :span="3">
-                            <i class="el-icon-picture" style="font-size: 24px; line-height: 44px"></i>
-                        </el-col>
-                        <el-col :span="21">
-                            <p :title="photoInfo.name" class="side-title">{{photoInfo.name_original}}</p>
-                            <p style="font-size: 14px; color: #8c939d">
-                                <span style="margin-right: 10px;">{{photoInfo.width}} × {{photoInfo.height}}</span>
-                                <span>{{$common.bytesToSize(photoInfo.size)}}</span>
-                            </p>
-                        </el-col>
-                    </el-row>
-                    <el-row v-show="photoInfo.exif_make">
-                        <el-col :span="3">
-                            <i class="el-icon-camera-solid" style="font-size: 24px; line-height: 44px"></i>
-                        </el-col>
-                        <el-col :span="21">
-                            <p class="side-title">{{photoInfo.exif_make}} {{photoInfo.exif_model}}</p>
-                            <p style="font-size: 14px; color: #8c939d">
-                                <span style="margin-right: 10px;">ƒ/{{photoInfo.exif_fnumber}}</span>
-                                <span style="margin-right: 10px;">{{photoInfo.exif_exposuretime}}</span>
-                                <span style="margin-right: 10px;">{{photoInfo.exif_focallength}}mm</span>
-                                <span>ISO{{photoInfo.exif_isospeedratings}}</span>
-                            </p>
-                        </el-col>
-                    </el-row>
-                    <!--位置信息-->
-                    <el-row :class="{'side-href':['photo','album','favorites'].indexOf(callMode)>-1}"
-                            @click.native="showModifyLocation">
-                        <el-col :span="3">
-                            <i class="el-icon-location" style="font-size: 24px;"></i>
-                        </el-col>
-                        <el-col :span="18">
-                            <p v-if="photoInfo.photo_address">
-                                <span v-if="photoInfo.photo_poi_name">{{photoInfo.photo_poi_name}} - </span>
-                                <span>{{photoInfo.photo_address}}</span>
-                            </p>
-                            <p v-else>这张照片是在哪里拍摄的？</p>
-                        </el-col>
-                        <el-col :span="3" style="text-align: right">
-                            <i v-show="['photo','album'].indexOf(callMode)>-1" class="el-icon-edit" style="font-size: 16px; color: #8c939d"></i>
-                        </el-col>
-                    </el-row>
-                    <el-row style="padding: 0" v-show="photoInfo.photo_address">
-                        <div id="map-core" style="height: 360px"></div>
-                        <a :href="'http://api.map.baidu.com/marker?location='+photoInfo.photo_lat+','+photoInfo.photo_lng+'&output=html&src=wjun.mango_photo'"
-                           target="_blank" title="在百度地图上显示照片位置信息">
-                            <img src="../assets/images/bmap_copyright_logo.png" alt=""
-                                 style="position: absolute; left: 5px; bottom: 10px;"/>
-                        </a>
-                    </el-row>
-                </div>
-            </div>
-            <!--添加到影集对话框-->
-            <el-dialog class="album-dialog" title="添加到影集"
-                       :visible.sync="isShowAddToAlbumDialog"
-                       width="400px"
-                       :close-on-click-modal="false"
-                       :destroy-on-close="true"
-                       @closed="deviceSupportInstall">
-                <el-tree class="album-tree" ref="albumTree" :lazy="true" :load="loadAlbumTree" node-key="uuid"
-                         :props="{label:'name'}"
-                         :default-expand-all="false"
-                         :expand-on-click-node="true"
-                         :highlight-current="true">
-                    <div slot-scope="{ data }">
-                        <div class="album-tree-cover"
-                             :style="{'background-image':'url('+apiUrl+'/'+data.cover_path+'/'+data.cover_name+')'}"></div>
-                        <div style="float: left">
-                            <p class="album-tree-title">{{data.name}}</p>
-                            <p class="album-tree-photos" v-if="data.photos === 0">没有内容</p>
-                            <p class="album-tree-photos" v-else>
-                                <span>{{$common.dateFormat(data.min_time,'yyyy年MM月dd日')}}至{{$common.dateFormat(data.max_time,'yyyy年MM月dd日')}}</span>
-                                <span style="margin-left: 10px">{{data.photos}}项</span>
-                            </p>
+                            <el-dropdown-menu slot="dropdown">
+                                <el-dropdown-item v-if="!face.people_name"
+                                                  :command="beforeFaceCommand(face.uuid, face.people_uuid, 'setName')">
+                                    添加姓名
+                                </el-dropdown-item>
+                                <el-dropdown-item v-if="face.people_name"
+                                                  :command="beforeFaceCommand(face.uuid, face.people_uuid, 'removeName')">
+                                    Ta不是{{face.people_name}}
+                                </el-dropdown-item>
+                                <el-dropdown-item v-if="face.people_name"
+                                                  :command="beforeFaceCommand(face.uuid, face.people_uuid, 'setCover')">
+                                    设为人物封面
+                                </el-dropdown-item>
+                            </el-dropdown-menu>
+                        </el-dropdown>
+                        <div v-if="['trash','pick','cover'].indexOf(callMode)>-1">
+                            <span class="face-name" v-if="face.people_name">{{face.people_name}}</span>
+                            <span class="face-name" v-else>Ta是谁</span>
                         </div>
-                    </div>
-                </el-tree>
-                <span slot="footer">
-                <el-button @click="isShowAddToAlbumDialog = false" size="small">取消</el-button>
-                <el-button type="primary" size="small" @click="addToAlbum">确定</el-button>
-            </span>
-            </el-dialog>
-            <!--修改日期和时间对话框-->
-            <el-dialog title="修改日期和时间" :visible.sync="isShowModifyDateTimeDialog" width="350px"
-                       :close-on-click-modal="false" @closed="deviceSupportInstall">
-                <el-date-picker type="datetime" v-model="photoDateTime" default-time="8:00:00"
-                                placeholder="选择日期时间" format="yyyy-MM-dd HH:mm"
-                                value-format="yyyy-MM-dd HH:mm:ss" style="width: 310px"></el-date-picker>
-                <span slot="footer">
-                <el-button size="small" @click="isShowModifyDateTimeDialog=false">取消</el-button>
-                <el-button type="primary" size="small" @click="modifyDateTime">确定</el-button>
-            </span>
-            </el-dialog>
-            <!--修改位置信息对话框-->
-            <el-dialog title="修改位置信息" :visible.sync="isShowModifyLocationDialog" width="500px"
-                       :close-on-click-modal="false" @closed="deviceSupportInstall">
-                <p v-if="photoInfo.photo_address" style="margin-bottom: 20px">
-                    <span v-if="photoInfo.photo_poi_name">{{photoInfo.photo_poi_name}} - </span>
-                    <span>{{photoInfo.photo_address}}</span>
-                </p>
-                <el-select v-model="photoLocation" :remote="true" :filterable="true" placeholder="输入地理位置"
-                           :remote-method="getLocationList" :loading="locationLoading" :clearable="true"
-                           @clear="locationOptions=[]"
-                           style="width: 460px">
-                    <el-option v-for="item in locationOptions" :key="item.uid"
-                               :label="item.name"
-                               :value="item.location.lat+','+item.location.lng+','+item.name">
-                        <span style="float: left">{{ item.name }}</span>
-                        <span style="float: right; color: #8492a6; font-size: 13px">{{ item.province + item.city + item.district }}</span>
-                    </el-option>
-                </el-select>
-                <span slot="footer">
-                <el-button v-if="photoInfo.photo_address" type="danger" size="small"
-                           @click="modifyLocation">清除位置信息</el-button>
-                <el-button size="small" @click="isShowModifyLocationDialog=false">取消</el-button>
-                <el-button type="primary" size="small" @click="checkLocation">确定</el-button>
-            </span>
-            </el-dialog>
+                    </el-col>
+                </el-row>
+                <el-row v-show="photoAlbums.length>0" style="font-size: 12px">影集</el-row>
+                <el-row v-for="(album, index) of this.photoAlbums" :key="index">
+                    <el-col :span="4">
+                        <div class="side-album-cover"
+                             :style="{'background-image':'url('+apiUrl+'/'+album.cover_path+'/'+album.cover_name+')'}"></div>
+                    </el-col>
+                    <el-col :span="20">
+                        <p>{{album.name}}</p>
+                        <p style="font-size: 14px; color: #8c939d" v-if="album.photos === 0">没有内容</p>
+                        <p class="album-tree-photos" v-else>
+                            <span>{{$common.dateFormat(album.min_time,'yyyy年MM月dd日')}}至{{$common.dateFormat(album.max_time,'yyyy年MM月dd日')}}</span>
+                            <span style="margin-left: 10px">{{album.photos}}项</span>
+                        </p>
+                    </el-col>
+                </el-row>
+                <el-row style="font-size: 12px">详情</el-row>
+                <el-row :class="{'side-href':['photo','album','favorites','people'].indexOf(callMode)>-1}" v-if="photoInfo.exif_datetime"
+                        @click.native="showModifyDateTime">
+                    <el-col :span="3">
+                        <i class="el-icon-date" style="font-size: 24px; line-height: 44px"></i>
+                    </el-col>
+                    <el-col :span="18">
+                        <p>{{$common.dateFormat(photoInfo.exif_datetime, 'yyyy年M月d日')}}</p>
+                        <p style="font-size: 14px; color: #8c939d">
+                            <span>{{$common.dateFormat(photoInfo.exif_datetime, '周w')}}，</span>
+                            <span>{{$common.dateFormat(photoInfo.exif_datetime, 'hh:mm')}}</span>
+                        </p>
+                    </el-col>
+                    <el-col :span="3" style="text-align: right">
+                        <i v-show="['photo','album'].indexOf(callMode)>-1" class="el-icon-edit" style="font-size: 16px; line-height: 44px; color: #8c939d"></i>
+                    </el-col>
+                </el-row>
+                <el-row v-show="photoInfo.name">
+                    <el-col :span="3">
+                        <i class="el-icon-picture" style="font-size: 24px; line-height: 44px"></i>
+                    </el-col>
+                    <el-col :span="21">
+                        <p :title="photoInfo.name" class="side-title">{{photoInfo.name_original}}</p>
+                        <p style="font-size: 14px; color: #8c939d">
+                            <span style="margin-right: 10px;">{{photoInfo.width}} × {{photoInfo.height}}</span>
+                            <span>{{$common.bytesToSize(photoInfo.size)}}</span>
+                        </p>
+                    </el-col>
+                </el-row>
+                <el-row v-show="photoInfo.exif_make">
+                    <el-col :span="3">
+                        <i class="el-icon-camera-solid" style="font-size: 24px; line-height: 44px"></i>
+                    </el-col>
+                    <el-col :span="21">
+                        <p class="side-title">{{photoInfo.exif_make}} {{photoInfo.exif_model}}</p>
+                        <p style="font-size: 14px; color: #8c939d">
+                            <span style="margin-right: 10px;">ƒ/{{photoInfo.exif_fnumber}}</span>
+                            <span style="margin-right: 10px;">{{photoInfo.exif_exposuretime}}</span>
+                            <span style="margin-right: 10px;">{{photoInfo.exif_focallength}}mm</span>
+                            <span>ISO{{photoInfo.exif_isospeedratings}}</span>
+                        </p>
+                    </el-col>
+                </el-row>
+                <!--位置信息-->
+                <el-row :class="{'side-href':['photo','album','favorites','people'].indexOf(callMode)>-1}"
+                        @click.native="showModifyLocation">
+                    <el-col :span="3">
+                        <i class="el-icon-location" style="font-size: 24px;"></i>
+                    </el-col>
+                    <el-col :span="18">
+                        <p v-if="photoInfo.photo_address">
+                            <span v-if="photoInfo.photo_poi_name">{{photoInfo.photo_poi_name}} - </span>
+                            <span>{{photoInfo.photo_address}}</span>
+                        </p>
+                        <p v-else>这张照片是在哪里拍摄的？</p>
+                    </el-col>
+                    <el-col :span="3" style="text-align: right">
+                        <i v-show="['photo','album'].indexOf(callMode)>-1" class="el-icon-edit" style="font-size: 16px; color: #8c939d"></i>
+                    </el-col>
+                </el-row>
+                <el-row style="padding: 0" v-show="photoInfo.photo_address">
+                    <div id="map-core" style="height: 360px"></div>
+                    <a :href="'http://api.map.baidu.com/marker?location='+photoInfo.photo_lat+','+photoInfo.photo_lng+'&output=html&src=wjun.mango_photo'"
+                       target="_blank" title="在百度地图上显示照片位置信息">
+                        <img src="../assets/images/bmap_copyright_logo.png" alt=""
+                             style="position: absolute; left: 5px; bottom: 10px;"/>
+                    </a>
+                </el-row>
+            </div>
         </div>
-    </transition>
+        <!--添加到影集对话框-->
+        <el-dialog class="album-dialog" title="添加到影集"
+                   :visible.sync="isShowAddToAlbumDialog"
+                   width="400px"
+                   :close-on-click-modal="false"
+                   :destroy-on-close="true"
+                   @closed="deviceSupportInstall">
+            <el-tree class="album-tree" ref="albumTree" :lazy="true" :load="loadAlbumTree" node-key="uuid"
+                     :props="{label:'name'}"
+                     :default-expand-all="false"
+                     :expand-on-click-node="true"
+                     :highlight-current="true">
+                <div slot-scope="{ data }">
+                    <div class="album-tree-cover"
+                         :style="{'background-image':'url('+apiUrl+'/'+data.cover_path+'/'+data.cover_name+')'}"></div>
+                    <div style="float: left">
+                        <p class="album-tree-title">{{data.name}}</p>
+                        <p class="album-tree-photos" v-if="data.photos === 0">没有内容</p>
+                        <p class="album-tree-photos" v-else>
+                            <span>{{$common.dateFormat(data.min_time,'yyyy年MM月dd日')}}至{{$common.dateFormat(data.max_time,'yyyy年MM月dd日')}}</span>
+                            <span style="margin-left: 10px">{{data.photos}}项</span>
+                        </p>
+                    </div>
+                </div>
+            </el-tree>
+            <span slot="footer">
+            <el-button @click="isShowAddToAlbumDialog = false" size="small">取消</el-button>
+            <el-button type="primary" size="small" @click="addToAlbum">确定</el-button>
+        </span>
+        </el-dialog>
+        <!--修改日期和时间对话框-->
+        <el-dialog title="修改日期和时间" :visible.sync="isShowModifyDateTimeDialog" width="350px"
+                   :close-on-click-modal="false" @closed="deviceSupportInstall">
+            <el-date-picker type="datetime" v-model="photoDateTime" default-time="8:00:00"
+                            placeholder="选择日期时间" format="yyyy-MM-dd HH:mm"
+                            value-format="yyyy-MM-dd HH:mm:ss" style="width: 310px"></el-date-picker>
+            <span slot="footer">
+            <el-button size="small" @click="isShowModifyDateTimeDialog=false">取消</el-button>
+            <el-button type="primary" size="small" @click="modifyDateTime">确定</el-button>
+        </span>
+        </el-dialog>
+        <!--修改位置信息对话框-->
+        <el-dialog title="修改位置信息" :visible.sync="isShowModifyLocationDialog" width="500px"
+                   :close-on-click-modal="false" @closed="deviceSupportInstall">
+            <p v-if="photoInfo.photo_address" style="margin-bottom: 20px">
+                <span v-if="photoInfo.photo_poi_name">{{photoInfo.photo_poi_name}} - </span>
+                <span>{{photoInfo.photo_address}}</span>
+            </p>
+            <el-select v-model="photoLocation" :remote="true" :filterable="true" placeholder="输入地理位置"
+                       :remote-method="getLocationList" :loading="locationLoading" :clearable="true"
+                       @clear="locationOptions=[]"
+                       style="width: 460px">
+                <el-option v-for="item in locationOptions" :key="item.uid"
+                           :label="item.name"
+                           :value="item.location.lat+','+item.location.lng+','+item.name">
+                    <span style="float: left">{{ item.name }}</span>
+                    <span style="float: right; color: #8492a6; font-size: 13px">{{ item.province + item.city + item.district }}</span>
+                </el-option>
+            </el-select>
+            <span slot="footer">
+            <el-button v-if="photoInfo.photo_address" type="danger" size="small"
+                       @click="modifyLocation">清除位置信息</el-button>
+            <el-button size="small" @click="isShowModifyLocationDialog=false">取消</el-button>
+            <el-button type="primary" size="small" @click="checkLocation">确定</el-button>
+        </span>
+        </el-dialog>
+        <!--指定人物对话框-->
+        <el-dialog title="Ta是谁" :visible.sync="isShowPeopleDialog" width="350px"
+                   :close-on-click-modal="false" @closed="deviceSupportInstall">
+            <el-select v-model="currFace.name" filterable allow-create placeholder="请输入人物姓名"
+                       style="width: 300px">
+                <el-option v-for="item in peopleOptions" :key="item.uuid"
+                           :label="item.name"
+                           :value="item.name">
+                </el-option>
+            </el-select>
+            <span slot="footer">
+                <el-button size="small" @click="isShowPeopleDialog=false">取消</el-button>
+                <el-button type="primary" size="small" @click="setPeopleName">确定</el-button>
+            </span>
+        </el-dialog>
+    </div>
 </template>
 
 <script>
@@ -304,6 +332,7 @@
                 callMode: this.$route.params.callMode,  //调用模式
                 albumUUID: this.$route.params.albumUUID,  //当调用模式为album时，必须指定影集uuid
                 albumName: '',  //影集标题
+                peopleUUID: this.$route.params.peopleUUID,  //当调用模式为people时，必须指定人物uuid
                 previewListOrder: [],  //大图预览列表
                 index: 0,  //当前预览图编号
                 currentImg: {},  //当前预览图
@@ -329,7 +358,13 @@
                 isShowModifyLocationDialog: false,  //是否显示修改位置信息对话框
                 photoLocation: '',  //照片的拍摄地点
                 locationLoading: false,  //位置选择框是否正在从远程获取数据
-                locationOptions: [],  //地点检索的结果
+                locationOptions: [],  //地点的检索结果
+                isShowPeopleDialog: false,  //是否显示指定人物对话框
+                currFace: {  //当前操作的人脸对象
+                    face_uuid: '',
+                    name: ''
+                },
+                peopleOptions: [],  //人物的检索结果
             }
         },
         watch: {
@@ -337,6 +372,11 @@
                 handler: function () {
                     this.currentImg = this.previewListOrder[this.index]
                     this.reset();
+                    if (this.isShowInfoSide) {
+                        this.getPhotoInfo()  //重新获取照片详细信息
+                        this.getPhotoAlbums()  //重新获取照片所属的影集列表
+                        this.getPhotoFaces()  //重新获取照片中的人物
+                    }
                 }
             },
             currentImg() {
@@ -487,11 +527,6 @@
                         albumUUID: this.albumUUID
                     }
                 })
-                if (this.isShowInfoSide) {
-                    this.getPhotoInfo()  //重新获取照片详细信息
-                    this.getPhotoAlbums()  //重新获取照片所属的影集列表
-                    this.getPhotoFaces()  //重新获取照片中的人物
-                }
             },
             next() {  //下一张
                 const len = this.previewListOrder.length;
@@ -504,11 +539,6 @@
                         albumUUID: this.albumUUID
                     }
                 })
-                if (this.isShowInfoSide) {
-                    this.getPhotoInfo()  //重新获取照片详细信息
-                    this.getPhotoAlbums()  //重新获取照片所属的影集列表
-                    this.getPhotoFaces()  //重新获取照片中的人物
-                }
             },
             handleActions(action, options = {}) {  //对图片进行缩放和旋转操作
                 if (this.loading) return;
@@ -559,6 +589,7 @@
                         userid: localStorage.getItem('userid'),
                         call_mode: this.callMode,
                         album_uuid: this.albumUUID,
+                        people_uuid: this.peopleUUID,
                     }
                 }).then(response => {
                     let photoList = response.data
@@ -759,7 +790,7 @@
                         photo_list: [this.currentImg.uuid]
                     }
                 }).then(() => {
-                    let msg = '成功将照片' + this.currentImg.name + '添加到影集 [' + album_name + '] 中'
+                    let msg = '成功将照片添加到影集 [' + album_name + '] 中'
                     this.$message({
                         message: msg,
                         type: 'success',
@@ -787,7 +818,7 @@
                             photo_list: [this.currentImg.uuid]
                         }
                     }).then(() => {
-                        let msg = '照片' + this.currentImg.name + '已从影集 [' + this.albumName + '] 中移除'
+                        let msg = '照片已从影集 [' + this.albumName + '] 中移除'
                         this.$message({
                             message: msg,
                             type: 'success',
@@ -827,7 +858,7 @@
                             photo_list: [this.currentImg.uuid]
                         }
                     }).then(() => {
-                        let msg = '已将照片' + this.currentImg.name + '移到回收站'
+                        let msg = '已将照片移到回收站'
                         this.$message({
                             message: msg,
                             type: 'success',
@@ -861,7 +892,7 @@
                         photo_uuid: this.currentImg.uuid
                     }
                 }).then(() => {
-                    let msg = '成功将照片' + this.currentImg.name + '设置为影集 [' + this.albumName + '] 的封面'
+                    let msg = '影集 [' + this.albumName + '] 的封面设置成功'
                     this.$message({
                         message: msg,
                         type: 'success',
@@ -888,7 +919,7 @@
                             photo_list: [this.currentImg.uuid]
                         }
                     }).then(() => {
-                        let msg = '照片' + this.currentImg.name + '成功删除'
+                        let msg = '照片已被成功删除'
                         this.$message({
                             message: msg,
                             type: 'success',
@@ -921,7 +952,7 @@
                         photo_list: [this.currentImg.uuid]
                     }
                 }).then(() => {
-                    let msg = '照片' + this.currentImg.name + '成功恢复'
+                    let msg = '照片已成功恢复'
                     this.$message({
                         message: msg,
                         type: 'success',
@@ -979,7 +1010,7 @@
             },
             showModifyDateTime() {
                 //显示修改日期和时间对话框
-                if (['photo','album','favorites'].indexOf(this.callMode) === -1)
+                if (['photo','album','favorites','people'].indexOf(this.callMode) === -1)
                     return false
                 this.deviceSupportUninstall()  //卸载键盘按键支持，避免与dialog的esc关闭冲突
                 this.photoDateTime = this.photoInfo.exif_datetime
@@ -1013,7 +1044,7 @@
             },
             showModifyLocation(){
                 //显示修改位置信息对话框
-                if (['photo','album','favorites'].indexOf(this.callMode) === -1)
+                if (['photo','album','favorites','people'].indexOf(this.callMode) === -1)
                     return false
                 this.deviceSupportUninstall()
                 this.photoLocation = ''
@@ -1073,68 +1104,100 @@
                     })
                 })
             },
-            beforeFaceCommand(uuid, name, command) {
+            beforeFaceCommand(uuid, people_uuid, command) {
                 return {
                     'uuid': uuid,
-                    'name': name,
+                    'people_uuid': people_uuid,
                     'command': command
                 }
             },
             faceCommand(command) {
                 switch (command.command) {
                     case 'setName':  //设置人物姓名
-                        this.setPeopleName(command.uuid, command.name)
+                        this.currFace = {
+                            face_uuid: command.uuid,
+                            name: '',
+                        }
+                        this.getPeopleList()
+                        this.deviceSupportUninstall()  //卸载键盘按键支持
+                        this.isShowPeopleDialog = true
                         break
                     case 'removeName':  //清除人物姓名
-                        this.removePeopleName(command.uuid)
+                        this.removePeopleName(command.uuid, command.people_uuid)
+                        break
+                    case 'setCover':  //设为人物封面
+                        this.setPeopleCover(command.uuid, command.people_uuid)
                         break
                 }
             },
-            setPeopleName(uuid, name) {
+            getPeopleList() {
+                //获取人物列表
+                this.$axios({
+                    method: 'get',
+                    url: this.apiUrl + '/api/people_list',
+                    params: {
+                        userid: localStorage.getItem('userid'),
+                    }
+                }).then(response => {
+                    this.peopleOptions = response.data
+                })
+            },
+            setPeopleName() {
                 // 设置人物姓名
-                this.deviceSupportUninstall()  //卸载键盘按键支持
-                if (name === null) name = ''
-                this.$prompt('请输入人物姓名：', {
-                    inputValue: name,
-                    closeOnClickModal: false,
-                    inputValidator: (value => {
-                        if (value.trim().length === 0)
-                            return '人物姓名不能为空'
-                    }),
-                    callback: ((action, instance) => {
-                        if (action === 'confirm') {
-                            this.$axios({
-                                method: 'post',
-                                url: this.apiUrl + '/api/people_add_feature',
-                                data: {
-                                    userid: localStorage.getItem('userid'),
-                                    face_uuid: uuid,
-                                    name: instance.inputValue,
-                                }
-                            }).then(() => {
-                                this.getPhotoFaces()
-                                this.$message({
-                                    message: '成功为人物命名为 [' + instance.inputValue + ']',
-                                    type: 'success',
-                                })
-                            })
-                        }
-                        this.deviceSupportInstall()  //恢复键盘按键支持
+                if (this.currFace.name === '') {
+                    this.$message({
+                        message: '请输入人物姓名',
+                        type: 'error',
+                    })
+                    return false
+                }
+                this.isShowPeopleDialog = false  //关闭对话框
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/people_add_feature',
+                    data: {
+                        userid: localStorage.getItem('userid'),
+                        face_uuid: this.currFace.face_uuid,
+                        name: this.currFace.name,
+                    }
+                }).then(() => {
+                    this.getPhotoFaces()  //刷新人脸列表
+                    this.$message({
+                        message: '成功为人物命名为 [' + this.currFace.name + ']',
+                        type: 'success',
                     })
                 })
             },
-            removePeopleName(uuid) {
+            removePeopleName(uuid, people_uuid) {
                 // 清除人物姓名
                 this.$axios({
                     method: 'post',
                     url: this.apiUrl + '/api/people_remove_feature',
                     data: {
-                        face_uuid: [uuid],
+                        filter_type: 'face',
+                        people_uuid: people_uuid,
+                        face_list: [uuid],
                     }
                 }).then(() => {
                     this.getPhotoFaces()
                     this.$message({
                         message: '成功清除了人物姓名',
+                        type: 'success',
+                    })
+                })
+            },
+            setPeopleCover(uuid, people_uuid) {
+                // 设为人物封面
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/people_set_cover',
+                    data: {
+                        people_uuid: people_uuid,
+                        face_uuid: uuid,
+                    }
+                }).then(() => {
+                    this.$message({
+                        message: '人物封面设置成功',
                         type: 'success',
                     })
                 })
@@ -1375,12 +1438,20 @@
     }
 
     .face-img {  /*人脸图像*/
+        position: absolute;
+        top: 0;
         width: 100%;
         border-radius: 8px;
+    }
+    .face-img-unknow {  /*未知的人脸图像*/
+        filter: sepia(1);
+        transition: 0.5s filter;
+    }
+    .face-img-unknow:hover {
+        filter: none;
     }
     .face-name {  /*人物姓名*/
         color: #d9d9d9;
         font-size: 12px;
-        cursor: pointer;
     }
 </style>

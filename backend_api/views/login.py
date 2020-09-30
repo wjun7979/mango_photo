@@ -19,6 +19,7 @@ def login(request):
         response['msg'] = '用户不存在'
         return JsonResponse(response, status=500)
     encrypt_pwd = hashlib.md5(password.join('Nhj10LyBc').encode("utf-8")).hexdigest()
+    # Abcd1234的加密后密码为：3b4f646f390eeab7b87022bfad32f15c
     if encrypt_pwd != user.password:
         response['msg'] = '登录密码错误'
         return JsonResponse(response, status=500)
