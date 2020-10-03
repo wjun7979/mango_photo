@@ -8,12 +8,13 @@ import Photo from "./components/Photo";
 import Albums from "./components/Albums";
 import Album from "./components/Album";
 import PickPhoto from "./components/PickPhoto";
-import Cover from "./components/Cover";
+import PickCover from "./components/PickCover";
 import Trash from "./components/Trash"
 import Favorites from "./components/Favorites";
 import Peoples from "./components/Peoples";
 import People from "./components/People";
 import PickFace from "./components/PickFace";
+import PickFeature from "./components/PickFeature";
 import NotFound from "./components/NotFound";
 
 //解决ElementUI导航栏中的vue-router重复点菜单报错问题
@@ -87,13 +88,18 @@ const routes = [
         }
     },
     {
-        path: '/cover/:albumUUID', name: 'cover', component: Cover, meta: {
+        path: '/pick_cover/:albumUUID', name: 'pick_cover', component: PickCover, meta: {
             title: '选择影集封面'
         }
     },
     {
         path: '/pick_face/:peopleUUID', name: 'pick_face', component: PickFace, meta: {
             title: '添加面孔到人物'
+        }
+    },
+    {
+        path: '/pick_feature/:peopleUUID', name: 'pick_feature', component: PickFeature, meta: {
+            title: '选择人物特征照片'
         }
     },
     {path: '*', component: NotFound},

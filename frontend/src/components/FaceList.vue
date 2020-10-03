@@ -32,7 +32,7 @@
                     <!--叠加预览按钮-->
                     <i class="el-icon-zoom-in btn-preview" @click="showPreview(face.photo_uuid)"></i>
                     <!--叠加特征标志-->
-                    <i v-if="face.feature_token" class="el-icon-star-on btn-feature"></i>
+                    <i v-if="face.feature_token" class="el-icon-user-solid btn-feature"></i>
                     <el-image class="img-face" :src="apiUrl + '/' + face.path_thumbnail + '/' + face.name" lazy
                               @click.exact="clickImage(face.uuid, face.photo_uuid)"
                               @click.shift.exact="multiSelectFaces($event, face.uuid, face.photo_uuid)">
@@ -177,7 +177,8 @@
                     name: 'photo',
                     params: {
                         uuid: photo_uuid,
-                        callMode: this.callMode,
+                        callMode: 'pick_face',
+                        albumUUID: 'none',
                         peopleUUID: this.peopleUUID,
                     }
                 })

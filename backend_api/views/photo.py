@@ -22,8 +22,13 @@ def photo_list(request):
     people_uuid = request.GET.get('people_uuid')
 
     photos = Photo.objects.distinct()
+    photos = photos.values('uuid', 'path_original', 'path_modified', 'path_thumbnail_s', 'path_thumbnail_l', 'name',
+                           'width', 'height', 'exif_datetime', 'is_favorited', 'comments', 'address__address',
+                           'address__poi_name')
+    photos = photos.annotate(faces=Count('peopleface__uuid'))
+    # 过滤条件
     photos = photos.filter(userid=userid)
-    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people']:
+    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people', 'feature']:
         photos = photos.filter(is_deleted=False)
         if call_mode == 'album':  # 在影集中调用
             photos = photos.filter(albumphoto__album_uuid=album_uuid)
@@ -41,11 +46,11 @@ def photo_list(request):
             photos = photos.filter(albumphoto__album_uuid__in=albums)
         if call_mode == 'people':  # 在人物中调用
             photos = photos.filter(peopleface__people_uuid=people_uuid)
+        if call_mode == 'feature':  # 在选择人物特征中调用，只显示面孔数量为1的照片
+            photos = photos.filter(peopleface__people_uuid=people_uuid, faces=1, peopleface__feature_token__isnull=True)
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
-    photos = photos.values('uuid', 'path_original', 'path_modified', 'path_thumbnail_s', 'path_thumbnail_l', 'name',
-                           'width', 'height', 'exif_datetime', 'is_favorited', 'comments', 'address__address',
-                           'address__poi_name')
+    # 排序
     photos = photos.order_by('-exif_datetime')
 
     response = json.loads(json.dumps(list(photos), cls=DateEncoder))

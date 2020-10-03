@@ -22,7 +22,8 @@
         <el-main class="mp-page-main">
             <div v-if="people.features===0" class="no-feature">
                 <i class="el-icon-info"></i>
-                <span style="margin-left: 10px">注意：该人物没有特征照片，将无法进行智能匹配！</span>
+                <span style="margin-left: 10px">注意：该人物没有特征照片，将无法进行智能匹配！请
+                    <el-button type="text" style="font-size: 16px" @click="openPickFeature">点击这里</el-button> 选取清晰的正面照作为Ta的特征。</span>
             </div>
             <PhotoList v-if="showType==='photo'" callMode="people" :peopleUUID="peopleUUID"></PhotoList>
             <FaceList v-if="showType==='face'" callMode="people" :peopleUUID="peopleUUID"></FaceList>
@@ -89,8 +90,16 @@
                 })
             },
             openPick() {
+                //添加面孔
                 this.$router.push({
                     name: 'pick_face',
+                    params: {peopleUUID: this.peopleUUID}
+                })
+            },
+            openPickFeature() {
+                //选择人物特征照片
+                this.$router.push({
+                    name: 'pick_feature',
                     params: {peopleUUID: this.peopleUUID}
                 })
             },

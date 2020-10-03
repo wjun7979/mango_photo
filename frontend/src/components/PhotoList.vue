@@ -78,14 +78,16 @@
                                 </el-tooltip>
                             </div>
                             <!--叠加收藏标志-->
-                            <i v-if="img.is_favorited" class="el-icon-star-on btn-favorited"></i>
+                            <div v-if="img.is_favorited" class="btn-flag">
+                                <i v-if="img.is_favorited" class="el-icon-star-on"></i>
+                            </div>
                         </div>
                     </div>
                 </el-checkbox-group>
             </el-row>
         </el-checkbox-group>
         <!--选中照片后的工具栏-->
-        <el-row class="chk-toolbar" v-show="['pick','cover'].indexOf(this.callMode) === -1 && checkList.length>0">
+        <el-row class="chk-toolbar" v-show="['pick','cover','feature'].indexOf(this.callMode) === -1 && checkList.length>0">
             <el-col :span="12">
                 <i class="el-icon-close" style="color: #202124;" @click="unselectPhoto"></i>
                 <span style="font-size: 1.125rem; padding-left: 7px;">选择了 {{checkList.length}} 张照片</span>
@@ -251,7 +253,7 @@
             callMode: {  //调用模式
                 type: String,
                 //photo:照片; album:影集; trash:回收站; pick:挑选照片到影集; favorites:收藏夹; cover:设置影集封面
-                //people:人物
+                //people:人物; feature:挑选人物特征
                 default: 'photo'
             },
             albumUUID: {  //当调用模式为album时，必须指定影集uuid
@@ -262,7 +264,7 @@
                 type: Array,
                 default: () => []
             },
-            peopleUUID: {  //当调用模式为people时，必须指定人物uuid
+            peopleUUID: {  //当调用模式为people和feature时，必须指定人物uuid
                 type: String,
                 default: 'none'
             },
@@ -316,7 +318,7 @@
                     let addList = val.filter(function(v){ return albumPhotoList.indexOf(v) === -1 })
                     this.onPick(removeList, addList)
                 }
-                if (this.callMode === 'cover') {
+                if (['cover','feature'].indexOf(this.callMode) > -1) {
                     this.onPick(this.checkList)
                 }
                 //返回选中列表中是否包含未收藏的照片
@@ -349,15 +351,15 @@
                 this.getAlbum()
             }
             this.showPhotos()  //获取并显示照片列表
-            if (['pick','cover'].indexOf(this.callMode) === -1)
+            if (['pick','cover','feature'].indexOf(this.callMode) === -1)
                 this.deviceSupportInstall()  //注册键盘按键支持
-            if (this.callMode === 'cover')  //设置影集封面模式下，只允许单选
+            if (['cover','feature'].indexOf(this.callMode) > -1)  //设置影集封面、选择人物特征模式下，只允许单选
                 this.multiple = false
             this.setImgHeight()
             window.addEventListener('resize', this.listenResize)
         },
         beforeDestroy() {
-            if (['pick','cover'].indexOf(this.callMode) === -1) {
+            if (['pick','cover','feature'].indexOf(this.callMode) === -1) {
                 this.deviceSupportUninstall()  //卸载键盘按键支持
             }
             window.removeEventListener('resize', this.listenResize)
@@ -473,8 +475,9 @@
                     this.selectPhoto(uuid, timestamp)  //触发照片选择事件
                 } else {
                     switch (this.callMode) {
-                        case 'pick':  //添加照片到影集、设置影集封面模式下，点击照片不是预览，而是选中
+                        case 'pick':  //添加照片到影集、设置影集封面、选择人物特征模式下，点击照片不是预览，而是选中
                         case 'cover':
+                        case 'feature':
                             this.checkList.push(uuid)
                             this.selectPhoto(uuid, timestamp)  //触发照片选择事件
                             break
@@ -1059,7 +1062,7 @@
         width: 100%;
         font-size: 12px;
         color: #fff;
-        background: linear-gradient(rgba(0,0,0,.1),rgba(0,0,0,.6)); /*渐变色背景*/
+        background: linear-gradient(rgba(0,0,0,0),rgba(0,0,0,.1),rgba(0,0,0,.5)); /*渐变色背景*/
         white-space: nowrap;
         text-overflow: ellipsis;
         overflow: hidden;
@@ -1104,14 +1107,18 @@
     .btn-preview:hover {
         color: #fff;
     }
-    .btn-favorited {  /*照片右上角的收藏标志*/
+    .btn-flag {  /*照片右上角的收藏和人物特征标志*/
         position: absolute;
-        top: 8px;
-        right: 8px;
-        z-index: 1;
+        top: 0;
+        right: 0;
+        width: 100%;
+        height: 33px;
+        line-height: 33px;
+        padding-right: 5px;
+        text-align: right;
         color: #fff;
-        font-size: 24px;
-        -webkit-text-stroke: 1px rgba(0, 0, 0, .1);
+        background: linear-gradient(rgba(0,0,0,.5),rgba(0,0,0,.1)); /*渐变色背景*/
+        font-size: 22px;
     }
     .btn-location {  /*照片的位置信息*/
         margin-right: 5px;

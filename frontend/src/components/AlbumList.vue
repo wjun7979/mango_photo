@@ -275,7 +275,7 @@
             setAlbumCover(command) {
                 //选择影集封面
                 this.$router.push({
-                    name: 'cover',
+                    name: 'pick_cover',
                     params: {albumUUID: command.uuid}
                 })
             },
@@ -293,6 +293,7 @@
 <style scoped>
     .album-wrap { /*影集容器*/
         cursor: pointer;
+        margin-bottom: 15px;
     }
 
     .album-cover { /*影集封面*/

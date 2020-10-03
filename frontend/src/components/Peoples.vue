@@ -18,25 +18,36 @@
                              :style="{'background-image':'url('+apiUrl+'/'+people.cover_path+'/'+people.cover_name+')'}"></div>
                         <p class="people-name">{{people.name}}</p>
                         <p class="people-peoples">
+                            <span style="margin-right: 10px">特征照片: {{people.features}}</span>
+                            <el-tooltip v-if="people.features===0" class="item" effect="dark" placement="bottom-start">
+                                <span slot="content">该人物没有特征照片，将无法进行智能匹配！</span>
+                                <i class="el-icon-info" style="color: #F56C6C;"></i>
+                            </el-tooltip>
+                        </p>
+                        <p class="people-peoples">
                             <span style="margin-right: 5px;">照片{{people.photos}}</span>
                             <span>面孔{{people.faces}}</span>
                         </p>
                     </div>
                     <!--下拉菜单-->
-                <el-dropdown class="btn-dropdown" trigger="click" placement="bottom-start"
-                             @command="handCommand">
-                    <i class="el-icon-more btn-menu"></i>
-                    <el-dropdown-menu slot="dropdown">
-                        <el-dropdown-item icon="el-icon-edit"
-                                          :command="beforeHandleCommand(people.uuid, people.name, 'rename')">
-                            重命名人物
-                        </el-dropdown-item>
-                        <el-dropdown-item icon="el-icon-delete"
-                                          :command="beforeHandleCommand(people.uuid, people.name, 'remove')">
-                            删除人物
-                        </el-dropdown-item>
-                    </el-dropdown-menu>
-                </el-dropdown>
+                    <el-dropdown class="btn-dropdown" trigger="click" placement="bottom-start"
+                                 @command="handCommand">
+                        <i class="el-icon-more btn-menu"></i>
+                        <el-dropdown-menu slot="dropdown">
+                            <el-dropdown-item icon="el-icon-edit"
+                                              :command="beforeHandleCommand(people.uuid, people.name, 'rename')">
+                                重命名人物
+                            </el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-user-solid"
+                                              :command="beforeHandleCommand(people.uuid, people.name, 'feature')">
+                                选择特征照片
+                            </el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-delete"
+                                              :command="beforeHandleCommand(people.uuid, people.name, 'remove')">
+                                删除人物
+                            </el-dropdown-item>
+                        </el-dropdown-menu>
+                    </el-dropdown>
                 </el-col>
             </el-row>
         </el-main>
@@ -90,6 +101,9 @@
                 switch (command.command) {
                     case 'rename':  //重命名人物
                         this.renamePeople(command.uuid, command.name)
+                        break
+                    case 'feature':
+                        this.openPickFeature(command.uuid)
                         break
                     case 'remove':  //删除人物
                         this.removePeople(command.uuid, command.name)
@@ -149,6 +163,13 @@
                 }).catch(() => {
                 });
             },
+            openPickFeature(uuid) {
+                //选择人物特征照片
+                this.$router.push({
+                    name: 'pick_feature',
+                    params: {peopleUUID: uuid}
+                })
+            },
         }
     }
 </script>
@@ -156,6 +177,7 @@
 <style scoped>
     .people-wrap { /*人物容器*/
         cursor: pointer;
+        margin-bottom: 15px;
     }
 
     .people-cover { /*人物封面*/

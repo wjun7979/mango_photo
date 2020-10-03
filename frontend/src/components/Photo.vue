@@ -45,7 +45,7 @@
                     <i class="el-icon-delete" title="永久删除" @click="removePhoto"></i>
                     <i class="el-icon-time" title="恢复" @click="restorePhoto"></i>
                 </div>
-                <div v-if="['pick','cover'].indexOf(callMode)>-1">
+                <div v-if="['pick','cover','feature','pick_face'].indexOf(callMode)>-1">
                     <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
                 </div>
             </div>
@@ -111,16 +111,16 @@
                             <img :src="apiUrl+'/'+face.path_thumbnail+'/'+face.name" alt=""
                                  :class="{'face-img':true, 'face-img-unknow':!face.people_uuid}"/>
                             <!--叠加特征标志-->
-                            <i v-if="face.feature_token" class="el-icon-star-on face-feature"></i>
+                            <i v-if="face.feature_token" class="el-icon-user-solid face-feature"></i>
                         </div>
-                        <el-dropdown v-if="['photo','album','favorites','people'].indexOf(callMode)>-1"
+                        <el-dropdown v-if="['photo','album','favorites','people','pick_face'].indexOf(callMode)>-1"
                                      trigger="click"
                                      placement="bottom-start" @command="faceCommand" style="cursor: pointer">
-                              <span class="face-name" v-if="face.people_name">
+                            <span class="face-name" v-if="face.people_name">
                                 {{face.people_name}}<i class="el-icon-arrow-down el-icon--right"></i>
-                              </span>
+                            </span>
                             <span class="face-name" v-else>Ta是谁<i class="el-icon-arrow-down el-icon--right"></i>
-                              </span>
+                            </span>
                             <el-dropdown-menu slot="dropdown">
                                 <el-dropdown-item v-if="!face.people_name"
                                                   :command="beforeFaceCommand(face.uuid, face.people_uuid, 'setName')">
@@ -144,7 +144,7 @@
                                 </el-dropdown-item>
                             </el-dropdown-menu>
                         </el-dropdown>
-                        <div v-if="['trash','pick','cover'].indexOf(callMode)>-1">
+                        <div v-if="['trash','pick','cover','feature'].indexOf(callMode)>-1">
                             <span class="face-name" v-if="face.people_name">{{face.people_name}}</span>
                             <span class="face-name" v-else>Ta是谁</span>
                         </div>

@@ -34,6 +34,7 @@
         <el-card v-if="showUploadProgress" class="upload-progress">
             <p class="upload-progress-tips">正在上传 {{this.fileList.length}} 张照片...</p>
             <el-progress :percentage="progress"></el-progress>
+            <p class="upload-progress-warning">操作完成前请勿关闭或刷新本页面！</p>
         </el-card>
     </div>
 </template>
@@ -226,5 +227,10 @@
     .upload-progress-tips {
         text-align: left;
         padding: 0 0 20px 20px;
+    }
+    .upload-progress-warning {
+        text-align: left;
+        color: #F56C6C;
+        padding: 20px 0 0 20px;
     }
 </style>

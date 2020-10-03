@@ -23,7 +23,7 @@
     import PhotoList from "./PhotoList";
 
     export default {
-        name: "Cover",
+        name: "PickCover",
         data() {
             return {
                 albumUUID: this.$route.params.albumUUID,
@@ -66,9 +66,7 @@
             },
             onPick(checkList) {
                 //当选中列表值改变时的回调
-                if (checkList.length > 0) {
-                    this.photo_uuid = checkList[0]
-                }
+                this.photo_uuid = checkList[0]
             },
             setCover() {
                 //设置影集封面

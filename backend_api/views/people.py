@@ -210,6 +210,7 @@ def people_list(request):
     peoples = peoples.values('uuid', 'name', cover_path=F('cover__path_thumbnail'), cover_name=F('cover__name'))
     peoples = peoples.annotate(photos=Count('peopleface__photo_uuid', distinct=True))
     peoples = peoples.annotate(faces=Count('peopleface'))
+    peoples = peoples.annotate(features=Count('peopleface__feature_token'))
     peoples = peoples.order_by('-faces')
     response = json.loads(json.dumps(list(peoples), cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)
