@@ -1,15 +1,18 @@
 <template>
-    <div>
-        <el-button icon="el-icon-upload2" size="small" @click="showUpload" :type="buttonType">
+    <div style="display: inline-block">
+        <el-button icon="el-icon-upload2" size="middle" @click="showUpload" :type="buttonType" class="hidden-mobile-only"
+                   style="margin-top: 11px; margin-right: 20px">
             {{buttonText}}
         </el-button>
+        <i class="el-icon-upload2 icon-button hidden-pc-only" @click="showUpload"></i>
         <el-dialog title="上传"
                    :visible.sync="showUploadDialog"
                    :close-on-click-modal="false"
                    :modal-append-to-body='false'
-                   width="840px"
+                   top="80px"
+                   class="dialog-wrap"
                    style="text-align: left;">
-            <div class="div-el-dialog">
+            <div class="div-el-upload">
                 <el-upload action=""
                            ref="upload"
                            :multiple="true"
@@ -33,7 +36,7 @@
         <!--进度条-->
         <el-card v-if="showUploadProgress" class="upload-progress">
             <p class="upload-progress-tips">正在上传 {{this.fileList.length}} 张照片...</p>
-            <el-progress :percentage="progress"></el-progress>
+            <el-progress :percentage="progress" :text-inside="true" :stroke-width="20"></el-progress>
             <p class="upload-progress-warning">操作完成前请勿关闭或刷新本页面！</p>
         </el-card>
     </div>
@@ -88,7 +91,7 @@
             submitUpload() {
                 //提交
                 if (this.fileList.length === 0) {
-                    this.$message.warning('请选取文件')
+                    this.$message.warning('请选取照片')
                     return
                 }
 
@@ -97,7 +100,10 @@
                 let formData = new FormData()
                 // 因为要传一个文件数组过去，所以要循环append
                 this.fileList.forEach((file) => {
-                    let fileDate = this.$common.dateFormat(file.raw.lastModifiedDate, 'yyyy-MM-dd hh:mm:ss')
+                    let fileDate = this.$common.dateFormat(new Date(), 'yyyy-MM-dd hh:mm:ss')
+                    if (file.raw.lastModifiedDate !== undefined) {
+                        fileDate = this.$common.dateFormat(file.raw.lastModifiedDate, 'yyyy-MM-dd hh:mm:ss')
+                    }
                     formData.append('file', file.raw)
                     formData.append(file.name, fileDate)
                 })
@@ -134,7 +140,7 @@
                         })
                     }
                     else {
-                        msg += '<div style="width: 350px; max-height: 250px; overflow: auto">'
+                        msg += '<div style="width: 250px; max-height: 250px; overflow: auto">'
                         for (let error of res.error) {
                             msg += '<br/>' + error.name + '上传失败: ' + error.msg
                         }
@@ -212,25 +218,44 @@
 </script>
 
 <style scoped>
-    .div-el-dialog {  /*上传对话框*/
-        height: 400px;
+    .dialog-wrap >>> .el-dialog {
+        width: 840px;
+    }
+
+    @media only screen and (max-width: 767px) {
+        .dialog-wrap >>> .el-dialog {
+            width: 320px;
+        }
+    }
+
+    .div-el-upload {  /*上传对话框*/
+        height: 350px;
         overflow: auto;
+    }
+
+    @media only screen and (max-width: 767px) {
+        .div-el-upload >>> .el-upload-list--picture-card .el-upload-list__item,
+        .div-el-upload >>> .el-upload--picture-card {
+            width: 130px;
+            height: 130px;
+        }
     }
 
     .upload-progress {  /*上传进度条*/
         position: fixed;
-        left: 40px;
+        left: 20px;
         bottom: 60px;
-        width: 330px;
+        width: 320px;
         z-index: 2;
     }
     .upload-progress-tips {
         text-align: left;
-        padding: 0 0 20px 20px;
+        padding: 0 0 10px 0;
     }
     .upload-progress-warning {
         text-align: left;
+        font-size: 14px;
         color: #F56C6C;
-        padding: 20px 0 0 20px;
+        padding: 10px 0 0 0;
     }
 </style>

@@ -3,10 +3,10 @@
         <el-aside width="256px" style="overflow:hidden">
             <span class="span-title">芒果相册</span>
         </el-aside>
-        <el-main style="overflow:hidden; padding: 12px 20px 12px 10px">
+        <el-main style="overflow:hidden; padding: 12px 20px 12px 0">
             <el-row>
                 <el-col :span="14">
-                    <el-input class="input-search" placeholder="搜索你的照片" v-model="keyword"
+                    <el-input class="input-search hidden-xs-only" placeholder="搜索你的照片" v-model="keyword"
                               prefix-icon="el-icon-search"></el-input>
                 </el-col>
                 <el-col :span="10" style="text-align: right">
@@ -22,11 +22,22 @@
 
     export default {
         name: "Header",
-        components: {UserCard},
         data () {
             return {
                 keyword: ''  //搜索关键字
             }
+        },
+        components: {UserCard},
+        computed: {
+            showMenu() {
+                return this.$store.state.showMenu  //小尺寸屏幕下是否显示菜单
+            },
+        },
+        methods: {
+            toggleMenu() {
+                //切换菜单
+                this.$store.commit('showMenu', {show: !this.showMenu})
+            },
         }
     }
 </script>
@@ -41,7 +52,7 @@
     .span-title {  /*logo标题*/
         display: block;
         margin-left: 20px;
-        margin-top: 15px;
+        margin-top: 11px;
         padding-left: 35px;
         background-image: url("../assets/images/mango.png");
         background-size: 29px;

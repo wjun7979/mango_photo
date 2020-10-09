@@ -1,23 +1,22 @@
 <template>
     <el-container>
-        <el-header class="mp-page-header" height="56px">
-            <el-col class="mp-page-header-title" :span="8">
+        <el-header class="mp-page-header" height="64px">
+            <el-col class="mp-page-header-title" :span="14">
                 <div style="float: left;width: 40px"><i class="el-icon-back alumb-back" @click="$router.back()"></i></div>
-                <div class="album-cover" :style="{'background-image':'url('+apiUrl+'/'+album.cover_path+'/'+album.cover_name+')'}"></div>
-                <div style="float: left">{{album.name}}
-                    <span v-if="album.photos>0">({{album.photos}} 张照片)</span>
+                <div class="album-cover hidden-xs-only" :style="{'background-image':'url('+apiUrl+'/'+album.cover_path+'/'+album.cover_name+')'}"></div>
+                <div class="album-title">{{album.name}}
+                    <span class="hidden-xs-only" v-if="album.photos>0">({{album.photos}} 张)</span>
+                    <span class="hidden-sm-and-up" v-if="album.photos>0">({{album.photos}})</span>
                 </div>
             </el-col>
-            <el-col :span="16" style="text-align: right">
-                <el-form :inline="true" style="margin-top: 2px;">
-                    <el-form-item>
-                        <CreateAlbum buttonText="创建子影集" :parentUUID="albumUUID"></CreateAlbum>
-                    </el-form-item>
-                    <el-form-item>
-                        <el-button icon="el-icon-document-add" size="small" @click="openPick">添加照片
-                        </el-button>
-                    </el-form-item>
-                </el-form>
+            <el-col :span=10 style="text-align: right">
+                <CreateAlbum buttonText="创建子影集" :parentUUID="albumUUID"></CreateAlbum>
+                <el-button class="hidden-mobile-only" icon="iconfont icontianjiatupian" size="middle" @click="openPick"
+                           style="margin: 11px 20px 0 20px">添加照片
+                </el-button>
+                <i class="iconfont icontianjiatupian icon-button hidden-pc-only" @click="openPick"
+                   style="margin-left: 20px; font-size: 22px"></i>
+                <PickPhotoButton style="margin: 0 20px"></PickPhotoButton>
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
@@ -28,11 +27,12 @@
 
 <script>
     import PhotoList from "./PhotoList"
-    import CreateAlbum from "./CreateAlbum";
+    import CreateAlbum from "./MainHeader/CreateAlbum";
+    import PickPhotoButton from "./MainHeader/PickPhotoButton";
 
     export default {
         name: "Album",
-        components: {PhotoList, CreateAlbum},
+        components: {PickPhotoButton, PhotoList, CreateAlbum},
         data() {
             return {
                 albumUUID: this.$route.params.uuid,  //影集uuid
@@ -106,7 +106,7 @@
 
     .album-cover {  /*影集封面*/
         float: left;
-        margin-top: 9px;
+        margin-top: 17px;
         margin-right: 10px;
         width: 30px;
         height: 30px;
@@ -115,5 +115,13 @@
         background-position: center;
         background-repeat: no-repeat;
         border-radius: 5px;
+    }
+
+    .album-title {
+        float: left;
+        width: calc(100% - 80px);
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
     }
 </style>

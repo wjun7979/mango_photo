@@ -1,7 +1,8 @@
 <template>
     <el-container>
-        <el-header class="mp-page-header" height="56px">
+        <el-header class="mp-page-header" height="64px">
             <el-col class="mp-page-header-title" :span="24">
+                <ToggleMenu></ToggleMenu>
                 <span>收藏夹</span>
             </el-col>
         </el-header>
@@ -13,10 +14,11 @@
 
 <script>
     import PhotoList from "./PhotoList";
+    import ToggleMenu from "./MainHeader/ToggleMenu";
 
     export default {
         name: "Favorites",
-        components: {PhotoList},
+        components: {ToggleMenu, PhotoList},
     }
 </script>
 

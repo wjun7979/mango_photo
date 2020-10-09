@@ -1,11 +1,18 @@
 <template>
     <el-container>
-        <el-header class="mp-page-header" height="56px">
-            <el-col class="mp-page-header-title" :span="8">
+        <el-header class="mp-page-header" height="64px">
+            <el-col class="mp-page-header-title" :span="12">
+                <ToggleMenu></ToggleMenu>
                 <span>回收站</span>
             </el-col>
-            <el-col :span="16" style="text-align: right; padding: 8px 20px 0 0">
-                <el-button icon="el-icon-delete" size="small" @click="emptyTrash">清空回收站</el-button>
+            <el-col :span="12" style="text-align: right">
+                <el-button class="hidden-mobile-only" icon="iconfont iconqingkonghuishouzhan" size="middle"
+                           @click="emptyTrash"
+                           style="margin: 11px 20px 0 20px">清空回收站
+                </el-button>
+                <i class="iconfont iconqingkonghuishouzhan hidden-pc-only icon-button" @click="emptyTrash"
+                   style="margin-left: 20px"></i>
+                <PickPhotoButton style="margin: 0 20px"></PickPhotoButton>
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
@@ -16,10 +23,12 @@
 
 <script>
     import PhotoList from "./PhotoList"
+    import ToggleMenu from "./MainHeader/ToggleMenu";
+    import PickPhotoButton from "./MainHeader/PickPhotoButton";
 
     export default {
         name: 'Trash',
-        components: {PhotoList},
+        components: {PickPhotoButton, ToggleMenu, PhotoList},
         computed: {
             apiUrl() {
                 return this.$store.state.apiUrl  //后台api调用地址
@@ -57,5 +66,4 @@
 </script>
 
 <style scoped>
-
 </style>

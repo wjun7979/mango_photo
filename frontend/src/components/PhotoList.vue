@@ -11,9 +11,9 @@
                 </el-radio-group>
                 <i class="el-icon-menu btn-group-size" slot="reference"></i>
             </el-popover>
-            <el-popover placement="bottom-end">
+            <el-popover placement="bottom-end" class="hidden-xs-only">
                 <label>尺寸：</label>
-                <el-slider v-model="imgHeight" :min="100" :max="300" style="width: 200px"></el-slider>
+                <el-slider v-model="imgHeight" :min="110" :max="300" :show-tooltip="false" style="width: 200px"></el-slider>
                 <i class="el-icon-picture btn-group-size" slot="reference"></i>
             </el-popover>
         </div>
@@ -28,7 +28,7 @@
         <!--照片列表-->
         <el-checkbox-group v-model="checkGroupList" class="images-wrap"
                            :class="{'show-checkbox': checkList.length > 0}">
-            <el-row v-for="(photoGroup, index) of photoListGroup" :key="index" style="margin-right: 28px">
+            <el-row v-for="(photoGroup, index) of photoListGroup" :key="index" style="margin-right: 5px">
                 <el-checkbox v-if="multiple" class="chk-group" :label="photoGroup.timestamp"
                              @change="selectPhotoGroup(photoGroup.timestamp)">
                 </el-checkbox>
@@ -47,10 +47,13 @@
                             <!--叠加选择框-->
                             <el-checkbox v-if="multiple" :label="img.uuid"
                                          @change="selectPhoto(img.uuid, photoGroup.timestamp)"
-                                         @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photoGroup.timestamp)">
+                                         @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photoGroup.timestamp)"
+                                         class="btn-checkbox"
+                                         :class="{'show-always':showChkToolBar}">
                             </el-checkbox>
                             <!--叠加预览按钮-->
-                            <i class="el-icon-zoom-in btn-preview" @click="showPreview(img.uuid)"></i>
+                            <i class="el-icon-zoom-in btn-preview" @click="showPreview(img.uuid)"
+                               :class="{'show-always':showChkToolBar}"></i>
                             <el-image :src="apiUrl + '/' + img.path_thumbnail_s + '/' + img.name"
                                       lazy
                                       :alt="img.name"
@@ -87,12 +90,16 @@
             </el-row>
         </el-checkbox-group>
         <!--选中照片后的工具栏-->
-        <el-row class="chk-toolbar" v-show="['pick','cover','feature'].indexOf(this.callMode) === -1 && checkList.length>0">
+        <el-row class="chk-toolbar" v-show="showChkToolBar">
             <el-col :span="12">
                 <i class="el-icon-close" style="color: #202124;" @click="unselectPhoto"></i>
-                <span style="font-size: 1.125rem; padding-left: 7px;">选择了 {{checkList.length}} 张照片</span>
+                <span v-show="checkList.length>0" class="chk-title">
+                    <span class="hidden-xs-only">选择了 {{checkList.length}} 张照片</span>
+                    <span class="hidden-sm-and-up">{{checkList.length}} 张</span>
+                </span>
+                <span v-show="checkList.length===0" class="chk-title">选择照片</span>
             </el-col>
-            <el-col :span="12" style="text-align: right">
+            <el-col v-show="checkList.length>0" :span="12" style="text-align: right">
                 <div v-if="['photo','favorites'].indexOf(callMode)>-1">
                     <i class="el-icon-folder-add" title="添加到影集" @click="showAlbumTree"></i>
                     <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
@@ -150,7 +157,7 @@
         <!--添加到影集对话框-->
         <el-dialog class="album-dialog" title="添加到影集"
                    :visible.sync="isShowAddToAlbumDialog"
-                   width="400px"
+                   width="340px"
                    :close-on-click-modal="false"
                    :destroy-on-close="true"
                    @closed="deviceSupportInstall">
@@ -165,7 +172,7 @@
                         <p class="album-tree-title">{{data.name}}</p>
                         <p class="album-tree-photos" v-if="data.photos === 0">没有内容</p>
                         <p class="album-tree-photos" v-else>
-                            <span>{{$common.dateFormat(data.min_time,'yyyy年MM月dd日')}}至{{$common.dateFormat(data.max_time,'yyyy年MM月dd日')}}</span>
+                            <span>{{$common.dateFormat(data.min_time,'yyyy-MM-dd')}}至{{$common.dateFormat(data.max_time,'yyyy-MM-dd')}}</span>
                             <span style="margin-left: 10px">{{data.photos}}项</span>
                         </p>
                     </div>
@@ -177,18 +184,18 @@
             </span>
         </el-dialog>
         <!--修改日期和时间对话框-->
-        <el-dialog title="修改日期和时间" :visible.sync="isShowModifyDateTimeDialog" width="350px"
+        <el-dialog title="修改日期和时间" :visible.sync="isShowModifyDateTimeDialog" width="320px"
                    :close-on-click-modal="false" @closed="deviceSupportInstall">
             <el-date-picker type="datetime" v-model="photoDateTime" default-time="8:00:00"
                             placeholder="选择日期时间" format="yyyy-MM-dd HH:mm"
-                            value-format="yyyy-MM-dd HH:mm:ss" style="width: 310px"></el-date-picker>
+                            value-format="yyyy-MM-dd HH:mm:ss" style="width: 280px"></el-date-picker>
             <span slot="footer">
                 <el-button size="small" @click="isShowModifyDateTimeDialog=false">取消</el-button>
                 <el-button type="primary" size="small" @click="modifyDateTime">确定</el-button>
             </span>
         </el-dialog>
         <!--修改位置信息对话框-->
-        <el-dialog title="修改位置信息" :visible.sync="isShowModifyLocationDialog" width="500px"
+        <el-dialog title="修改位置信息" :visible.sync="isShowModifyLocationDialog" width="320px" top="80px"
                    :close-on-click-modal="false" @closed="deviceSupportInstall">
             <p v-if="photoLocationList.length>0" style="font-weight: 600; margin-bottom: 10px">选中的照片中包含以下位置信息：</p>
             <div v-if="photoLocationList.length>0" class="location-list">
@@ -199,7 +206,7 @@
             <el-select v-model="photoLocation" :remote="true" :filterable="true" placeholder="输入地理位置"
                        :remote-method="getLocationList" :loading="locationLoading" :clearable="true"
                        @clear="locationOptions=[]"
-                       style="width: 460px">
+                       style="width: 280px">
                 <el-option v-for="item in locationOptions" :key="item.uid"
                            :label="item.name"
                            :value="item.location.lat+','+item.location.lng+','+item.name">
@@ -213,14 +220,12 @@
                 <el-button type="primary" size="small" @click="checkLocation">确定</el-button>
             </span>
         </el-dialog>
-        <!--回到顶部-->
-        <el-backtop :bottom="60"></el-backtop>
     </div>
 </template>
 
 <script>
     import AlbumList from "./AlbumList";
-    import UploadFile from "./UploadFile";
+    import UploadFile from "./MainHeader/UploadFile";
     import {rafThrottle} from "element-ui/src/utils/util";
     import {off, on} from "element-ui/src/utils/dom";
     export default {
@@ -278,17 +283,25 @@
             apiUrl() {
                 return this.$store.state.apiUrl  //后台api调用地址
             },
-            mainHeight() {
-                if (this.callMode === 'pick')
-                    return document.documentElement.clientHeight - 48 + 'px'
-                else
-                    return this.$store.state.mainHeight  //主内容区的高度
-            },
             refreshPhoto() {
                 return this.$store.state.refreshPhoto  //是否刷新照片列表
             },
             cancelSelectPhoto() {
                 return this.$store.state.cancelSelectPhoto  //是否取消已选中的照片
+            },
+            pickPhotoMode() {
+                return this.$store.state.pickPhotoMode  //移动设备下是否进入选择照片模式
+            },
+            showChkToolBar() {  //是否显示选择工具栏
+                if (['pick', 'cover', 'feature'].indexOf(this.callMode) === -1 && this.checkList.length > 0) {
+                    return true
+                } else {
+                    if (this.pickPhotoMode) {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
             },
         },
         watch: {
@@ -363,6 +376,7 @@
                 this.deviceSupportUninstall()  //卸载键盘按键支持
             }
             window.removeEventListener('resize', this.listenResize)
+            this.$store.commit('pickPhotoMode', {show: false})  //重置移动设备下是否进入选择照片模式
         },
         methods: {
             deviceSupportInstall() {
@@ -463,7 +477,7 @@
             },
             clickImage(uuid, timestamp) {
                 //点击照片时发生，按下shift等修饰键时不会触发单击事件
-                if (this.checkList.length > 0) {  //当前有照片被选中了
+                if (this.showChkToolBar) {  //当前有照片被选中了
                     let idx = this.checkList.indexOf(uuid)
                     if (idx === -1) {
                         if (!this.multiple)  //单选模式下先清空已选择的照片
@@ -545,6 +559,7 @@
                 this.checkList = []
                 this.checkGroupList = []
                 this.$store.commit('cancelSelectPhoto', {action: false})  //重置vuex的值
+                this.$store.commit('pickPhotoMode', {show: false})  //重置移动设备下是否进入选择照片模式
             },
             multiSelectPhotos(e, uuid, timestamp) {
                 if (!this.multiple) return false
@@ -964,6 +979,9 @@
         display: flex;
         flex-wrap: wrap;
     }
+    .images-wrap {
+        padding-left: 10px;
+    }
     .div-images::after {
         content: '';
         flex-grow: 999999999;
@@ -1027,23 +1045,23 @@
         margin-top: 15px;
         margin-bottom: 10px
     }
-    .div-images >>> .el-checkbox { /*选择控件*/
+    .btn-checkbox { /*选择控件*/
         visibility: hidden; /*控件默认隐藏*/
         position: absolute;
         top: 8px;
         left: 8px;
     }
-    .div-images >>> .el-checkbox__label { /*选择控件的文本*/
+    .btn-checkbox >>> .el-checkbox__label { /*选择控件的文本*/
         display: none;
     }
-    .div-images >>> .el-checkbox__inner { /*选择控件的外观*/
+    .btn-checkbox >>> .el-checkbox__inner { /*选择控件的外观*/
         width: 20px;
         height: 20px;
         border: 2px solid #FFF;
         border-radius: 50%;
         background-color: rgba(0, 0, 0, .1);
     }
-    .div-images >>> .el-checkbox__inner:after { /*选择控件内勾的外观*/
+    .btn-checkbox >>> .el-checkbox__inner:after { /*选择控件内勾的外观*/
         top: 0;
         width: 5px;
         height: 11px;
@@ -1068,9 +1086,16 @@
         overflow: hidden;
         cursor: pointer;
     }
-    .div-img:hover >>> .el-checkbox,
-    .div-img:hover .btn-preview { /*鼠标移上去时显示勾选控件和预览按钮*/
-        visibility: visible;
+    @media (hover: none) {
+        .div-img-comments {
+            visibility: hidden;
+        }
+    }
+    @media (hover: hover) {
+        .div-img:hover >>> .el-checkbox,
+        .div-img:hover .btn-preview { /*鼠标移上去时显示勾选控件和预览按钮*/
+            visibility: visible;
+        }
     }
     .show-checkbox >>> .el-checkbox {
         visibility: visible; /*当选择了照片时，所有的勾选控件都显示出来*/
@@ -1135,7 +1160,7 @@
         padding: 0 14px;
         background-color: #fff;
         box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .30), 0 2px 6px 2px rgba(60, 64, 67, .15);
-        z-index: 2;
+        z-index: 4;
     }
     .chk-toolbar i {
         margin-top: 12px;
@@ -1154,13 +1179,17 @@
         background-color: #e5e5e5;
         border-radius: 50%;
     }
+    .chk-title {  /*选择工具栏标题*/
+        font-size: 1.125rem;
+        padding-left: 7px;
+    }
     .btn-toolbar {
         margin-top: 12px;
         margin-right: 15px;
     }
     .div-group-size {
         position: fixed;
-        right: 50px;
+        right: 20px;
         z-index: 1;
         padding-top: 10px;
     }
@@ -1174,6 +1203,7 @@
     }
     .album-tree { /*影集树*/
         height: 300px;
+        overflow: auto;
     }
     .album-dialog >>> .el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content {
         color: #f56c6c; /*影集树选中的节点*/
@@ -1223,5 +1253,9 @@
         white-space: nowrap;
         text-overflow: ellipsis;
         overflow: hidden;
+    }
+    /*移动端进入选择模式后显示某些控件*/
+    .show-always {
+        visibility: visible;
     }
 </style>

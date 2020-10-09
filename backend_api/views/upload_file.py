@@ -39,7 +39,7 @@ def upload_photo(request):
                     # 获取文件md5值，然后检查是否已经存在，如果是在照片中添加就跳过，如果是在影集中添加则写入
                     file_md5 = __get_file_md5(file)
                     photo_uuid = str(uuid.uuid1()).replace('-', '')  # 生成照片唯一序列号
-                    photo = Photo.objects.filter(md5=file_md5).first()  # 表过滤
+                    photo = Photo.objects.filter(userid=userid, md5=file_md5).first()  # 表过滤
                     if photo:
                         if call_mode == 'album':
                             album_photo = AlbumPhoto()
@@ -72,6 +72,13 @@ def upload_photo(request):
                     file.seek(0)  # 因为之前获取md5时读取过文件，所以这里要将指针定位到文件头
                     __write_file(fullpath_original, file)
 
+                    # 获取照片的Exif信息
+                    exif = __get_exif(fullpath_original, request.POST.get(file.name))
+                    # pprint.pprint(exif)
+
+                    # 将照片转正
+                    __spin_photo(fullpath_original, exif['Orientation'])
+
                     # 创建缩略图
                     thumbnail = __create_thumbnail(userid, fullpath_original, path_original, file_md5)
                     fullpath_thumbnail_s = thumbnail[1]  # 小缩略图的完整路径
@@ -82,10 +89,6 @@ def upload_photo(request):
                     im_width = im.width
                     im_height = im.height
                     im.close()
-
-                    # 获取照片的Exif信息
-                    exif = __get_exif(fullpath_original, request.POST.get(file.name))
-                    # pprint.pprint(exif)
 
                     # 写入照片数据表
                     photo = Photo()
@@ -116,8 +119,8 @@ def upload_photo(request):
 
                     # 获取并写入照片的位置信息
                     if exif['GPSLatitude'] and exif['GPSLongitude']:
-                        location = __get_address_from_gps(exif['GPSLatitude'], exif['GPSLatitudeRef'], exif['GPSLongitude'],
-                                                          exif['GPSLongitudeRef'])
+                        location = __get_address_from_gps(exif['GPSLatitude'], exif['GPSLatitudeRef'],
+                                                          exif['GPSLongitude'], exif['GPSLongitudeRef'])
                         Address.objects.filter(uuid=photo_uuid).delete()  # 先删除再插入
                         address = Address()
                         address.uuid = Photo.objects.get(uuid=photo_uuid)
@@ -233,6 +236,29 @@ def __create_thumbnail(userid, fullpath_original, path_original, file_md5):
             im.close()
 
 
+def __spin_photo(full_path, orientation):
+    """根据拍摄方向转正照片"""
+    if orientation == '':
+        return
+    im = None
+    try:
+        im = Image.open(full_path)
+        if orientation == '3' or orientation.upper() == 'ROTATE 180':  # 顺时针旋转180度
+            im = im.rotate(180, expand=True)  # 将图像逆时针旋转180度
+        elif orientation == '6' or orientation.upper() == 'ROTATED 90 CW':  # 顺时针旋转90度
+            im = im.rotate(270, expand=True)  # 将图像逆时针旋转270度
+        elif orientation == '8' or orientation.upper() == 'ROTATE 270 CW':  # 顺时针旋转270度
+            im = im.rotate(90, expand=True)  # 将图像逆时针旋转270度
+        im.save(full_path)
+        im.close()
+    except Exception as e:
+        traceback.print_exc()  # 输出详细的错误信息
+        raise Exception(str(e))
+    finally:
+        if im:
+            im.close()
+
+
 def __get_exif(full_path: str, dt: str):
     """获取照片的exif信息"""
     exif = {
@@ -248,6 +274,7 @@ def __get_exif(full_path: str, dt: str):
         'GPSLatitudeRef': 'N',  # 缺省设置为北半球
         'GPSLongitude': '',  # GPS纬度
         'GPSLongitudeRef': 'E',   # 缺省设置为东半球
+        'Orientation': '',  # 拍摄方向
     }
     with open(full_path, 'rb') as f:
         tags = exifread.process_file(f, details=False)
@@ -285,6 +312,8 @@ def __get_exif(full_path: str, dt: str):
                     exif['GPSLongitude'] = str(tags[tag])
             if re.match(r'^GPS GPSLongitudeRef$', tag, re.IGNORECASE):
                 exif['GPSLongitudeRef'] = str(tags[tag])
+            if re.match(r'^Image Orientation$', tag, re.IGNORECASE):
+                exif['Orientation'] = str(tags[tag])
     return exif
 
 

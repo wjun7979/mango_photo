@@ -16,6 +16,8 @@ const store = new Vuex.Store({
         photoCheckList: [],  //选中的照片列表
         faceCheckList: [],  //选中的面孔列表
         cancelSelectFace: false,  //是否取消已选中的面孔
+        showMenu: false,  //小尺寸屏幕下是否显示菜单
+        pickPhotoMode: false,  //移动设备下是否进入选择照片模式
     },
     mutations: {
         setApiUrl(state) {  //根据客户端访问地址改变API请求地址
@@ -55,6 +57,12 @@ const store = new Vuex.Store({
         },
         cancelSelectFace(state, payload) {  //更改“是否取消已选中的面孔”的值
             state.cancelSelectFace = payload.action
+        },
+        showMenu(state, payload) {  //更改"小尺寸屏幕下是否显示菜单"的值
+            state.showMenu = payload.show
+        },
+        pickPhotoMode(state, payload) {  //更改"移动设备下是否进入选择照片模式"的值
+            state.pickPhotoMode = payload.show
         },
     }
 })

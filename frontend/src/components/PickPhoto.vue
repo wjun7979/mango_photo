@@ -29,7 +29,7 @@
 
 <script>
     import PhotoList from "./PhotoList";
-    import UploadFile from "./UploadFile";
+    import UploadFile from "./MainHeader/UploadFile";
 
     export default {
         name: "PickPhoto",

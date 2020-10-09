@@ -1,7 +1,8 @@
 <template>
     <div style="padding-top: 10px">
         <el-row :gutter="20" style="margin: 0">
-            <el-col :span="4" v-for="album of albumList" :key="album.uuid" style="position: relative">
+            <el-col :xs="{span:12}" :sm="{span:8}" :lg="{span:6}" :xl="{span:4}" v-for="album of albumList"
+                    :key="album.uuid" style="position: relative">
                 <div class="album-wrap" @click="showAlbum(album.uuid)">
                     <div class="album-cover"
                          :style="{'background-image':'url('+apiUrl+'/'+album.cover_path+'/'+album.cover_name+')'}"></div>
@@ -38,7 +39,7 @@
         <!--移动影集对话框-->
         <el-dialog class="album-dialog" title="移动影集"
                    :visible.sync="isShowMoveAlbumDialog"
-                   width="400px"
+                   width="340px"
                    :close-on-click-modal="false">
             <el-tree class="album-tree" ref="albumTree" :lazy="true" :load="loadAlbumTree" node-key="uuid"
                      :props="{label:'name'}"
@@ -52,7 +53,7 @@
                         <p class="album-tree-title">{{data.name}}</p>
                         <p class="album-tree-photos" v-if="data.photos === 0">没有内容</p>
                         <p class="album-tree-photos" v-else>
-                            <span>{{$common.dateFormat(data.min_time,'yyyy年MM月dd日')}}至{{$common.dateFormat(data.max_time,'yyyy年MM月dd日')}}</span>
+                            <span>{{$common.dateFormat(data.min_time,'yyyy-MM-dd')}}至{{$common.dateFormat(data.max_time,'yyyy-MM-dd')}}</span>
                             <span style="margin-left: 10px">{{data.photos}}项</span>
                         </p>
                     </div>
@@ -341,6 +342,7 @@
 
     .album-tree { /*影集树*/
         height: 300px;
+        overflow: auto;
     }
     .album-dialog >>> .el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content {
         color: #f56c6c; /*影集树选中的节点*/

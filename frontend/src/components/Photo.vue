@@ -130,11 +130,11 @@
                                                   :command="beforeFaceCommand(face.uuid, face.people_uuid, 'removeName')">
                                     Ta不是{{face.people_name}}
                                 </el-dropdown-item>
-                                <el-dropdown-item v-if="face.people_name && face.feature_token===null"
+                                <el-dropdown-item v-if="photoFaces.length===1 && face.people_name && face.feature_token===null"
                                                   :command="beforeFaceCommand(face.uuid, face.people_uuid, 'addFeature')">
                                     将Ta作为人物特征
                                 </el-dropdown-item>
-                                <el-dropdown-item v-if="face.people_name && face.feature_token"
+                                <el-dropdown-item v-if="photoFaces.length===1 && face.people_name && face.feature_token"
                                                   :command="beforeFaceCommand(face.uuid, face.people_uuid, 'removeFeature')">
                                     取消作为人物特征
                                 </el-dropdown-item>
@@ -238,7 +238,7 @@
         <!--添加到影集对话框-->
         <el-dialog class="album-dialog" title="添加到影集"
                    :visible.sync="isShowAddToAlbumDialog"
-                   width="400px"
+                   width="340px"
                    :close-on-click-modal="false"
                    :destroy-on-close="true"
                    @closed="deviceSupportInstall">
@@ -254,7 +254,7 @@
                         <p class="album-tree-title">{{data.name}}</p>
                         <p class="album-tree-photos" v-if="data.photos === 0">没有内容</p>
                         <p class="album-tree-photos" v-else>
-                            <span>{{$common.dateFormat(data.min_time,'yyyy年MM月dd日')}}至{{$common.dateFormat(data.max_time,'yyyy年MM月dd日')}}</span>
+                            <span>{{$common.dateFormat(data.min_time,'yyyy-MM-dd')}}至{{$common.dateFormat(data.max_time,'yyyy-MM-dd')}}</span>
                             <span style="margin-left: 10px">{{data.photos}}项</span>
                         </p>
                     </div>
@@ -266,18 +266,18 @@
         </span>
         </el-dialog>
         <!--修改日期和时间对话框-->
-        <el-dialog title="修改日期和时间" :visible.sync="isShowModifyDateTimeDialog" width="350px"
+        <el-dialog title="修改日期和时间" :visible.sync="isShowModifyDateTimeDialog" width="320px"
                    :close-on-click-modal="false" @closed="deviceSupportInstall">
             <el-date-picker type="datetime" v-model="photoDateTime" default-time="8:00:00"
                             placeholder="选择日期时间" format="yyyy-MM-dd HH:mm"
-                            value-format="yyyy-MM-dd HH:mm:ss" style="width: 310px"></el-date-picker>
+                            value-format="yyyy-MM-dd HH:mm:ss" style="width: 280px"></el-date-picker>
             <span slot="footer">
             <el-button size="small" @click="isShowModifyDateTimeDialog=false">取消</el-button>
             <el-button type="primary" size="small" @click="modifyDateTime">确定</el-button>
         </span>
         </el-dialog>
         <!--修改位置信息对话框-->
-        <el-dialog title="修改位置信息" :visible.sync="isShowModifyLocationDialog" width="500px"
+        <el-dialog title="修改位置信息" :visible.sync="isShowModifyLocationDialog" width="320px" top="80px"
                    :close-on-click-modal="false" @closed="deviceSupportInstall">
             <p v-if="photoInfo.photo_address" style="margin-bottom: 20px">
                 <span v-if="photoInfo.photo_poi_name">{{photoInfo.photo_poi_name}} - </span>
@@ -302,10 +302,10 @@
         </span>
         </el-dialog>
         <!--指定人物对话框-->
-        <el-dialog title="Ta是谁" :visible.sync="isShowPeopleDialog" width="350px"
+        <el-dialog title="Ta是谁" :visible.sync="isShowPeopleDialog" width="320px"
                    :close-on-click-modal="false" @closed="deviceSupportInstall">
             <el-select v-model="currFace.name" filterable allow-create placeholder="请输入人物姓名"
-                       style="width: 300px">
+                       style="width: 270px">
                 <el-option v-for="item in peopleOptions" :key="item.uuid"
                            :label="item.name"
                            :value="item.name">
@@ -1469,6 +1469,7 @@
 
     .album-tree { /*影集树*/
         height: 300px;
+        overflow: auto;
     }
     .album-dialog >>> .el-tree--highlight-current .el-tree-node.is-current > .el-tree-node__content {
         color: #f56c6c; /*影集树选中的节点*/

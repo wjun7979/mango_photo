@@ -1,14 +1,18 @@
 <template>
     <el-container>
-        <el-header class="mp-page-header" height="56px">
-            <el-col class="mp-page-header-title" :span="8">影集</el-col>
-            <el-col :span="16" style="text-align: right; padding: 8px 20px 0 0">
-                <CreateAlbum></CreateAlbum>
+        <el-header class="mp-page-header" height="64px">
+            <el-col class="mp-page-header-title" :span="12">
+                <ToggleMenu></ToggleMenu>
+                <span>影集</span>
+            </el-col>
+            <el-col :span="12" style="text-align: right">
+                <SearchButton style="margin-right: 20px"></SearchButton>
+                <CreateAlbum style="margin-right: 20px"></CreateAlbum>
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
             <el-row :gutter="20" style="margin: 20px 0 30px 0">
-                <el-col :span="3">
+                <el-col :xs="{span:8}" :sm="{span:6}" :lg="{span:4}" :xl="{span:3}">
                     <router-link to="/favorites">
                         <div class="group favorites"></div>
                     </router-link>
@@ -17,7 +21,7 @@
                         <span>收藏夹</span>
                     </div>
                 </el-col>
-                <el-col :span="3">
+                <el-col :xs="{span:8}" :sm="{span:6}" :lg="{span:4}" :xl="{span:3}">
                     <router-link to="/peoples">
                         <div class="group people"></div>
                     </router-link>
@@ -25,7 +29,7 @@
                         <span>人物</span>
                     </div>
                 </el-col>
-                <el-col :span="3" style="display: none">
+                <el-col :xs="{span:8}" :sm="{span:6}" :lg="{span:4}" :xl="{span:3}" style="display: none">
                     <div class="group"></div>
                     <div class="group-title">地点</div>
                 </el-col>
@@ -37,11 +41,13 @@
 
 <script>
     import AlbumList from "./AlbumList";
-    import CreateAlbum from "./CreateAlbum";
+    import ToggleMenu from "./MainHeader/ToggleMenu";
+    import CreateAlbum from "./MainHeader/CreateAlbum";
+    import SearchButton from "./MainHeader/SearchButton";
 
     export default {
         name: "Albums",
-        components: {AlbumList, CreateAlbum},
+        components: {SearchButton, ToggleMenu, AlbumList, CreateAlbum},
     }
 </script>
 

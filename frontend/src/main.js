@@ -4,6 +4,7 @@ import router from './router.js'
 import store from "./store";
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
+import 'element-ui/lib/theme-chalk/display.css';
 import { Notification } from 'element-ui'
 import axios from 'axios'
 import lodash from 'lodash'
@@ -56,6 +57,17 @@ axios.interceptors.response.use(response => {
 	}
 	return Promise.reject(err)
 })
+
+//禁止移动端双击放大
+let touchTime = 0;
+document.addEventListener('touchend', function (event) {
+	//记录当前点击的时间与下一次时间的间隔
+	let nowTime = new Date();
+	if (nowTime.getTime() - touchTime <= 300) {
+		event.preventDefault();
+	}
+	touchTime = nowTime.getTime();
+}, false);
 
 Vue.prototype.$axios = axios //全局注册，使用方法为:this.$axios
 Vue.prototype.$lodash = lodash  //全局注册losash工具库

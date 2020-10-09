@@ -1,5 +1,5 @@
 <template>
-    <div class="div-login">
+    <el-row class="div-login">
         <el-carousel ref="carousel" class="bg-carousel" height="100%" indicator-position="none" :autoplay="false"
                      arrow="never">
             <el-carousel-item class="bg-item" v-for="(img, index) of bgList" :key="index"
@@ -7,30 +7,35 @@
             </el-carousel-item>
         </el-carousel>
 
-        <el-form class="login-form" ref="loginForm" :model="form" :rules="rules">
-            <p class="login-title">芒果相册</p>
-            <div class="div-input">
-                <el-form-item prop="userid">
-                    <el-input v-model="form.userid" name="userid" placeholder="请输入用户名"
-                              prefix-icon="el-icon-user" :clearable="true" :autofocus="true"
-                              @keypress.enter.native="nextInput($event)"></el-input>
-                </el-form-item>
-                <el-form-item prop="password" style="margin-bottom: 0">
-                    <el-input type="password" ref="password" v-model="form.password" name="password" placeholder="请输入密码"
-                              prefix-icon="el-icon-lock" :clearable="true" :show-password="true"
-                              @keypress.enter.native="_login"></el-input>
-                </el-form-item>
-            </div>
-            <div class="div-btn">
-                <el-button @click="resetForm">重置</el-button>
-                <el-button type="primary" @click="_login">登录</el-button>
-            </div>
-        </el-form>
+        <el-col class="div-form"
+                :xs="{span: 20, offset: 2}"
+                :sm="{span: 12, offset: 6}"
+                :lg="{span: 6, offset: 9}">
+            <el-form class="login-form" ref="loginForm" :model="form" :rules="rules">
+                <p class="login-title">芒果相册</p>
+                <div class="div-input">
+                    <el-form-item prop="userid">
+                        <el-input v-model="form.userid" name="userid" placeholder="请输入用户名"
+                                  prefix-icon="el-icon-user" :clearable="true" :autofocus="true"
+                                  @keypress.enter.native="nextInput($event)"></el-input>
+                    </el-form-item>
+                    <el-form-item prop="password" style="margin-bottom: 0">
+                        <el-input type="password" ref="password" v-model="form.password" name="password" placeholder="请输入密码"
+                                  prefix-icon="el-icon-lock" :clearable="true" :show-password="true"
+                                  @keypress.enter.native="_login"></el-input>
+                    </el-form-item>
+                </div>
+                <div class="div-btn">
+                    <el-button @click="resetForm">重置</el-button>
+                    <el-button type="primary" @click="_login">登录</el-button>
+                </div>
+            </el-form>
+        </el-col>
         <div class="bgimg-tools">
             <el-button class="btn-prev" icon="el-icon-arrow-left" title="上一张" circle @click="prevBackImg"></el-button>
             <el-button class="btn-next" icon="el-icon-arrow-right" title="下一张" circle @click="nextBackImg"></el-button>
         </div>
-    </div>
+    </el-row>
 </template>
 
 <script>
@@ -121,15 +126,21 @@
 
 <style scoped>
     .div-login { /*最外层容器*/
+        position: fixed;
+        top: 0;
+        right: 0;
+        bottom: 0;
+        left: 0;
+    }
+
+    .div-form {
+        height: 100%;
         display: flex;
         align-items: center;
-        height: 100%;
     }
 
     .login-form { /*登录表单*/
-        position: absolute;
-        left: calc(50% - 200px);
-        width: 400px;
+        width: 100%;
         background-color: rgba(255, 255, 255, 0.9);
         border: 1px solid #e4e4e4;
         border-radius: 20px;
@@ -164,6 +175,7 @@
 
     .bg-carousel { /*走马灯*/
         position: fixed;
+        z-index: -1;
         width: 100%;
         height: 100%;
     }

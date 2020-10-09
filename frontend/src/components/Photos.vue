@@ -1,11 +1,14 @@
 <template>
     <el-container>
-        <el-header class="mp-page-header" height="56px">
-            <el-col class="mp-page-header-title" :span="8">
+        <el-header class="mp-page-header" height="64px">
+            <el-col class="mp-page-header-title" :span="12">
+                <ToggleMenu></ToggleMenu>
                 <span>照片</span>
             </el-col>
-            <el-col :span="16" style="text-align: right; padding: 8px 20px 0 0">
-                <UploadFile></UploadFile>
+            <el-col :span="12" style="text-align: right">
+                <SearchButton></SearchButton>
+                <UploadFile style="margin-left: 20px"></UploadFile>
+                <PickPhotoButton style="margin: 0 20px"></PickPhotoButton>
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
@@ -16,11 +19,14 @@
 
 <script>
     import PhotoList from "./PhotoList";
-    import UploadFile from "./UploadFile";
+    import UploadFile from "./MainHeader/UploadFile";
+    import ToggleMenu from "./MainHeader/ToggleMenu";
+    import SearchButton from "./MainHeader/SearchButton";
+    import PickPhotoButton from "./MainHeader/PickPhotoButton";
 
     export default {
         name: "Photos",
-        components: {PhotoList, UploadFile},
+        components: {PickPhotoButton, SearchButton, ToggleMenu, PhotoList, UploadFile},
     }
 </script>
 

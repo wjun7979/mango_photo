@@ -1,5 +1,10 @@
 <template>
-    <el-button icon="el-icon-circle-plus-outline" size="small" @click="newAlbum">{{buttonText}}</el-button>
+    <div style="display: inline-block">
+        <el-button icon="el-icon-folder-add" size="middle" @click="newAlbum" class="hidden-mobile-only"
+                   style="margin-top: 11px">{{buttonText}}
+        </el-button>
+        <i class="el-icon-folder-add icon-button hidden-pc-only" @click="newAlbum"></i>
+    </div>
 </template>
 
 <script>
@@ -24,7 +29,7 @@
             newAlbum() {
                 this.$store.commit('cancelSelectPhoto', {action: true})  //取消已选中的照片
                 //创建影集
-                this.$prompt('请输入影集标题', {
+                this.$prompt('请输入影集标题', this.buttonText , {
                     inputValue: '',
                     closeOnClickModal: false,
                     inputValidator: (value => {
@@ -60,5 +65,4 @@
 </script>
 
 <style scoped>
-
 </style>

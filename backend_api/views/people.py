@@ -254,7 +254,8 @@ def people_add_face(request):
             # 写入人脸对应的人物
             people_face = PeopleFace.objects.get(uuid=face_uuid)
             people_face.people_uuid = People.objects.get(uuid=people_uuid)
-            people_face.feature_token = 'wait...'
+            if is_feature:
+                people_face.feature_token = 'wait...'
             people_face.save()
             # 删除人工排除项
             PeopleFaceExcept.objects.filter(face_uuid=face_uuid).delete()

@@ -95,6 +95,7 @@
             },
             showUserInfo() {
                 //跳转到修改用户账号组件
+                this.$store.commit('showMenu', {show: false})  //隐藏菜单
                 this.$refs['popover'].doClose()
                 this.$router.push({
                     name: 'user_info'

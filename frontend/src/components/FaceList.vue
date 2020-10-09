@@ -45,8 +45,6 @@
                 </div>
             </div>
         </el-checkbox-group>
-        <!--回到顶部-->
-        <el-backtop :bottom="60"></el-backtop>
     </div>
 </template>
 

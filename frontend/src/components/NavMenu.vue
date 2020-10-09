@@ -1,6 +1,10 @@
 <template>
     <div class="div-container">
-        <el-menu :default-active="$route.path" router>
+        <div class="hidden-sm-and-up" style="border-bottom: 1px solid #dadce0;">
+            <span class="span-title">芒果相册</span>
+            <UserCard style="margin-top: 10px"></UserCard>
+        </div>
+        <el-menu :default-active="$route.path" router @select="selectMenu">
             <el-menu-item index="/photos">
                 <i class="el-icon-picture-outline"></i>
                 <span>照片</span>
@@ -24,8 +28,16 @@
 </template>
 
 <script>
+    import UserCard from "./UserCard";
+
     export default {
-        name: "NavMenu"
+        name: "NavMenu",
+        components: {UserCard},
+        methods: {
+            selectMenu() {
+                this.$store.commit('showMenu', {show: false})
+            }
+        }
     }
 </script>
 
@@ -50,5 +62,18 @@
 
     .div-container >>> .el-menu-item-group__title {
         margin: 10px 0;
+    }
+    .span-title {  /*logo标题*/
+        display: inline-block;
+        margin: 10px 0 10px 20px;
+        padding-left: 35px;
+        background-image: url("../assets/images/mango.png");
+        background-size: 29px;
+        background-repeat: no-repeat;
+        background-position-y: 5px;
+        line-height: 40px;
+        color: #5f6368;
+        font-size: 20px;
+        vertical-align: middle;
     }
 </style>
