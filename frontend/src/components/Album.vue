@@ -124,4 +124,9 @@
         text-overflow: ellipsis;
         overflow: hidden;
     }
+    @media only screen and (max-width: 767px) {
+        .album-title {
+            width: calc(100% - 50px);
+        }
+    }
 </style>

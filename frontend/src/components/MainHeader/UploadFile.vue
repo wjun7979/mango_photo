@@ -1,7 +1,7 @@
 <template>
     <div style="display: inline-block">
         <el-button icon="el-icon-upload2" size="middle" @click="showUpload" :type="buttonType" class="hidden-mobile-only"
-                   style="margin-top: 11px; margin-right: 20px">
+                   style="margin-top: 11px">
             {{buttonText}}
         </el-button>
         <i class="el-icon-upload2 icon-button hidden-pc-only" @click="showUpload"></i>

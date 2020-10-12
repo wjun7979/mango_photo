@@ -84,12 +84,12 @@ html, body {
     }
 }
 /*pc端和移动端隐藏的全局样式*/
-@media (hover: hover) {
+@media (any-hover: hover) {
     .hidden-pc-only {
         display: none !important;
     }
 }
-@media (hover: none) {
+@media (any-hover: none) {
     .hidden-mobile-only {
         display: none !important;
     }

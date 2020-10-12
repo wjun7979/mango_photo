@@ -7,29 +7,29 @@
             <span class="viewer-btn viewer-close" @click="close">
                 <i class="el-icon-back"></i>
             </span>
-            <span v-show="currentImg.comments" class="viewer-comments" @click="setPhotoComments">{{currentImg.comments}}</span>
+            <span v-show="currentImg.comments" class="viewer-comments"
+                  @click="setPhotoComments">{{currentImg.comments}}</span>
             <!--工具栏-->
             <div class="viewer-toolbar">
                 <div v-if="['photo','favorites','people'].indexOf(callMode)>-1">
-                    <i class="el-icon-s-operation" title="修改" @click="showModify"></i>
+                    <i class="el-icon-s-operation hidden-mobile-only" title="修改" @click="showModify"></i>
                     <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
                     <i v-if="currentImg.is_favorited" class="el-icon-star-on" title="收藏" @click="removeFromFavorites"></i>
                     <i v-if="!currentImg.is_favorited" class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
-                    <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
                     <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
                         <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
                         <el-dropdown-menu slot="dropdown">
                             <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-folder-add" command="add_to_album">添加到影集</el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-delete" command="trash">移到回收站</el-dropdown-item>
                         </el-dropdown-menu>
                     </el-dropdown>
                 </div>
                 <div v-if="callMode === 'album'">
-                    <i class="el-icon-s-operation" title="修改" @click="showModify"></i>
+                    <i class="el-icon-s-operation hidden-mobile-only" title="修改" @click="showModify"></i>
                     <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
                     <i v-if="currentImg.is_favorited" class="el-icon-star-on" title="收藏" @click="removeFromFavorites"></i>
                     <i v-if="!currentImg.is_favorited" class="el-icon-star-off" title="收藏" @click="addToFavorites"></i>
-                    <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
                     <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
                         <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
                         <el-dropdown-menu slot="dropdown">
@@ -37,6 +37,7 @@
                             <el-dropdown-item icon="el-icon-plus" command="add_to_album">添加到影集</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-folder-delete" command="remove_from_album">从影集中移除</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-notebook-1" command="set_album_cover">设为影集封面</el-dropdown-item>
+                            <el-dropdown-item icon="el-icon-delete" command="trash">移到回收站</el-dropdown-item>
                         </el-dropdown-menu>
                     </el-dropdown>
                 </div>
@@ -51,11 +52,11 @@
             </div>
             <!-- 上一张、下一张 -->
             <template v-if="!isSingle">
-                <span class="viewer-btn viewer-prev"
+                <span class="viewer-btn viewer-prev hidden-mobile-only"
                       @click="prev">
                     <i class="el-icon-arrow-left"/>
                 </span>
-                <span class="viewer-btn viewer-next"
+                <span class="viewer-btn viewer-next hidden-mobile-only"
                       @click="next">
                     <i class="el-icon-arrow-right"/>
                 </span>
@@ -75,7 +76,9 @@
             <!--大图显示-->
             <div class="viewer-canvas">
                 <img class="viewer-img" ref="img" :src="currentImg.url" alt="" :style="imgStyle"
-                     @load="handleImgLoad" @error="handleImgError" @mousedown="handleMouseDown"/>
+                     @load="handleImgLoad" @error="handleImgError" @mousedown="handleMouseDown"
+                     @touchstart="handleTouchStart" @touchmove="handleTouchMove"
+                     @touchend="handleTouchEnd" @doubleTap="handleDblclick" @dblclick="handleDblclick"/>
             </div>
         </div>
         <!--修改侧边栏-->
@@ -278,15 +281,15 @@
         </el-dialog>
         <!--修改位置信息对话框-->
         <el-dialog title="修改位置信息" :visible.sync="isShowModifyLocationDialog" width="320px" top="80px"
-                   :close-on-click-modal="false" @closed="deviceSupportInstall">
+                   :close-on-click-modal="false" @opened="fixSelect" @closed="deviceSupportInstall">
             <p v-if="photoInfo.photo_address" style="margin-bottom: 20px">
                 <span v-if="photoInfo.photo_poi_name">{{photoInfo.photo_poi_name}} - </span>
                 <span>{{photoInfo.photo_address}}</span>
             </p>
-            <el-select v-model="photoLocation" :remote="true" :filterable="true" placeholder="输入地理位置"
+            <el-select ref="location" v-model="photoLocation" :remote="true" :filterable="true" placeholder="输入地理位置"
                        :remote-method="getLocationList" :loading="locationLoading" :clearable="true"
                        @clear="locationOptions=[]"
-                       style="width: 460px">
+                       style="width: 280px">
                 <el-option v-for="item in locationOptions" :key="item.uid"
                            :label="item.name"
                            :value="item.location.lat+','+item.location.lng+','+item.name">
@@ -386,6 +389,13 @@
                 },
                 setPeopleFeature: false,  //是否同时设为该人物的特征
                 peopleOptions: [],  //人物的检索结果
+                touchStart: {  //手指在屏幕滑动时记录一些坐标
+                    offsetX: 0,
+                    offsetY: 0,
+                    startX: 0,  //单点触摸的起始坐标
+                    startY: 0,
+                    startTouches: [],  //双指触摸时的起始坐标
+                },
             }
         },
         watch: {
@@ -445,7 +455,8 @@
             this.deviceSupportUninstall()  //卸载键盘按键支持
         },
         methods: {
-            deviceSupportInstall() {  //注册键盘按键和鼠标滚动支持
+            deviceSupportInstall() {  //注册键盘按键、鼠标滚动、多点触摸支持
+                //键盘按键
                 this._keyDownHandler = rafThrottle(e => {
                     const keyCode = e.keyCode
                     switch (keyCode) {
@@ -468,29 +479,30 @@
                             this.handleActions('zoomOut')
                             break
                     }
-                });
+                })
+                //鼠标滚动
                 this._mouseWheelHandler = rafThrottle(e => {
                     const delta = e.wheelDelta ? e.wheelDelta : -e.detail
                     if (delta > 0) {
                         this.handleActions('zoomIn', {
                             zoomRate: 0.2,
                             enableTransition: false
-                        });
+                        })
                     } else {
                         this.handleActions('zoomOut', {
                             zoomRate: 0.2,
                             enableTransition: false
-                        });
+                        })
                     }
-                });
-                on(document, 'keydown', this._keyDownHandler);
+                })
+                on(document, 'keydown', this._keyDownHandler)
                 on(this.$refs.img, mousewheelEventName, this._mouseWheelHandler)
             },
             deviceSupportUninstall() {  //卸载键盘按键和鼠标滚动支持
-                off(document, 'keydown', this._keyDownHandler);
-                off(this.$refs.img, mousewheelEventName, this._mouseWheelHandler);
-                this._keyDownHandler = null;
-                this._mouseWheelHandler = null;
+                off(document, 'keydown', this._keyDownHandler)
+                off(this.$refs.img, mousewheelEventName, this._mouseWheelHandler)
+                this._keyDownHandler = null
+                this._mouseWheelHandler = null
             },
             handleImgLoad() {  //图片加载完毕时
                 this.loading = false;
@@ -499,21 +511,97 @@
                 this.loading = false;
                 e.target.alt = '加载失败';
             },
+            handleDblclick() {
+                //双击照片
+                this.reset()
+                this.mode = Mode.CONTAIN
+            },
             handleMouseDown(e) {
                 //鼠标左键按下时，拖动图片
-                if (this.loading || e.button !== 0) return;
-                const {offsetX, offsetY} = this.transform;
-                const startX = e.pageX;
-                const startY = e.pageY;
+                if (this.loading || e.button !== 0) return
+
+                const {offsetX, offsetY} = this.transform
+                const startX = e.pageX
+                const startY = e.pageY
                 this._dragHandler = rafThrottle(ev => {
-                    this.transform.offsetX = offsetX + ev.pageX - startX;
-                    this.transform.offsetY = offsetY + ev.pageY - startY;
+                    if (this.checkPhotoSize()) return  //照片比屏幕小时不允许拖动
+                    this.transform.offsetX = offsetX + ev.pageX - startX
+                    this.transform.offsetY = offsetY + ev.pageY - startY
                 });
-                on(document, 'mousemove', this._dragHandler);
+                on(document, 'mousemove', this._dragHandler)
                 on(document, 'mouseup', () => {
-                    off(document, 'mousemove', this._dragHandler);
-                });
-                e.preventDefault();
+                    off(document, 'mousemove', this._dragHandler)
+                })
+
+                e.preventDefault()
+            },
+            handleTouchStart(e) {
+                //手指触摸屏幕时触发，即使已经有手指在屏幕上也会触发
+                this.touchStart.startTouches = e.touches  //记录触摸点的数量和坐标
+                if (e.touches && e.touches.length === 1) {  //单点触摸时记录相关坐标
+                    this.touchStart.offsetX = this.transform.offsetX
+                    this.touchStart.offsetY = this.transform.offsetY
+                    this.touchStart.startX = e.touches[0].pageX
+                    this.touchStart.startY = e.touches[0].pageY
+                }
+                // e.preventDefault()
+            },
+            handleTouchMove(e) {
+                //单指滑动
+                if (e.touches && e.touches.length === 1) {
+                    if (!this.checkPhotoSize()) {  //照片比屏幕大时，判断为拖动操作
+                        this.transform.offsetX = this.touchStart.offsetX + e.touches[0].pageX - this.touchStart.startX
+                        this.transform.offsetY = this.touchStart.offsetY + e.touches[0].pageY - this.touchStart.startY
+                    }
+                }
+                //双指缩放
+                if (e.touches && e.touches.length >= 2) {
+                    //得到缩放比例
+                    let now = e.touches
+                    let scale = this.$common.getDistance(now[0], now[1]) / this.$common.getDistance(this.touchStart.startTouches[0], this.touchStart.startTouches[1])
+                    if (scale > 1) {
+                        this.handleActions('zoomIn', {
+                            zoomRate: 0.05,
+                            enableTransition: false
+                        })
+                    } else {
+                        this.handleActions('zoomOut', {
+                            zoomRate: 0.05,
+                            enableTransition: false
+                        })
+                    }
+                }
+            },
+            handleTouchEnd(e) {
+                if (this.touchStart.startTouches.length === 1) {  //单点触摸
+                    if (this.checkPhotoSize()) {  //照片比屏幕小时，判断为滑动操作
+                        let endX = e.changedTouches[0].pageX;
+                        let endY = e.changedTouches[0].pageY;
+                        let direction = this.$common.getDirection(this.touchStart.startX, this.touchStart.startY, endX, endY)
+                        switch (direction) {
+                            case 2:
+                                this.close()
+                                break;
+                            case 3:
+                                this.next()
+                                break;
+                            case 4:
+                                this.prev()
+                                break;
+                        }
+                    }
+                }
+            },
+            checkPhotoSize() {
+                //检查照片实际大小是否小于屏幕尺寸
+                let realWidth = this.$refs.img.getBoundingClientRect().width
+                let realHeight = this.$refs.img.getBoundingClientRect().height
+                let screenWidth = document.documentElement.clientWidth
+                let screenHeight = document.documentElement.clientHeight
+                if (realWidth <= screenWidth && realHeight <= screenHeight)
+                    return true
+                else
+                    return false
             },
             reset() {
                 //重置图片缩放比例和方向
@@ -563,27 +651,58 @@
             },
             handleActions(action, options = {}) {  //对图片进行缩放和旋转操作
                 if (this.loading) return;
-                const {zoomRate, rotateDeg, enableTransition} = {
+                const {zoomRate, enableTransition} = {
                     zoomRate: 0.2,
-                    rotateDeg: 90,
                     enableTransition: true,
                     ...options
                 };
                 const {transform} = this;
                 switch (action) {
                     case 'zoomOut':
-                        if (transform.scale > 0.2) {  //控制最小缩放比例
-                            transform.scale = parseFloat((transform.scale - zoomRate).toFixed(3));
+                        if (!this.checkPhotoSize()) {  //照片比屏幕小时不允许缩小
+                            transform.scale = parseFloat((transform.scale - zoomRate).toFixed(3))
+                        }
+                        else {
+                            this.reset()
+                            this.mode = Mode.CONTAIN
                         }
                         break;
                     case 'zoomIn':
-                        transform.scale = parseFloat((transform.scale + zoomRate).toFixed(3));
+                        if (transform.scale < 3) {  //控制最大缩放比例
+                            transform.scale = parseFloat((transform.scale + zoomRate).toFixed(3))
+                        }
+                        break
+                    case 'anticlocelise':  //左旋转
+                        // transform.deg -= rotateDeg
+                        this.$axios({
+                            method: 'post',
+                            url: this.apiUrl + '/api/photo_rotate',
+                            data: {
+                                photo_uuid: this.currentImg.uuid,
+                                angle: 90
+                            }
+                        }).then(response => {
+                            let res = response.data
+                            this.previewListOrder[this.index].name = res.file_name
+                            this.previewListOrder[this.index].url = this.apiUrl + '/' + res.path_thumbnail_l + '/' + res.file_name
+                            this.reset()
+                        })
                         break;
-                    case 'clocelise':  //左旋转
-                        transform.deg += rotateDeg;
-                        break;
-                    case 'anticlocelise':  //右旋转
-                        transform.deg -= rotateDeg;
+                    case 'clocelise':  //右旋转
+                        // transform.deg += rotateDeg
+                        this.$axios({
+                            method: 'post',
+                            url: this.apiUrl + '/api/photo_rotate',
+                            data: {
+                                photo_uuid: this.currentImg.uuid,
+                                angle: 270
+                            }
+                        }).then(response => {
+                            let res = response.data
+                            this.previewListOrder[this.index].name = res.file_name
+                            this.previewListOrder[this.index].url = this.apiUrl + '/' + res.path_thumbnail_l + '/' + res.file_name
+                            this.reset()
+                        })
                         break;
                 }
                 transform.enableTransition = enableTransition;
@@ -764,6 +883,9 @@
                         break
                     case 'set_album_cover':
                         this.setAlbumCover()
+                        break
+                    case 'trash':
+                        this.trashPhoto()
                         break
                 }
             },
@@ -1010,7 +1132,7 @@
                                 }
                             }).then(() => {
                                 this.currentImg.comments = instance.inputValue
-                                this.getPhotoInfo()  //刷新当前图片信息
+                                this.previewListOrder[this.index].comments = instance.inputValue
                                 if (instance.inputValue) {
                                     this.$message({
                                         message: '成功为照片添加了说明 [' + instance.inputValue + ']',
@@ -1071,6 +1193,17 @@
                 this.photoLocation = ''
                 this.locationOptions = []
                 this.isShowModifyLocationDialog = true
+            },
+            fixSelect() {
+                //修正搜索下拉框在移动端无法弹出软键盘的问题
+                let elSelect = this.$refs.location.$children[0].$refs.input
+                elSelect.removeAttribute('readOnly')
+                elSelect.onblur = function () {
+                    let _this = this
+                    setTimeout(() => {
+                        _this.removeAttribute('readOnly')
+                    }, 200)
+                }
             },
             getLocationList(query) {
                 //根据用户输入的关键字返回位置列表
@@ -1305,13 +1438,15 @@
         box-sizing: border-box;
         user-select: none;
     }
-    .viewer-btn:hover {
-        background-color: #454749;
+    @media (any-hover: hover) {
+        .viewer-btn:hover {
+            background-color: #454749;
+        }
     }
     /*关闭按钮*/
     .viewer-close {
-        top: 20px;
-        left: 20px;
+        top: 10px;
+        left: 10px;
         width: 40px;
         height: 40px;
         font-size: 23px;
@@ -1321,8 +1456,8 @@
     /*照片的说明文字*/
     .viewer-comments {
         position: absolute;
-        top: 20px;
-        left: 70px;
+        top: 12px;
+        left: 50px;
         padding: 8px;
         max-width: 500px;
         color: #fff;
@@ -1334,8 +1469,20 @@
         cursor: pointer;
         z-index: 1;
     }
-    .viewer-comments:hover {
-        background-color: #454749;
+    @media (any-hover: hover) {
+        .viewer-comments:hover {
+            background-color: #454749;
+        }
+    }
+    @media (any-hover: none) {
+        .viewer-comments {
+            max-width: 100%;
+            top: unset;
+            left: 5px;
+            bottom: 2px;
+            background: none;
+            font-size: 12px;
+        }
     }
     /*上一张按钮*/
     .viewer-prev, .viewer-next {
@@ -1380,16 +1527,18 @@
     .viewer-actions-inner i {
         cursor: pointer;
     }
-    .viewer-actions-inner i:hover {
-        color: #fff;
+    @media (any-hover: hover) {
+        .viewer-actions-inner i:hover {
+            color: #fff;
+        }
     }
     /*工具栏*/
     .viewer-toolbar {
         position: absolute;
         z-index: 1;
         height: 44px;
-        top: 20px;
-        right: 30px;
+        top: 10px;
+        right: 5px;
     }
     .viewer-toolbar i {
         margin-right: 10px;
@@ -1403,9 +1552,11 @@
         border-radius: 50%;
         cursor: pointer;
     }
-    .viewer-toolbar i:hover {
-        background-color: #454749;
-        border-radius: 50%;
+    @media (any-hover: hover) {
+        .viewer-toolbar i:hover {
+            background-color: #454749;
+            border-radius: 50%;
+        }
     }
     /*侧边栏*/
     .viewer-side {
@@ -1415,9 +1566,16 @@
         z-index: 1;
         width: 360px;
         height: 100%;
-        overflow: auto;
+        overflow-x: hidden;
+        overflow-y: auto;
         background-color: #202124;
         color: #d9d9d9;
+    }
+    @media only screen and (max-width: 420px) {
+        .viewer-side {
+            left: 0;
+            width: 100%;
+        }
     }
     .viewer-side >>> .el-row {
         padding: 15px 30px;
@@ -1442,9 +1600,11 @@
         font-size: 23px;
         cursor: pointer;
     }
-    .side-btn-close:hover {
-        background-color: #454749;
-        border-radius: 50%;
+    @media (any-hover: hover) {
+        .side-btn-close:hover {
+            background-color: #454749;
+            border-radius: 50%;
+        }
     }
     .side-album-cover { /*侧边栏影集封面*/
         width: 44px;
@@ -1458,8 +1618,10 @@
     .side-href { /*侧边栏照片拍摄时间*/
         cursor: pointer;
     }
-    .side-href:hover {
-        background-color: #454545;
+    @media (any-hover: hover) {
+        .side-href:hover {
+            background-color: #454545;
+        }
     }
     .side-title { /*侧边栏中超长的文字*/
         white-space: nowrap;
@@ -1503,6 +1665,7 @@
         position: absolute;
         top: 0;
         width: 100%;
+        height: 100%;
         border-radius: 8px;
     }
     .face-img-unknow {  /*未知的人脸图像*/

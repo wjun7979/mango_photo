@@ -2,10 +2,12 @@ import Vue from 'vue'
 import App from './App.vue'
 import router from './router.js'
 import store from "./store";
+//ElementUI
 import ElementUI from 'element-ui'
 import 'element-ui/lib/theme-chalk/index.css'
 import 'element-ui/lib/theme-chalk/display.css';
 import { Notification } from 'element-ui'
+
 import axios from 'axios'
 import lodash from 'lodash'
 import './assets/style/default.css'
@@ -58,16 +60,30 @@ axios.interceptors.response.use(response => {
 	return Promise.reject(err)
 })
 
-//禁止移动端双击放大
-let touchTime = 0;
+//禁止移动端双击放大和双指放大
+let touchTime = 0
 document.addEventListener('touchend', function (event) {
 	//记录当前点击的时间与下一次时间的间隔
-	let nowTime = new Date();
+	let nowTime = new Date()
 	if (nowTime.getTime() - touchTime <= 300) {
-		event.preventDefault();
+		event.preventDefault()
 	}
-	touchTime = nowTime.getTime();
-}, false);
+	touchTime = nowTime.getTime()
+}, false)
+document.addEventListener(
+	"touchmove",
+	function (event) {
+		if (event.touches && event.touches.length >= 2) {
+			event.preventDefault()
+		}
+	},
+	false)
+document.addEventListener(
+	"gesturestart",
+	function (event) {
+		event.preventDefault()
+	},
+	false)
 
 Vue.prototype.$axios = axios //全局注册，使用方法为:this.$axios
 Vue.prototype.$lodash = lodash  //全局注册losash工具库

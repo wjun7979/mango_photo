@@ -1,26 +1,23 @@
 <template>
     <el-container>
-        <el-header class="mp-page-header" height="56px" style="padding: 4px 0 0 0">
-            <el-col class="mp-page-header-title" :span="8">
+        <el-header class="mp-page-header" height="64px" style="padding: 0">
+            <el-col class="mp-page-header-title" :span="14">
                 <i class="el-icon-close pick-close" @click="$router.back()"></i>
-                <span v-if="addList.length===0 && removeList.length===0">添加到影集：{{albumName}}</span>
-                <span v-if="addList.length>0" style="padding-left: 7px;">添加了 {{addList.length}} 张照片</span>
-                <span v-if="addList.length>0 && removeList.length>0" style="padding-left: 7px;">，</span>
-                <span v-if="removeList.length>0" style="padding-left: 7px;">移除了 {{removeList.length}} 张照片</span>
+                <span v-if="addList.length===0 && removeList.length===0">添加到影集</span>
+                <span v-if="addList.length===0 && removeList.length===0" class="hidden-xs-only">：{{albumName}}</span>
+                <span v-if="addList.length>0" style="padding-left: 7px;">添加 {{addList.length}}</span>
+                <span v-if="addList.length>0 && removeList.length>0" style="padding-left: 7px;">,</span>
+                <span v-if="removeList.length>0" style="padding-left: 7px;">移除 {{removeList.length}}</span>
             </el-col>
-            <el-col :span="16" style="text-align: right">
-                <el-form :inline="true" style="margin-top: 2px;">
-                    <el-form-item>
-                        <UploadFile callMode="album" :albumUUID="albumUUID" button-text="从计算机中选择"
-                                    :on-completed="onClose"></UploadFile>
-                    </el-form-item>
-                    <el-form-item style="padding-right: 10px">
-                        <el-button type="primary" size="small" @click="finishPick">完成</el-button>
-                    </el-form-item>
-                </el-form>
+            <el-col :span="10" style="text-align: right">
+                <UploadFile callMode="album" :albumUUID="albumUUID" button-text="从计算机中选择"
+                            :on-completed="onClose"></UploadFile>
+                <el-button type="primary" @click="finishPick"
+                           style="float: right;margin: 11px 10px 0 20px">完成
+                </el-button>
             </el-col>
         </el-header>
-        <el-main style="padding-top: 56px">
+        <el-main class="mp-page-main">
             <PhotoList callMode="pick" :albumUUID="albumUUID" :albumPhotoList="albumPhotoList"
                        :on-pick="onPick"></PhotoList>
         </el-main>

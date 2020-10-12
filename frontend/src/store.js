@@ -25,7 +25,12 @@ const store = new Vuex.Store({
                 state.apiUrl = 'http://127.0.0.1:8000'
             }
             else {
-                state.apiUrl = 'http://wlon.vicp.net:7080'
+                if (window.location.href.indexOf('192.168.16.67') > -1) {
+                    state.apiUrl = 'http://192.168.16.67:8000'
+                }
+                else {
+                    state.apiUrl = 'http://wlon.vicp.net:7080'
+                }
             }
         },
         refreshPhoto(state, payload) {  //更改"是否刷新照片列表"的值

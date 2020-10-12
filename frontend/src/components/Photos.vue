@@ -5,10 +5,10 @@
                 <ToggleMenu></ToggleMenu>
                 <span>照片</span>
             </el-col>
-            <el-col :span="12" style="text-align: right">
+            <el-col :span="12" style="text-align: right; padding-right: 10px">
                 <SearchButton></SearchButton>
                 <UploadFile style="margin-left: 20px"></UploadFile>
-                <PickPhotoButton style="margin: 0 20px"></PickPhotoButton>
+                <PickPhotoButton style="margin-left: 20px"></PickPhotoButton>
             </el-col>
         </el-header>
         <el-main class="mp-page-main">

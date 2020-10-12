@@ -2,6 +2,8 @@ import os
 import json
 import traceback
 import requests  # 调用api
+import uuid
+from PIL import Image  # 图像处理
 from django.db import transaction
 from django.db.models import Count, Sum, Q, F, Min, Max
 from django.http import JsonResponse
@@ -354,3 +356,62 @@ def photo_get_faces(request):
     people_face = people_face.order_by('-people_uuid', 'input_date')
     response = json.loads(json.dumps(list(people_face), cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)
+
+
+@require_http_methods(['POST'])
+def photo_rotate(request):
+    """旋转照片"""
+    response = {}
+    im = None
+    try:
+        request_data = json.loads(request.body)
+        photo_uuid = request_data.get('photo_uuid')
+        angle = request_data.get('angle')  # 逆时针旋转的角度
+
+        photo = Photo.objects.get(uuid=photo_uuid)
+        name = photo.name  # 原文件名
+        extension_name = os.path.splitext(name)[1]  # 原文件扩展名
+        path_original = photo.path_original  # 原图路径
+        path_thumbnail_l = photo.path_thumbnail_l  # 大缩略图路径
+        path_thumbnail_s = photo.path_thumbnail_s  # 小缩略图路径
+        full_path_original = os.path.join(settings.BASE_DIR, photo.path_original)  # 原图完整路径
+        full_path_thumbnail_l = os.path.join(settings.BASE_DIR, photo.path_thumbnail_l)  # 大缩略图完整路径
+        full_path_thumbnail_s = os.path.join(settings.BASE_DIR, photo.path_thumbnail_s)  # 小缩略图完整路径
+
+        # 将原图、大小缩略图都进行旋转并保存为新的文件
+        new_name = str(uuid.uuid1()).replace('-', '') + extension_name  # 新的文件名
+        im = Image.open(os.path.join(full_path_original, name))
+        im = im.rotate(angle, expand=True)
+        im.save(os.path.join(full_path_original, new_name))
+        new_width = im.width  # 照片旋转后新的宽度
+        new_height = im.height
+        im = Image.open(os.path.join(full_path_thumbnail_l, name))
+        im = im.rotate(angle, expand=True)
+        im.save(os.path.join(full_path_thumbnail_l, new_name))
+        im = Image.open(os.path.join(full_path_thumbnail_s, name))
+        im = im.rotate(angle, expand=True)
+        im.save(os.path.join(full_path_thumbnail_s, new_name))
+
+        # 回写数据库
+        photo.name = new_name
+        photo.width = new_width
+        photo.height = new_height
+        photo.save()
+
+        # 删除原来的文件
+        if os.path.join(path_original, name) and os.path.exists(os.path.join(full_path_original, name)):
+            os.remove(os.path.join(full_path_original, name))
+        if os.path.join(path_thumbnail_l, name) and os.path.exists(os.path.join(full_path_thumbnail_l, name)):
+            os.remove(os.path.join(full_path_thumbnail_l, name))
+        if os.path.join(path_thumbnail_s, name) and os.path.exists(os.path.join(full_path_thumbnail_s, name)):
+            os.remove(os.path.join(full_path_thumbnail_s, name))
+
+        response = {'file_name': new_name, 'path_thumbnail_l': path_thumbnail_l}
+        return JsonResponse(response, safe=False, status=200)
+    except Exception as e:
+        traceback.print_exc()  # 输出详细的错误信息
+        response['msg'] = str(e)
+        return JsonResponse(response, status=500)
+    finally:
+        if im:
+            im.close()

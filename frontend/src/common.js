@@ -36,7 +36,7 @@ export default {
     isContain(arr1, arr2) {
         //判断arr2是否是arr1的子集
         for (let i = arr2.length - 1; i >= 0; i--) {
-            if(!arr1.includes(arr2[i])){
+            if (!arr1.includes(arr2[i])) {
                 return false;
             }
         }
@@ -48,5 +48,39 @@ export default {
         let k = 1024, sizes = ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'],
             i = Math.floor(Math.log(bytes) / Math.log(k))
         return (bytes / Math.pow(k, i)).toPrecision(3) + ' ' + sizes[i]
+    },
+    getDistance(p1, p2) {
+        //勾股定理计算两点的距离
+        let x = p2.pageX - p1.pageX,
+            y = p2.pageY - p1.pageY
+        return Math.sqrt((x * x) + (y * y))
+    },
+    getDirection(startx, starty, endx, endy) {
+        //根据起点终点返回方向 1向上 2向下 3向左 4向右 0未滑动
+        let angx = endx - startx
+        let angy = endy - starty
+        let result = 0
+
+        //如果滑动距离太短
+        if (Math.abs(angx) < 2 && Math.abs(angy) < 2) {
+            return result
+        }
+
+        let angle = this.getAngle(angx, angy)
+        if (angle >= -135 && angle <= -45) {
+            result = 1  //向上
+        } else if (angle > 45 && angle < 135) {
+            result = 2  //向下
+        } else if ((angle >= 135 && angle <= 180) || (angle >= -180 && angle < -135)) {
+            result = 3  //向左
+        } else if (angle >= -45 && angle <= 45) {
+            result = 4  //向右
+        }
+
+        return result
+    },
+    getAngle(angx, angy) {
+        //获得角度
+        return Math.atan2(angy, angx) * 180 / Math.PI;
     },
 }

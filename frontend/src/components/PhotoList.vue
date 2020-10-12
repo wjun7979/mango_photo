@@ -1,7 +1,9 @@
 <template>
     <div>
         <!--照片分组尺寸快捷工具-->
-        <div v-if="photoList.length>0" class="div-group-size">
+        <div v-if="photoList.length>0" class="div-float-tools" :style="{'margin-top': floatTools.newTop+'px'}"
+             draggable @dragstart="handleFloatToolsDragStart" @dragend="handleFloatToolsDragEnd"
+             @touchstart="handleFloatToolsTouchStart" @touchend="handleFloatToolsDragEnd">
             <el-popover placement="bottom-end">
                 <label>分组：</label>
                 <el-radio-group v-model="groupType" size="small">
@@ -9,12 +11,12 @@
                     <el-radio-button label="month">按月</el-radio-button>
                     <el-radio-button label="day">按天</el-radio-button>
                 </el-radio-group>
-                <i class="el-icon-menu btn-group-size" slot="reference"></i>
+                <i class="el-icon-menu btn-float-tools" slot="reference"></i>
             </el-popover>
             <el-popover placement="bottom-end" class="hidden-xs-only">
                 <label>尺寸：</label>
-                <el-slider v-model="imgHeight" :min="110" :max="300" :show-tooltip="false" style="width: 200px"></el-slider>
-                <i class="el-icon-picture btn-group-size" slot="reference"></i>
+                <el-slider v-model="imgHeight" :min="125" :max="300" :show-tooltip="false" style="width: 200px"></el-slider>
+                <i class="el-icon-picture btn-float-tools" slot="reference"></i>
             </el-popover>
         </div>
         <!--子影集列表-->
@@ -239,11 +241,15 @@
                 checkList: [],  //选中的照片列表
                 photoListGroup: [],  //分组后的照片列表
                 isShowTips: false,  //是否显示上传提示
-                groupType: 'day',  //分组类型 day, month, year
+                groupType: 'month',  //分组类型 day, month, year
                 checkGroupList: [],  //选中的分组列表
                 multiple: true,  //是否允许多选
                 lastSelectedUUID: null,  //最后一次选中的照片uuid
                 noFavorited: false,  //选中列表中是否含有未收藏的内容，用于切换工具栏菜单
+                floatTools: {  //浮动工具栏
+                    oldTop: 0,  //拖动前的上边距
+                    newTop: 20,  //拖动后的上边距
+                },
                 isShowAddToAlbumDialog: false,  //是否显示添加到影集对话框
                 isShowModifyDateTimeDialog: false,  //是否显示修改日期时间对话框
                 photoDateTime: null,  //照片的拍摄时间
@@ -406,6 +412,22 @@
                 this.imgHeight = this.imgHeight < 100 ? 100 : this.imgHeight
                 this.imgHeight = this.imgHeight > 200 ? 200 : this.imgHeight
             },
+            handleFloatToolsDragStart(e) {
+                //浮动工具栏开始拖动时
+                this.floatTools.oldTop = e.pageY
+            },
+            handleFloatToolsTouchStart(e) {
+                //浮动工具栏开始触摸时
+                this.floatTools.oldTop = e.pageY
+                e.preventDefault()
+            },
+            handleFloatToolsDragEnd(e) {
+                //浮动工具栏拖动结束或者手指离开屏幕时
+                this.floatTools.newTop += (e.pageY - this.floatTools.oldTop)
+                if (this.floatTools.newTop < 20)
+                    this.floatTools.newTop = 20
+                e.preventDefault()
+            },
             getAlbum() {
                 //获取指定的影集信息
                 this.$axios({
@@ -477,7 +499,7 @@
             },
             clickImage(uuid, timestamp) {
                 //点击照片时发生，按下shift等修饰键时不会触发单击事件
-                if (this.showChkToolBar) {  //当前有照片被选中了
+                if (this.showChkToolBar || this.checkList.length > 0) {  //当前有照片被选中了
                     let idx = this.checkList.indexOf(uuid)
                     if (idx === -1) {
                         if (!this.multiple)  //单选模式下先清空已选择的照片
@@ -1086,12 +1108,7 @@
         overflow: hidden;
         cursor: pointer;
     }
-    @media (hover: none) {
-        .div-img-comments {
-            visibility: hidden;
-        }
-    }
-    @media (hover: hover) {
+    @media (any-hover: hover) {
         .div-img:hover >>> .el-checkbox,
         .div-img:hover .btn-preview { /*鼠标移上去时显示勾选控件和预览按钮*/
             visibility: visible;
@@ -1187,13 +1204,12 @@
         margin-top: 12px;
         margin-right: 15px;
     }
-    .div-group-size {
+    .div-float-tools {
         position: fixed;
         right: 20px;
         z-index: 1;
-        padding-top: 10px;
     }
-    .btn-group-size { /*照片分组和尺寸工具按钮*/
+    .btn-float-tools { /*照片分组和尺寸工具按钮*/
         margin-left: 10px;
         padding: 8px;
         color: #409EFF;

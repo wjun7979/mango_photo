@@ -1,9 +1,12 @@
 <template>
     <el-container>
         <el-header class="mp-page-header" height="64px">
-            <el-col class="mp-page-header-title" :span="24">
+            <el-col class="mp-page-header-title" :span="14">
                 <ToggleMenu></ToggleMenu>
                 <span>收藏夹</span>
+            </el-col>
+            <el-col :span=10 style="text-align: right">
+                <PickPhotoButton style="margin: 19px 20px 0 0"></PickPhotoButton>
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
@@ -15,10 +18,11 @@
 <script>
     import PhotoList from "./PhotoList";
     import ToggleMenu from "./MainHeader/ToggleMenu";
+    import PickPhotoButton from "./MainHeader/PickPhotoButton";
 
     export default {
         name: "Favorites",
-        components: {ToggleMenu, PhotoList},
+        components: {PickPhotoButton, ToggleMenu, PhotoList},
     }
 </script>
 

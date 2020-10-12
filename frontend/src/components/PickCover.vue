@@ -1,19 +1,16 @@
 <template>
     <el-container>
-        <el-header class="mp-page-header" height="56px" style="padding: 4px 0 0 0">
-            <el-col class="mp-page-header-title" :span="8">
+        <el-header class="mp-page-header" height="64px" style="padding: 0">
+            <el-col class="mp-page-header-title" :span="14">
                 <i class="el-icon-close pick-close" @click="$router.back()"></i>
-                <span>选择影集封面：{{albumName}}</span>
+                <span>选择影集封面</span>
+                <span class="hidden-xs-only">：{{albumName}}</span>
             </el-col>
-            <el-col :span="16" style="text-align: right">
-                <el-form :inline="true" style="margin-top: 2px;">
-                    <el-form-item style="padding-right: 10px">
-                        <el-button type="primary" size="small" @click="_setCover">完成</el-button>
-                    </el-form-item>
-                </el-form>
+            <el-col :span="10" style="text-align: right">
+                <el-button type="primary" @click="_setCover" style="margin: 11px 10px 0 0">完成</el-button>
             </el-col>
         </el-header>
-        <el-main style="padding-top: 56px">
+        <el-main class="mp-page-main">
             <PhotoList callMode="cover" :albumUUID="albumUUID" :on-pick="onPick"></PhotoList>
         </el-main>
     </el-container>
