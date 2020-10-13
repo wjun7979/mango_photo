@@ -9,7 +9,7 @@
 
 <script>
     export default {
-        name: "PickPhotoButton",
+        name: "MoreOption",
         methods: {
             handCommand(command) {
                 //更多选项

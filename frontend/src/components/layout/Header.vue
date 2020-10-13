@@ -18,7 +18,7 @@
 </template>
 
 <script>
-    import UserCard from "./UserCard";
+    import UserCard from "../UserCard";
 
     export default {
         name: "Header",
@@ -54,7 +54,7 @@
         margin-left: 20px;
         margin-top: 11px;
         padding-left: 35px;
-        background-image: url("../assets/images/mango.png");
+        background-image: url("../../assets/images/mango.png");
         background-size: 29px;
         background-repeat: no-repeat;
         background-position-y: 5px;

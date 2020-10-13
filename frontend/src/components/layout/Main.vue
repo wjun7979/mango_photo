@@ -16,8 +16,6 @@
         <el-footer height="48px" class="div-footer">
             <Footer></Footer>
         </el-footer>
-        <!--回到顶部-->
-        <el-backtop :right="20" :bottom="60"></el-backtop>
     </el-container>
 </template>
 

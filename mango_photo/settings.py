@@ -128,10 +128,14 @@ LOGGING = {
         },
     },
     'loggers': {
-        'django.db.backends': {
+        'django.db.backends': {  # 输出ORM生成的SQL
             'handlers': ['console'],
             'propagate': True,
             'level': 'ERROR',
+        },
+        'django.server': {
+            'handlers': ['console'],
+            'level': 'WARNING'
         },
     }
 }

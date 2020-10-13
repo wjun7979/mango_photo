@@ -1,19 +1,16 @@
 <template>
     <el-container>
-        <el-header class="mp-page-header" height="56px" style="padding: 4px 0 0 0">
-            <el-col class="mp-page-header-title" :span="8">
+        <el-header class="mp-page-header" height="64px" style="padding: 0">
+            <el-col class="mp-page-header-title" :span="14">
                 <i class="el-icon-close pick-close" @click="$router.back()"></i>
-                <span>选择特征照片：{{peopleName}}</span>
+                <span>选择特征照片</span>
+                <span class="hidden-xs-only">：{{peopleName}}</span>
             </el-col>
-            <el-col :span="16" style="text-align: right">
-                <el-form :inline="true" style="margin-top: 2px;">
-                    <el-form-item style="padding-right: 10px">
-                        <el-button type="primary" size="small" @click="_setFeature">完成</el-button>
-                    </el-form-item>
-                </el-form>
+            <el-col :span="10" style="text-align: right">
+                <el-button type="primary" @click="_setFeature" style="margin: 11px 10px 0 0">完成</el-button>
             </el-col>
         </el-header>
-        <el-main style="padding-top: 56px">
+        <el-main class="mp-page-main">
             <PhotoList callMode="feature" :peopleUUID="peopleUUID" :on-pick="onPick"></PhotoList>
         </el-main>
     </el-container>

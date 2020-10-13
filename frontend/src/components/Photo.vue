@@ -145,6 +145,9 @@
                                                   :command="beforeFaceCommand(face.uuid, face.people_uuid, 'setCover')">
                                     设为人物封面
                                 </el-dropdown-item>
+                                <el-dropdown-item :command="beforeFaceCommand(face.uuid, face.people_uuid, 'removeFace')">
+                                    删除该面孔
+                                </el-dropdown-item>
                             </el-dropdown-menu>
                         </el-dropdown>
                         <div v-if="['trash','pick','cover','feature'].indexOf(callMode)>-1">
@@ -1289,6 +1292,9 @@
                     case 'setCover':  //设为人物封面
                         this.setPeopleCover(command.uuid, command.people_uuid)
                         break
+                    case 'removeFace':  //删除面孔
+                        this.removeFace(command.uuid)
+                        break
                 }
             },
             getPeopleList() {
@@ -1334,7 +1340,7 @@
                 // 清除人物姓名
                 this.$axios({
                     method: 'post',
-                    url: this.apiUrl + '/api/people_remove_face',
+                    url: this.apiUrl + '/api/people_remove_name',
                     data: {
                         filter_type: 'face',
                         people_uuid: people_uuid,
@@ -1395,6 +1401,29 @@
                         type: 'success',
                     })
                 })
+            },
+            removeFace(uuid) {
+                this.$confirm('面孔一旦删除将无法恢复', '要删除选中的面孔吗？', {
+                    confirmButtonText: '删除',
+                    cancelButtonText: '取消',
+                    type: 'warning',
+                    closeOnClickModal: false,
+                }).then(() => {
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/people_remove_face',
+                        data: {
+                            face_list: [uuid],
+                        }
+                    }).then(() => {
+                        this.$message({
+                            message: '面孔已删除',
+                            type: 'success',
+                        })
+                        this.getPhotoFaces()  //刷新人脸列表
+                    })
+                }).catch(() => {
+                });
             },
         }
     }

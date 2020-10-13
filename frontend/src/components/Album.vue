@@ -2,7 +2,7 @@
     <el-container>
         <el-header class="mp-page-header" height="64px">
             <el-col class="mp-page-header-title" :span="14">
-                <div style="float: left;width: 40px"><i class="el-icon-back alumb-back" @click="$router.back()"></i></div>
+                <div style="float: left;width: 40px"><i class="el-icon-back mp-page-header-back" @click="$router.back()"></i></div>
                 <div class="album-cover hidden-xs-only" :style="{'background-image':'url('+apiUrl+'/'+album.cover_path+'/'+album.cover_name+')'}"></div>
                 <div class="album-title">{{album.name}}
                     <span class="hidden-xs-only" v-if="album.photos>0">({{album.photos}} 张)</span>
@@ -16,7 +16,7 @@
                 </el-button>
                 <i class="iconfont icontianjiatupian icon-button hidden-pc-only" @click="openPick"
                    style="margin-left: 20px; font-size: 22px"></i>
-                <PickPhotoButton style="margin: 0 20px"></PickPhotoButton>
+                <MoreOption style="margin: 0 20px"></MoreOption>
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
@@ -28,11 +28,11 @@
 <script>
     import PhotoList from "./PhotoList"
     import CreateAlbum from "./MainHeader/CreateAlbum";
-    import PickPhotoButton from "./MainHeader/PickPhotoButton";
+    import MoreOption from "./MainHeader/MoreOption";
 
     export default {
         name: "Album",
-        components: {PickPhotoButton, PhotoList, CreateAlbum},
+        components: {MoreOption, PhotoList, CreateAlbum},
         data() {
             return {
                 albumUUID: this.$route.params.uuid,  //影集uuid
@@ -91,19 +91,6 @@
 </script>
 
 <style scoped>
-    .alumb-back { /*影集页头的返回按钮*/
-        padding: 8px;
-        margin-right: 10px;
-        color: #5f6368;
-        font-weight: bold;
-        cursor: pointer;
-    }
-
-    .alumb-back:hover {
-        background-color: #e5e5e5;
-        border-radius: 50%;
-    }
-
     .album-cover {  /*影集封面*/
         float: left;
         margin-top: 17px;

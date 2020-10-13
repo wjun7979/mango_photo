@@ -46,6 +46,7 @@ urlpatterns = [
     path('people_add_face', people_add_face),  # 添加面孔
     path('people_add_faces', people_add_faces),  # 批量添加面孔
     path('people_remove_face', people_remove_face),  # 删除面孔
+    path('people_remove_name', people_remove_name),  # 删除姓名
     path('people_add_feature', people_add_feature),  # 删除特征
     path('people_remove_feature', people_remove_feature),  # 删除特征
     path('people_list', people_list),  # 获取人物列表

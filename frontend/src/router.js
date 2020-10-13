@@ -2,7 +2,7 @@ import Vue from 'vue'
 import VueRouter from 'vue-router'
 import Login from './components/Login'
 import UserInfo from "./components/UserInfo";
-import Main from './components/Main'
+import Main from './components/layout/Main'
 import Photos from "./components/Photos"
 import Photo from "./components/Photo";
 import Albums from "./components/Albums";

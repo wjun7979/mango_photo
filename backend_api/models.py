@@ -151,7 +151,7 @@ class PeopleFace(models.Model):
     face_token = models.CharField(max_length=100)  # 人脸token
     feature_token = models.CharField(null=True, max_length=100)  # 人脸库token
     feature_ctime = models.DateTimeField(null=True)  # 注册到人脸库的时间
-    is_compared = models.BooleanField(default=False)  # 是否已执行过人脸识别
+    is_delete = models.BooleanField(default=False)  # 是否已删除
     input_date = models.DateTimeField(auto_now_add=True)  # 添加时间
 
     class Meta:

@@ -12,7 +12,7 @@
                 </el-button>
                 <i class="iconfont iconqingkonghuishouzhan hidden-pc-only icon-button" @click="emptyTrash"
                    style="margin-left: 20px"></i>
-                <PickPhotoButton style="margin: 0 20px"></PickPhotoButton>
+                <MoreOption style="margin: 0 20px"></MoreOption>
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
@@ -24,11 +24,11 @@
 <script>
     import PhotoList from "./PhotoList"
     import ToggleMenu from "./MainHeader/ToggleMenu";
-    import PickPhotoButton from "./MainHeader/PickPhotoButton";
+    import MoreOption from "./MainHeader/MoreOption";
 
     export default {
         name: 'Trash',
-        components: {PickPhotoButton, ToggleMenu, PhotoList},
+        components: {MoreOption, ToggleMenu, PhotoList},
         computed: {
             apiUrl() {
                 return this.$store.state.apiUrl  //后台api调用地址

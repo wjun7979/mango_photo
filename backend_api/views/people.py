@@ -157,7 +157,7 @@ def people_face_compare(userid):
     # 获取待识别的人脸列表
     # photos = Photo.objects.distinct().filter(peopleface__userid=userid, peopleface__people_uuid__isnull=True)
     photos = PeopleFace.objects
-    photos = photos.filter(userid=userid, people_uuid__isnull=True)
+    photos = photos.filter(userid=userid, people_uuid__isnull=True, is_delete=False)
     photos = photos.values(p_uuid=F('photo_uuid__uuid'), p_path_thumbnail_l=F('photo_uuid__path_thumbnail_l'),
                            p_name=F('photo_uuid__name'))
     total = len(photos)
@@ -300,6 +300,15 @@ def people_add_faces(request):
 @require_http_methods(['POST'])
 def people_remove_face(request):
     """删除面孔"""
+    request_data = json.loads(request.body)
+    face_list = request_data.get('face_list')
+    PeopleFace.objects.filter(uuid__in=face_list).update(is_delete=True)  # 修改删除标志
+    return JsonResponse({}, safe=False, status=200)
+
+
+@require_http_methods(['POST'])
+def people_remove_name(request):
+    """删除姓名"""
     response = {}
     try:
         with transaction.atomic():  # 开启事务处理
@@ -402,6 +411,7 @@ def people_get_faces(request):
     call_mode = request.GET.get('call_mode')
     people_uuid = request.GET.get('people_uuid')
     faces = PeopleFace.objects
+    faces = faces.filter(is_delete=False)
     if call_mode == 'people':
         faces = faces.filter(people_uuid=people_uuid)
     if call_mode == 'pick':

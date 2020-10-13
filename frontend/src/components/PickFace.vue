@@ -1,21 +1,21 @@
 <template>
     <el-container>
-        <el-header class="mp-page-header" height="56px" style="padding: 4px 0 0 0">
-            <el-col class="mp-page-header-title" :span="8">
+        <el-header class="mp-page-header" height="64px" style="padding: 0">
+            <el-col class="mp-page-header-title" :span="14">
                 <i class="el-icon-close pick-close" @click="$router.back()"></i>
-                <span v-if="addList.length===0">添加到人物：{{peopleName}}</span>
-                <span v-if="addList.length>0" style="padding-left: 7px;">添加了 {{addList.length}} 张照片</span>
+                <span v-if="addList.length===0">添加到：{{peopleName}}</span>
+                <span v-if="addList.length>0" style="padding-left: 7px;">选择了 {{addList.length}} 张</span>
             </el-col>
-            <el-col :span="16" style="text-align: right">
-                <el-form :inline="true" style="margin-top: 2px;">
-                    <el-form-item v-show="addList.length>0" style="padding-right: 10px">
-                        <el-button size="small" @click="cancelPick">取消选择</el-button>
-                        <el-button type="primary" size="small" @click="_finishPick">完成</el-button>
+            <el-col :span="10" style="text-align: right">
+                <el-form :inline="true" style="margin-top: 12px;">
+                    <el-form-item v-show="addList.length>0">
+                        <el-button size="small" type="danger" @click="removeFace">删除</el-button>
+                        <el-button type="primary" size="small" @click="_finishPick">添加</el-button>
                     </el-form-item>
                 </el-form>
             </el-col>
         </el-header>
-        <el-main style="padding-top: 56px">
+        <el-main class="mp-page-main">
             <FaceList callMode="pick" :peopleUUID="peopleUUID" :on-pick="onPick"></FaceList>
         </el-main>
     </el-container>
@@ -49,10 +49,6 @@
             })
         },
         methods: {
-            cancelPick() {
-                this.addList = []
-                this.$store.commit('cancelSelectFace', {action: true})
-            },
             getPeople() {
                 //获取指定的人物信息
                 this.$axios({
@@ -87,7 +83,33 @@
                     })
                     this.$router.back()
                 })
-            }
+            },
+            removeFace() {
+                this.$confirm('面孔一旦删除将无法恢复', '要删除选中的面孔吗？', {
+                    confirmButtonText: '删除',
+                    cancelButtonText: '取消',
+                    type: 'warning',
+                    closeOnClickModal: false,
+                }).then(() => {
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/people_remove_face',
+                        data: {
+                            face_list: this.addList,
+                        }
+                    }).then(() => {
+                        let msg = this.addList.length + ' 张面孔成功删除'
+                        this.$message({
+                            message: msg,
+                            type: 'success',
+                        })
+                        this.addList = []
+                        this.$store.commit('cancelSelectFace', {action: true})  //取消已选中的面孔
+                        this.$store.commit('refreshFace', {show: true})  //刷新面孔列表
+                    })
+                }).catch(() => {
+                });
+            },
         },
     }
 </script>

@@ -350,7 +350,7 @@ def photo_unfavorites(request):
 def photo_get_faces(request):
     """获取指定照片中的人脸列表"""
     photo_uuid = request.GET.get('photo_uuid')
-    people_face = PeopleFace.objects.filter(photo_uuid=photo_uuid)
+    people_face = PeopleFace.objects.filter(photo_uuid=photo_uuid, is_delete=False)
     people_face = people_face.values('uuid', 'path', 'path_thumbnail', 'name', 'input_date', 'people_uuid',
                                      'feature_token', people_name=F('people_uuid__name'))
     people_face = people_face.order_by('-people_uuid', 'input_date')

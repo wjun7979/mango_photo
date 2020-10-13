@@ -8,7 +8,7 @@
             <el-col :span="12" style="text-align: right; padding-right: 10px">
                 <SearchButton></SearchButton>
                 <UploadFile style="margin-left: 20px"></UploadFile>
-                <PickPhotoButton style="margin-left: 20px"></PickPhotoButton>
+                <MoreOption style="margin-left: 20px"></MoreOption>
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
@@ -22,11 +22,11 @@
     import UploadFile from "./MainHeader/UploadFile";
     import ToggleMenu from "./MainHeader/ToggleMenu";
     import SearchButton from "./MainHeader/SearchButton";
-    import PickPhotoButton from "./MainHeader/PickPhotoButton";
+    import MoreOption from "./MainHeader/MoreOption";
 
     export default {
         name: "Photos",
-        components: {PickPhotoButton, SearchButton, ToggleMenu, PhotoList, UploadFile},
+        components: {MoreOption, SearchButton, ToggleMenu, PhotoList, UploadFile},
     }
 </script>
 

@@ -1,9 +1,12 @@
 <template>
     <div>
         <el-container>
-            <el-header class="mp-page-header" height="56px">
-                <el-col class="mp-page-header-title" :span="8">管理用户账号</el-col>
-                <el-col :span="16" style="text-align: right; padding: 8px 20px 0 0">
+            <el-header class="mp-page-header" height="64px">
+                <el-col class="mp-page-header-title" :span="12">
+                    <div style="float: left;width: 40px"><i class="el-icon-back mp-page-header-back" @click="$router.back()"></i></div>
+                    <span>管理用户账号</span>
+                </el-col>
+                <el-col :span="12" style="text-align: right; padding: 16px 10px 0 0">
                     <el-button icon="el-icon-lock" size="small" @click="showModifyPwdDialog">修改登录密码</el-button>
                 </el-col>
             </el-header>
@@ -261,7 +264,7 @@
 
 <style scoped>
     .form-userinfo { /*修改密码表单*/
-        margin: 20px 0 0 50px;
-        width: 400px;
+        margin: 20px 0 0 20px;
+        width: 320px;
     }
 </style>

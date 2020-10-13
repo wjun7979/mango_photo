@@ -43,10 +43,28 @@ html, body {
     }
 }
 
+.mp-page-header-back { /*影集页头的返回按钮*/
+    padding: 8px;
+    margin-right: 10px;
+    color: #5f6368;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+@media (any-hover: hover) {
+    .mp-page-header-back:hover {
+        background-color: #e5e5e5;
+        border-radius: 50%;
+    }
+}
+
 .mp-page-header-title { /*页头的标题*/
     padding-left: 10px;
     line-height: 64px;
     font-size: 18px;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
 }
 
 .mp-page-main {  /*内容区的内容*/

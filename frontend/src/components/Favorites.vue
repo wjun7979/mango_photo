@@ -2,11 +2,11 @@
     <el-container>
         <el-header class="mp-page-header" height="64px">
             <el-col class="mp-page-header-title" :span="14">
-                <ToggleMenu></ToggleMenu>
+                <div style="float: left;width: 40px"><i class="el-icon-back mp-page-header-back" @click="$router.back()"></i></div>
                 <span>收藏夹</span>
             </el-col>
             <el-col :span=10 style="text-align: right">
-                <PickPhotoButton style="margin: 19px 20px 0 0"></PickPhotoButton>
+                <MoreOption style="margin: 19px 20px 0 0"></MoreOption>
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
@@ -17,12 +17,11 @@
 
 <script>
     import PhotoList from "./PhotoList";
-    import ToggleMenu from "./MainHeader/ToggleMenu";
-    import PickPhotoButton from "./MainHeader/PickPhotoButton";
+    import MoreOption from "./MainHeader/MoreOption";
 
     export default {
         name: "Favorites",
-        components: {PickPhotoButton, ToggleMenu, PhotoList},
+        components: {MoreOption, PhotoList},
     }
 </script>
 

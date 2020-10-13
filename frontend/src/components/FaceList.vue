@@ -6,14 +6,17 @@
             <img src="../assets/images/empty.png" alt=""/>
         </div>
         <!--选中照片后的工具栏-->
-        <el-row class="chk-toolbar" v-show="callMode==='people' && checkList.length>0">
+        <el-row class="chk-toolbar" v-show="showChkToolBar">
             <el-col :span="12">
                 <i class="el-icon-close" style="color: #202124;" @click="unselectFace"></i>
-                <span style="font-size: 1.125rem; padding-left: 7px;">选择了 {{checkList.length}} 个面孔</span>
+                <span v-show="checkList.length>0" class="chk-title">
+                    <span class="hidden-xs-only">选择了 {{checkList.length}} 张面孔</span>
+                    <span class="hidden-sm-and-up">{{checkList.length}} 张</span>
+                </span>
             </el-col>
             <el-col :span="12" style="text-align: right">
                 <div v-if="callMode==='people'">
-                    <el-button class="btn-toolbar" type="text" @click="removeFromPeople">Ta<span
+                    <el-button v-show="checkList.length>0" type="primary" class="btn-toolbar" @click="removeFromPeople">Ta<span
                             v-show="checkList.length>1">们</span>不是{{people.name}}
                     </el-button>
                 </div>
@@ -27,10 +30,13 @@
                               'chk-last-checked': lastSelectedUUID === face.uuid}">
                     <!--叠加选择框-->
                     <el-checkbox :label="face.uuid"
-                                 @click.native.shift.exact="multiSelectFaces($event, face.uuid, face.photo_uuid)">
+                                 @click.native.shift.exact="multiSelectFaces($event, face.uuid, face.photo_uuid)"
+                                 class="btn-checkbox"
+                                 :class="{'show-always':showPhotoTools}">
                     </el-checkbox>
                     <!--叠加预览按钮-->
-                    <i class="el-icon-zoom-in btn-preview" @click="showPreview(face.photo_uuid)"></i>
+                    <i class="el-icon-zoom-in btn-preview" :class="{'show-always':showPhotoTools}"
+                       @click="showPreview(face.photo_uuid)"></i>
                     <!--叠加特征标志-->
                     <i v-if="face.feature_token" class="el-icon-user-solid btn-feature"></i>
                     <el-image class="img-face" :src="apiUrl + '/' + face.path_thumbnail + '/' + face.name" lazy
@@ -69,7 +75,7 @@
         props: {
             callMode: {  //调用模式
                 type: String,
-                //people:人物
+                //people:人物；pick:添加面孔到人物
                 default: 'people'
             },
             peopleUUID: {  //当调用模式为people时，必须指定人物uuid
@@ -90,6 +96,23 @@
             },
             cancelSelectFace() {
                 return this.$store.state.cancelSelectFace  //是否取消已选中的面孔
+            },
+            pickFaceMode() {
+                return this.$store.state.pickFaceMode  //移动设备下是否进入选择面孔模式
+            },
+            showChkToolBar() {  //是否显示选择工具栏
+                if (['pick'].indexOf(this.callMode) === -1 && this.checkList.length > 0) {
+                    return true
+                } else {
+                    if (this.pickFaceMode) {
+                        return true
+                    } else {
+                        return false
+                    }
+                }
+            },
+            showPhotoTools() {  //是否始终显示照片上的浮动选择框预览按钮
+                return ['pick'].indexOf(this.callMode) > -1 || this.pickFaceMode
             },
         },
         watch: {
@@ -127,6 +150,7 @@
         },
         beforeDestroy() {
             this.deviceSupportUninstall()  //卸载键盘按键支持
+            this.$store.commit('pickFaceMode', {show: false})  //重置移动设备下是否进入选择面孔模式
         },
         methods: {
             deviceSupportInstall() {
@@ -183,7 +207,7 @@
             },
             clickImage(face_uuid, photo_uuid) {
                 //点击照片时发生，按下shift等修饰键时不会触发单击事件
-                if (this.checkList.length > 0) {  //当前有照片被选中了
+                if (this.showChkToolBar || this.checkList.length > 0) {  //当前有照片被选中了
                     let idx = this.checkList.indexOf(face_uuid)
                     if (idx === -1) {
                         this.checkList.push(face_uuid)
@@ -232,6 +256,7 @@
                 //放弃选择
                 this.checkList = []
                 this.$store.commit('cancelSelectFace', {action: false})  //重置vuex的值
+                this.$store.commit('pickFaceMode', {show: false})  //重置移动设备下是否进入选择面孔模式
             },
             getPeople() {
                 //获取指定的人物信息
@@ -257,7 +282,7 @@
                 }).then(() => {
                     this.$axios({
                         method: 'post',
-                        url: this.apiUrl + '/api/people_remove_face',
+                        url: this.apiUrl + '/api/people_remove_name',
                         data: {
                             filter_type: 'face',
                             people_uuid: this.peopleUUID,
@@ -296,7 +321,7 @@
     .div-images { /*瀑布流照片*/
         display: flex;
         flex-wrap: wrap;
-        padding: 20px 0;
+        padding: 10px 0 10px 10px;
     }
 
     .div-images::after {
@@ -306,10 +331,10 @@
 
     .div-img {  /*面孔容器*/
         position: relative;
-        width: 120px;
-        height: 120px;
-        flex-grow: 120;
-        margin: 0 5px 5px 0;
+        width: 110px;
+        height: 110px;
+        flex-grow: 110;
+        margin: 0 10px 10px 0;
     }
 
     .img-face {  /*面孔*/
@@ -319,23 +344,23 @@
         border-radius: 8px;
         cursor: pointer;
     }
-    .div-images >>> .el-checkbox { /*选择控件*/
+    .btn-checkbox { /*选择控件*/
         visibility: hidden; /*控件默认隐藏*/
         position: absolute;
         top: 8px;
         left: 8px;
     }
-    .div-images >>> .el-checkbox__label { /*选择控件的文本*/
+    .btn-checkbox >>> .el-checkbox__label { /*选择控件的文本*/
         display: none;
     }
-    .div-images >>> .el-checkbox__inner { /*选择控件的外观*/
+    .btn-checkbox >>> .el-checkbox__inner { /*选择控件的外观*/
         width: 20px;
         height: 20px;
         border: 2px solid #FFF;
         border-radius: 50%;
         background-color: rgba(0, 0, 0, .1);
     }
-    .div-images >>> .el-checkbox__inner:after { /*选择控件内勾的外观*/
+    .btn-checkbox >>> .el-checkbox__inner:after { /*选择控件内勾的外观*/
         top: 0;
         width: 5px;
         height: 11px;
@@ -347,9 +372,11 @@
         background-color: #409eff;
         border-color: #409eff;
     }
-    .div-img:hover >>> .el-checkbox,
-    .div-img:hover .btn-preview { /*鼠标移上去时显示勾选控件和预览按钮*/
-        visibility: visible;
+    @media (any-hover: hover) {
+        .div-img:hover >>> .el-checkbox,
+        .div-img:hover .btn-preview { /*鼠标移上去时显示勾选控件和预览按钮*/
+            visibility: visible;
+        }
     }
     .show-checkbox >>> .el-checkbox {
         visibility: visible; /*当选择了照片时，所有的勾选控件都显示出来*/
@@ -423,8 +450,17 @@
         background-color: #e5e5e5;
         border-radius: 50%;
     }
+    .chk-title {  /*选择工具栏标题*/
+        font-size: 1.125rem;
+        padding-left: 7px;
+    }
     .btn-toolbar {  /*选中工具栏上的文字按钮*/
         margin-top: 12px;
-        margin-right: 15px;
+    }
+    /*移动端进入选择模式后显示某些控件*/
+    @media (any-hover: none) {
+        .show-always {
+            visibility: visible;
+        }
     }
 </style>

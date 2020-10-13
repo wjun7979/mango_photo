@@ -51,11 +51,11 @@
                                          @change="selectPhoto(img.uuid, photoGroup.timestamp)"
                                          @click.native.shift.exact="multiSelectPhotos($event, img.uuid, photoGroup.timestamp)"
                                          class="btn-checkbox"
-                                         :class="{'show-always':showChkToolBar}">
+                                         :class="{'show-always':showPhotoTools}">
                             </el-checkbox>
                             <!--叠加预览按钮-->
                             <i class="el-icon-zoom-in btn-preview" @click="showPreview(img.uuid)"
-                               :class="{'show-always':showChkToolBar}"></i>
+                               :class="{'show-always':showPhotoTools}"></i>
                             <el-image :src="apiUrl + '/' + img.path_thumbnail_s + '/' + img.name"
                                       lazy
                                       :alt="img.name"
@@ -308,6 +308,9 @@
                         return false
                     }
                 }
+            },
+            showPhotoTools() {  //是否始终显示照片上的浮动选择框预览按钮
+                return ['pick', 'cover', 'feature'].indexOf(this.callMode) > -1  || this.pickPhotoMode
             },
         },
         watch: {
@@ -963,7 +966,7 @@
                 }).then(() => {
                     this.$axios({
                         method: 'post',
-                        url: this.apiUrl + '/api/people_remove_face',
+                        url: this.apiUrl + '/api/people_remove_name',
                         data: {
                             filter_type: 'photo',
                             people_uuid: this.peopleUUID,
@@ -1271,7 +1274,9 @@
         overflow: hidden;
     }
     /*移动端进入选择模式后显示某些控件*/
-    .show-always {
-        visibility: visible;
+    @media (any-hover: none) {
+        .show-always {
+            visibility: visible;
+        }
     }
 </style>

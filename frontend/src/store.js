@@ -18,6 +18,7 @@ const store = new Vuex.Store({
         cancelSelectFace: false,  //是否取消已选中的面孔
         showMenu: false,  //小尺寸屏幕下是否显示菜单
         pickPhotoMode: false,  //移动设备下是否进入选择照片模式
+        pickFaceMode: false,  //移动设备下是否进入选择面孔模式
     },
     mutations: {
         setApiUrl(state) {  //根据客户端访问地址改变API请求地址
@@ -68,6 +69,9 @@ const store = new Vuex.Store({
         },
         pickPhotoMode(state, payload) {  //更改"移动设备下是否进入选择照片模式"的值
             state.pickPhotoMode = payload.show
+        },
+        pickFaceMode(state, payload) {  //更改"移动设备下是否进入选择面孔模式"的值
+            state.pickFaceMode = payload.show
         },
     }
 })
