@@ -14,6 +14,10 @@
                     <i class="el-icon-collection"></i>
                     <span>影集</span>
                 </el-menu-item>
+                <el-menu-item index="/peoples">
+                    <i class="el-icon-user"></i>
+                    <span>人物</span>
+                </el-menu-item>
                 <el-menu-item index="/favorites">
                     <i class="el-icon-star-off"></i>
                     <span>收藏夹</span>

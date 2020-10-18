@@ -9,6 +9,7 @@ from django.db.models import Count, Sum, Q, F, Min, Max
 from django.http import JsonResponse
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
+from django.core.paginator import Paginator
 from backend_api.common.date_encoder import DateEncoder
 from backend_api.models import Photo, AlbumPhoto, Album, Address, People, PeopleFace
 from backend_api.views.album import album_auto_cover
@@ -18,10 +19,13 @@ from backend_api.views.people import people_auto_cover, baidu_ai_facelib_delete
 @require_http_methods(['GET'])
 def photo_list(request):
     """浏览照片"""
+    response = {}
     call_mode = request.GET.get('call_mode')
     userid = request.GET.get('userid')
     album_uuid = request.GET.get('album_uuid')
     people_uuid = request.GET.get('people_uuid')
+    page = request.GET.get('page')
+    pagesize = request.GET.get('pagesize')
 
     photos = Photo.objects.distinct()
     photos = photos.values('uuid', 'path_original', 'path_modified', 'path_thumbnail_s', 'path_thumbnail_l', 'name',
@@ -30,7 +34,7 @@ def photo_list(request):
     photos = photos.annotate(faces=Count('peopleface__uuid'))
     # 过滤条件
     photos = photos.filter(userid=userid)
-    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people', 'feature']:
+    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people', 'feature', 'pick_face']:
         photos = photos.filter(is_deleted=False)
         if call_mode == 'album':  # 在影集中调用
             photos = photos.filter(albumphoto__album_uuid=album_uuid)
@@ -49,13 +53,23 @@ def photo_list(request):
         if call_mode == 'people':  # 在人物中调用
             photos = photos.filter(peopleface__people_uuid=people_uuid)
         if call_mode == 'feature':  # 在选择人物特征中调用，只显示面孔数量为1的照片
-            photos = photos.filter(peopleface__people_uuid=people_uuid, faces=1, peopleface__feature_token__isnull=True)
+            photos = photos.filter(peopleface__people_uuid=people_uuid, faces=1, peopleface__feature_token__isnull=True,
+                                   peopleface__is_delete=False)
+        if call_mode == 'pick_face':  # 在选择面孔添加到人物中使用
+            photos = photos.filter(peopleface__people_uuid__isnull=True, faces__gt=0, peopleface__is_delete=False)
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
     # 排序
     photos = photos.order_by('-exif_datetime')
 
-    response = json.loads(json.dumps(list(photos), cls=DateEncoder))
+    # 分页
+    if page:
+        paginator = Paginator(photos, pagesize)
+        response['total'] = paginator.count
+        photos = paginator.page(page)
+        response['list'] = json.loads(json.dumps(list(photos), cls=DateEncoder))
+    else:
+        response = json.loads(json.dumps(list(photos), cls=DateEncoder))
     # safe 控制是否只有字典类型的数据才能被序列化，这里的response是一个数组，所以要将safe设置为False
     return JsonResponse(response, safe=False, status=200)
 
@@ -319,9 +333,11 @@ def photo_set_location(request):
                     address.district = result['result']['addressComponent']['district']
                     address.town = result['result']['addressComponent']['town']
                     address.save()
-                return JsonResponse({'address': poi_name}, safe=False, status=200)
+                response['address'] = result['result']['formatted_address']
+                response['poi_name'] = poi_name
+                return JsonResponse(response, safe=False, status=200)
             else:  # 删除位置信息
-                return JsonResponse({'address': ''}, safe=False, status=200)
+                return JsonResponse({'address': '', 'poi_name': ''}, safe=False, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息
         response['msg'] = str(e)
@@ -352,7 +368,8 @@ def photo_get_faces(request):
     photo_uuid = request.GET.get('photo_uuid')
     people_face = PeopleFace.objects.filter(photo_uuid=photo_uuid, is_delete=False)
     people_face = people_face.values('uuid', 'path', 'path_thumbnail', 'name', 'input_date', 'people_uuid',
-                                     'feature_token', people_name=F('people_uuid__name'))
+                                     'photo_uuid', 'feature_token', people_name=F('people_uuid__name'),
+                                     exif_datetime=F('photo_uuid__exif_datetime'))
     people_face = people_face.order_by('-people_uuid', 'input_date')
     response = json.loads(json.dumps(list(people_face), cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)
@@ -406,7 +423,8 @@ def photo_rotate(request):
         if os.path.join(path_thumbnail_s, name) and os.path.exists(os.path.join(full_path_thumbnail_s, name)):
             os.remove(os.path.join(full_path_thumbnail_s, name))
 
-        response = {'file_name': new_name, 'path_thumbnail_l': path_thumbnail_l}
+        response = {'file_name': new_name, 'path_thumbnail_l': path_thumbnail_l, 'width': new_width,
+                    'height': new_height}
         return JsonResponse(response, safe=False, status=200)
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息

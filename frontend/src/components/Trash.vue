@@ -55,7 +55,7 @@
                             message: '回收站已清空',
                             type: 'success',
                         })
-                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                        this.$store.commit('refreshPhoto', {action: 'reload'})
                         this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
                     })
                 }).catch(() => {

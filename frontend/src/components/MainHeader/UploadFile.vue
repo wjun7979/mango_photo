@@ -155,7 +155,7 @@
                             duration: 0
                         })
                     }
-                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                    this.$store.commit('refreshPhoto', {action: 'reload'})  //刷新图片列表
                     this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
                     this.clearFiles()
                     this.onCompleted()  //上传完成后的回调
@@ -244,7 +244,7 @@
     .upload-progress {  /*上传进度条*/
         position: fixed;
         left: 20px;
-        bottom: 60px;
+        bottom: 40px;
         width: 320px;
         z-index: 2;
     }

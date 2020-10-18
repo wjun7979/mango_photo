@@ -1,7 +1,7 @@
 <template>
     <div>
         <!--当面孔列表为空时显示一些提示信息-->
-        <div v-if="faceList.length === 0" style="text-align: center; padding-top: 80px">
+        <div v-if="isShowTips" style="text-align: center; padding-top: 80px">
             <div style="font-size: 18px; font-weight: 400; color: #202124; margin-bottom: 20px">空空如也，没有任何内容。</div>
             <img src="../assets/images/empty.png" alt=""/>
         </div>
@@ -25,7 +25,7 @@
         <!--瀑布流样式的面孔列表-->
         <el-checkbox-group v-model="checkList">
             <div class="div-images">
-                <div v-for="face of faceList" :key="face.uuid" class="div-img"
+                <div v-for="face of faces.faceList" :key="face.uuid" class="div-img"
                      :class="{'chk-checked': checkList.indexOf(face.uuid) !== -1,
                               'chk-last-checked': lastSelectedUUID === face.uuid}">
                     <!--叠加选择框-->
@@ -40,6 +40,7 @@
                     <!--叠加特征标志-->
                     <i v-if="face.feature_token" class="el-icon-user-solid btn-feature"></i>
                     <el-image class="img-face" :src="apiUrl + '/' + face.path_thumbnail + '/' + face.name" lazy
+                              scroll-container="body"
                               @click.exact="clickImage(face.uuid, face.photo_uuid)"
                               @click.shift.exact="multiSelectFaces($event, face.uuid, face.photo_uuid)">
                         <div slot="error">
@@ -51,31 +52,54 @@
                 </div>
             </div>
         </el-checkbox-group>
+        <!--大图预览-->
+        <Photo v-if="isShowPreview" :callMode="callMode" :uuid="previewPhotoUUID" :photoList="photos.photoList"
+               :peopleUUID="peopleUUID" :on-close="closePreview"></Photo>
     </div>
 </template>
 
 <script>
     import {rafThrottle} from "element-ui/src/utils/util";
     import {off, on} from "element-ui/src/utils/dom";
+    import Photo from "./Photo";
 
     export default {
         name: "FaceList",
+        components: {Photo},
         data() {
             return {
-                faceList: [],  //面孔列表
+                faces: {
+                    faceList: [],  //面孔列表
+                    total: 0,  //照片总数
+                    page: 1,  //当前页号
+                    pages: 1,  //总页数
+                    pageSize: 100,  //每页的数量
+                    isLoading: false,  //当前是否为加载状态
+                },
+                photos: {
+                    photoList: [],  //照片列表
+                    total: 0,  //照片总数
+                    page: 1,  //当前页号
+                    pages: 1,  //总页数
+                    pageSize: 100,  //每页的数量
+                    isLoading: false,  //当前是否为加载状态
+                },
                 checkList: [],  //选中的照片列表
+                isShowTips: false,  //是否显示上传提示
                 lastSelectedUUID: null,  //最后一次选中的面孔uuid
                 people: {  //人物信息
                     name: '',
                     cover_path: '',
                     cover_name: '',
                 },
+                isShowPreview: false,  //是否显示大图预览
+                previewPhotoUUID: '',  //当前预览的照片
             }
         },
         props: {
             callMode: {  //调用模式
                 type: String,
-                //people:人物；pick:添加面孔到人物
+                //people:人物；pick_face:添加面孔到人物
                 default: 'people'
             },
             peopleUUID: {  //当调用模式为people时，必须指定人物uuid
@@ -92,7 +116,7 @@
                 return this.$store.state.apiUrl  //后台api调用地址
             },
             refreshFace() {
-                return this.$store.state.refreshFace  //是否刷新照片列表
+                return this.$store.state.refreshFace.action  //是否刷新照片列表
             },
             cancelSelectFace() {
                 return this.$store.state.cancelSelectFace  //是否取消已选中的面孔
@@ -101,7 +125,7 @@
                 return this.$store.state.pickFaceMode  //移动设备下是否进入选择面孔模式
             },
             showChkToolBar() {  //是否显示选择工具栏
-                if (['pick'].indexOf(this.callMode) === -1 && this.checkList.length > 0) {
+                if (['pick_face'].indexOf(this.callMode) === -1 && this.checkList.length > 0) {
                     return true
                 } else {
                     if (this.pickFaceMode) {
@@ -112,15 +136,34 @@
                 }
             },
             showPhotoTools() {  //是否始终显示照片上的浮动选择框预览按钮
-                return ['pick'].indexOf(this.callMode) > -1 || this.pickFaceMode
+                return ['pick_face'].indexOf(this.callMode) > -1 || this.pickFaceMode
             },
         },
         watch: {
             refreshFace() {
                 //有其它组件发出刷新照片的指令
-                if (this.refreshFace) {
+                let refreshFace = this.$store.state.refreshFace
+                if (refreshFace.action === 'reload') {  //刷新
+                    this.faces.faceList = []
+                    this.faces.page = 1
                     this.showFaces()
+                    this.photos.photoList = []
+                    this.photos.page = 1
+                    this.showPhotos()
                 }
+                if (refreshFace.action === 'delete') {  //删除
+                    for (let item of refreshFace.list) {
+                        let index = this.faces.faceList.findIndex(t => t.uuid === item)
+                        this.faces.faceList.splice(index, 1)
+                    }
+                }
+                if (refreshFace.action === 'update') {  //更新
+                    let face = refreshFace.list
+                    let index = this.faces.faceList.findIndex(t => t.uuid === face.uuid)
+                    this.faces.faceList.splice(index, 1, face)
+                }
+                //操作完成后，将store.js中的refreshFace值重置为false
+                this.$store.commit('refreshFace', {action: 'none', list: []})
             },
             cancelSelectFace() {
                 //有其它组件发出取消已选中照片的指令
@@ -136,20 +179,23 @@
                     this.lastSelectedUUID = val[val.length - 1]
                 }
                 //将选中的面孔列表传递给上级组件
-                if (this.callMode === 'pick') {
+                if (this.callMode === 'pick_face') {
                     this.onPick(this.checkList)
                 }
             },
         },
         mounted() {
             this.showFaces()  //获取并显示面孔列表
+            this.showPhotos()  //获取照片列表
             if (this.callMode === 'people') {
                 this.getPeople()
             }
             this.deviceSupportInstall()  //注册键盘按键支持
+            window.addEventListener('scroll', this.listenScroll)
         },
         beforeDestroy() {
             this.deviceSupportUninstall()  //卸载键盘按键支持
+            window.removeEventListener('scroll', this.listenScroll)
             this.$store.commit('pickFaceMode', {show: false})  //重置移动设备下是否进入选择面孔模式
         },
         methods: {
@@ -170,6 +216,24 @@
                 off(document, 'keydown', this._keyDownHandler)
                 this._keyDownHandler = null
             },
+            listenScroll() {
+                //监听滚动事件，实现滚动加载
+                let bottomOfWindow = document.documentElement.offsetHeight - document.documentElement.scrollTop - window.innerHeight <= 20
+                if (bottomOfWindow && this.faces.isLoading === false) {
+                    this.faces.isLoading = true  //当前正处于加载状态
+                    if (this.faces.page < this.faces.pages) {
+                        this.faces.page ++
+                        this.showFaces()
+                    }
+                }
+                if (bottomOfWindow && this.photos.isLoading === false) {
+                    this.photos.isLoading = true  //当前正处于加载状态
+                    if (this.photos.page < this.photos.pages) {
+                        this.photos.page ++
+                        this.showPhotos()
+                    }
+                }
+            },
             showFaces() {
                 //获取并显示面孔列表
                 this.$axios({
@@ -178,32 +242,52 @@
                     params: {
                         call_mode: this.callMode,
                         people_uuid: this.peopleUUID,
+                        page: this.faces.page,
+                        pagesize: this.faces.pageSize,
                     }
                 }).then(response => {
-                    this.faceList = response.data
-                    //从vuex中读取上次选中的面孔列表
-                    let lastCheckList = this.$store.state.faceCheckList
-                    if (lastCheckList.length > 0) {
-                        this.checkList = lastCheckList
-                        this.$store.commit('setFaceCheckList', {'checkList': []})
+                    this.faces.total = response.data.total  //总照片数
+                    this.faces.pages = Math.ceil(this.faces.total / this.faces.pageSize)  //总页数
+                    this.faces.faceList.push.apply(this.faces.faceList, response.data.list)
+
+                    // 当没有照片时显示上传提示
+                    this.isShowTips = this.faces.faceList.length === 0
+                    this.faces.isLoading = false  //重置加载状态
+                })
+            },
+            showPhotos() {
+                //获取照片列表
+                this.$axios({
+                    method: 'get',
+                    url: this.apiUrl + '/api/photo_list',
+                    params: {
+                        userid: localStorage.getItem('userid'),
+                        call_mode: this.callMode,
+                        album_uuid: this.albumUUID,
+                        people_uuid: this.peopleUUID,
+                        page: this.photos.page,
+                        pagesize: this.photos.pageSize,
                     }
-                    //面孔读取完成后，将store.js中的refreshFace值重置为false
-                    this.$store.commit('refreshFace', {show: false})
+                }).then(response => {
+                    this.photos.total = response.data.total  //总照片数
+                    this.photos.pages = Math.ceil(this.photos.total / this.photos.pageSize)  //总页数
+                    this.photos.photoList.push.apply(this.photos.photoList, response.data.list)
+                    this.photos.isLoading = false  //重置加载状态
                 })
             },
             showPreview(photo_uuid) {
                 //显示大图预览
-                //记录当前选中的列表，便于从预览页面返回时重新将其选中
-                this.$store.commit('setFaceCheckList', {'checkList': this.checkList})
-                this.$router.push({
-                    name: 'photo',
-                    params: {
-                        uuid: photo_uuid,
-                        callMode: 'pick_face',
-                        albumUUID: 'none',
-                        peopleUUID: this.peopleUUID,
-                    }
-                })
+                this.previewPhotoUUID = photo_uuid
+                this.isShowPreview = true
+                // 隐藏滚动条
+                document.getElementsByTagName('body')[0].classList.add("el-popup-parent--hidden")
+                this.deviceSupportUninstall()  //卸载键盘按键支持
+            },
+            closePreview() {
+                //关闭大图预览
+                this.isShowPreview = false
+                document.getElementsByTagName('body')[0].classList.remove("el-popup-parent--hidden")
+                this.deviceSupportInstall()  //注册键盘按键支持
             },
             clickImage(face_uuid, photo_uuid) {
                 //点击照片时发生，按下shift等修饰键时不会触发单击事件
@@ -216,7 +300,7 @@
                     }
                 } else {
                     //在pick模式下，面孔不是预览，而是选中
-                    if (this.callMode === 'pick') {
+                    if (this.callMode === 'pick_face') {
                         this.checkList.push(face_uuid)
                     }
                     else {
@@ -229,19 +313,19 @@
                 if (e.target.tagName === 'SPAN') return  //因为原生click事件会执行两次，第一次在label标签上，第二次在input标签上，故此处理
                 //当起始照片uuid不存在时，不执行连续选择操作
                 if (this.lastSelectedUUID != null) {
-                    let startIdx = this.faceList.findIndex(t => t.uuid === this.lastSelectedUUID)
-                    let endIdx = this.faceList.findIndex(t => t.uuid === face_uuid)
+                    let startIdx = this.faces.faceList.findIndex(t => t.uuid === this.lastSelectedUUID)
+                    let endIdx = this.faces.faceList.findIndex(t => t.uuid === face_uuid)
                     let startIndex = endIdx > startIdx ? startIdx : endIdx
                     let endIndex = endIdx > startIdx ? endIdx : startIdx
                     if (this.checkList.indexOf(face_uuid) === -1) {  //当前照片处于未选中状态，执行连续选中操作
                         for (let i = startIndex; i <= endIndex; i++) {
-                            if (this.checkList.indexOf(this.faceList[i].uuid) === -1) {
-                                this.checkList.push(this.faceList[i].uuid)
+                            if (this.checkList.indexOf(this.faces.faceList[i].uuid) === -1) {
+                                this.checkList.push(this.faces.faceList[i].uuid)
                             }
                         }
                     } else {  //当前照片处于选中状态，执行连续取消选中操作
                         for (let i = startIndex; i <= endIndex; i++) {
-                            let idx = this.checkList.indexOf(this.faceList[i].uuid)
+                            let idx = this.checkList.indexOf(this.faces.faceList[i].uuid)
                             if (idx !== -1) {
                                 this.checkList.splice(idx, 1)
                             }
@@ -286,16 +370,16 @@
                         data: {
                             filter_type: 'face',
                             people_uuid: this.peopleUUID,
-                            photo_list: this.checkList,
+                            face_list: this.checkList,
                         }
                     }).then(() => {
                         let msg = '已将' + this.checkList.length + ' 个面孔从人物中移除'
-                        this.unselectPhoto()
                         this.$message({
                             message: msg,
                             type: 'success',
                         })
-                        this.$store.commit('refreshFace', {show: true})  //刷新图片列表
+                        this.$store.commit('refreshFace', {action: 'delete', list: this.checkList})
+                        this.unselectFace()
                     })
                 }).catch(() => {
                     this.deviceSupportInstall()
@@ -331,10 +415,17 @@
 
     .div-img {  /*面孔容器*/
         position: relative;
-        width: 110px;
-        height: 110px;
-        flex-grow: 110;
+        width: 160px;
+        height: 160px;
+        flex-grow: 160;
         margin: 0 10px 10px 0;
+    }
+    @media only screen and (max-width: 767px) {
+        .div-img {
+            width: 110px;
+            height: 110px;
+            flex-grow: 110;
+        }
     }
 
     .img-face {  /*面孔*/

@@ -1,9 +1,7 @@
 <template>
     <div>
         <!--照片分组尺寸快捷工具-->
-        <div v-if="photoList.length>0" class="div-float-tools" :style="{'margin-top': floatTools.newTop+'px'}"
-             draggable @dragstart="handleFloatToolsDragStart" @dragend="handleFloatToolsDragEnd"
-             @touchstart="handleFloatToolsTouchStart" @touchend="handleFloatToolsDragEnd">
+        <div v-if="photos.photoList.length>0" class="div-float-tools">
             <el-popover placement="bottom-end">
                 <label>分组：</label>
                 <el-radio-group v-model="groupType" size="small">
@@ -13,9 +11,9 @@
                 </el-radio-group>
                 <i class="el-icon-menu btn-float-tools" slot="reference"></i>
             </el-popover>
-            <el-popover placement="bottom-end" class="hidden-xs-only">
+            <el-popover placement="bottom-end">
                 <label>尺寸：</label>
-                <el-slider v-model="imgHeight" :min="125" :max="300" :show-tooltip="false" style="width: 200px"></el-slider>
+                <el-slider v-model="imgHeight" :min="110" :max="300" :show-tooltip="false" style="width: 200px"></el-slider>
                 <i class="el-icon-picture btn-float-tools" slot="reference"></i>
             </el-popover>
         </div>
@@ -58,6 +56,7 @@
                                :class="{'show-always':showPhotoTools}"></i>
                             <el-image :src="apiUrl + '/' + img.path_thumbnail_s + '/' + img.name"
                                       lazy
+                                      scroll-container="body"
                                       :alt="img.name"
                                       @click.exact="clickImage(img.uuid, photoGroup.timestamp)"
                                       @click.shift.exact="multiSelectPhotos($event, img.uuid, photoGroup.timestamp)"
@@ -91,6 +90,9 @@
                 </el-checkbox-group>
             </el-row>
         </el-checkbox-group>
+        <!--大图预览-->
+        <Photo v-if="isShowPreview" :callMode="callMode" :uuid="previewPhotoUUID" :photoList="photos.photoList"
+               :albumUUID="albumUUID" :peopleUUID="peopleUUID" :on-close="closePreview"></Photo>
         <!--选中照片后的工具栏-->
         <el-row class="chk-toolbar" v-show="showChkToolBar">
             <el-col :span="12">
@@ -230,14 +232,22 @@
     import UploadFile from "./MainHeader/UploadFile";
     import {rafThrottle} from "element-ui/src/utils/util";
     import {off, on} from "element-ui/src/utils/dom";
+    import Photo from "./Photo";
     export default {
         name: "PhotoList",
-        components: {AlbumList, UploadFile},
+        components: {Photo, AlbumList, UploadFile},
         data() {
             return {
                 imgHeight: 200,  //照片的高度
                 albumName: '',  //当callMode为album时，影集的名称
-                photoList: [],  //照片列表
+                photos: {
+                    photoList: [],  //照片列表
+                    total: 0,  //照片总数
+                    page: 1,  //当前页号
+                    pages: 1,  //总页数
+                    pageSize: 100,  //每页的数量
+                    isLoading: false,  //当前是否为加载状态
+                },
                 checkList: [],  //选中的照片列表
                 photoListGroup: [],  //分组后的照片列表
                 isShowTips: false,  //是否显示上传提示
@@ -246,10 +256,6 @@
                 multiple: true,  //是否允许多选
                 lastSelectedUUID: null,  //最后一次选中的照片uuid
                 noFavorited: false,  //选中列表中是否含有未收藏的内容，用于切换工具栏菜单
-                floatTools: {  //浮动工具栏
-                    oldTop: 0,  //拖动前的上边距
-                    newTop: 20,  //拖动后的上边距
-                },
                 isShowAddToAlbumDialog: false,  //是否显示添加到影集对话框
                 isShowModifyDateTimeDialog: false,  //是否显示修改日期时间对话框
                 photoDateTime: null,  //照片的拍摄时间
@@ -258,6 +264,8 @@
                 photoLocationList: [],  //选中照片中包含的位置列表
                 locationLoading: false,  //位置选择框是否正在从远程获取数据
                 locationOptions: [],  //地点检索的结果
+                isShowPreview: false,  //是否显示大图预览
+                previewPhotoUUID: '',  //当前预览的照片
             }
         },
         props: {
@@ -290,7 +298,7 @@
                 return this.$store.state.apiUrl  //后台api调用地址
             },
             refreshPhoto() {
-                return this.$store.state.refreshPhoto  //是否刷新照片列表
+                return this.$store.state.refreshPhoto.action  //刷新照片列表
             },
             cancelSelectPhoto() {
                 return this.$store.state.cancelSelectPhoto  //是否取消已选中的照片
@@ -316,9 +324,29 @@
         watch: {
             refreshPhoto() {
                 //有其它组件发出刷新照片的指令
-                if (this.refreshPhoto) {
+                let refreshPhoto = this.$store.state.refreshPhoto
+                if (refreshPhoto.action === 'reload') {  //刷新
+                    this.photos.photoList = []
+                    this.photos.page = 1
                     this.showPhotos()
                 }
+                if (refreshPhoto.action === 'delete') {  //删除
+                    for (let item of refreshPhoto.list) {
+                        let index = this.photos.photoList.findIndex(t => t.uuid === item)
+                        this.photos.photoList.splice(index, 1)
+                    }
+                    this.creatPhotoGroup()  //重新分组
+                }
+                if (refreshPhoto.action === 'update') {  //更新
+                    let photo = refreshPhoto.list
+                    let index = this.photos.photoList.findIndex(t => t.uuid === photo.uuid)
+                    this.photos.photoList.splice(index, 1, photo)
+                    if (refreshPhoto.refreshPhotoGroup) {
+                        this.creatPhotoGroup()  //重新分组
+                    }
+                }
+                //操作完成后，将store.js中的refreshPhoto值重置为false
+                this.$store.commit('refreshPhoto', {action: 'none', list: []})
             },
             cancelSelectPhoto() {
                 //有其它组件发出取消已选中照片的指令
@@ -347,7 +375,7 @@
                 if (['photo','album','favorites','people'].indexOf(this.callMode) > -1) {
                     this.noFavorited = false
                     for (let item of val) {
-                        let photo = this.photoList.find(t => t.uuid === item)
+                        let photo = this.photos.photoList.find(t => t.uuid === item)
                         if (!photo.is_favorited) {
                             this.noFavorited = true
                             break
@@ -379,12 +407,14 @@
                 this.multiple = false
             this.setImgHeight()
             window.addEventListener('resize', this.listenResize)
+            window.addEventListener('scroll', this.listenScroll)
         },
         beforeDestroy() {
             if (['pick','cover','feature'].indexOf(this.callMode) === -1) {
                 this.deviceSupportUninstall()  //卸载键盘按键支持
             }
             window.removeEventListener('resize', this.listenResize)
+            window.removeEventListener('scroll', this.listenScroll)
             this.$store.commit('pickPhotoMode', {show: false})  //重置移动设备下是否进入选择照片模式
         },
         methods: {
@@ -409,27 +439,22 @@
                 //监听浏览器窗口大小变化的事件
                 this.setImgHeight()
             },
+            listenScroll() {
+                //监听滚动事件，实现滚动加载
+                let bottomOfWindow = document.documentElement.offsetHeight - document.documentElement.scrollTop - window.innerHeight <= 20
+                if (bottomOfWindow && this.photos.isLoading === false) {
+                    this.photos.isLoading = true  //当前正处于加载状态
+                    if (this.photos.page < this.photos.pages) {
+                        this.photos.page ++
+                        this.showPhotos()
+                    }
+                }
+            },
             setImgHeight() {
                 //浏览器窗口大小变化时改变照片的大小
                 this.imgHeight = parseInt((document.documentElement.clientWidth / 8).toString())
                 this.imgHeight = this.imgHeight < 100 ? 100 : this.imgHeight
                 this.imgHeight = this.imgHeight > 200 ? 200 : this.imgHeight
-            },
-            handleFloatToolsDragStart(e) {
-                //浮动工具栏开始拖动时
-                this.floatTools.oldTop = e.pageY
-            },
-            handleFloatToolsTouchStart(e) {
-                //浮动工具栏开始触摸时
-                this.floatTools.oldTop = e.pageY
-                e.preventDefault()
-            },
-            handleFloatToolsDragEnd(e) {
-                //浮动工具栏拖动结束或者手指离开屏幕时
-                this.floatTools.newTop += (e.pageY - this.floatTools.oldTop)
-                if (this.floatTools.newTop < 20)
-                    this.floatTools.newTop = 20
-                e.preventDefault()
             },
             getAlbum() {
                 //获取指定的影集信息
@@ -454,30 +479,29 @@
                         call_mode: this.callMode,
                         album_uuid: this.albumUUID,
                         people_uuid: this.peopleUUID,
+                        page: this.photos.page,
+                        pagesize: this.photos.pageSize,
                     }
                 }).then(response => {
-                    this.photoList = response.data
+                    this.photos.total = response.data.total  //总照片数
+                    this.photos.pages = Math.ceil(this.photos.total / this.photos.pageSize)  //总页数
+                    let tempPhotoList = response.data.list
                     //为照片列表增加分组信息
-                    for (let index in this.photoList) {
-                        this.photoList[index]['timestamp'] = this.getGroupLabel(this.photoList[index]['exif_datetime'])
+                    for (let index in tempPhotoList) {
+                        tempPhotoList[index]['timestamp'] = this.getGroupLabel(tempPhotoList[index]['exif_datetime'])
                     }
+                    this.photos.photoList.push.apply(this.photos.photoList, tempPhotoList)
                     this.creatPhotoGroup()  //创建照片分组
-                    //从vuex中读取上次选中的照片列表
-                    let lastCheckList = this.$store.state.photoCheckList
-                    if (lastCheckList.length > 0) {
-                        this.checkList = lastCheckList
-                        this.$store.commit('setPhotoCheckList', {'checkList': []})
-                    }
+
                     // 当没有照片时显示上传提示
-                    this.isShowTips = this.photoList.length === 0
-                    //照片读取完成后，将store.js中的refreshPhoto值重置为false
-                    this.$store.commit('refreshPhoto', {show: false})
+                    this.isShowTips = this.photos.photoList.length === 0
+                    this.photos.isLoading = false  //重置加载状态
                 })
             },
             creatPhotoGroup() {
                 //将照片列表转换成时间线要求的分组格式
                 let dataMap = []
-                for (let d of this.photoList) {
+                for (let d of this.photos.photoList) {
                     let findData = dataMap.find(t => t.timestamp === this.getGroupLabel(d['exif_datetime']))
                     if (!findData)
                         dataMap.push({'timestamp': this.getGroupLabel(d['exif_datetime']), 'list': [d]})
@@ -488,17 +512,21 @@
             },
             showPreview(uuid) {
                 //显示大图预览
-                //记录当前选中的列表，便于从预览页面返回时重新将其选中
-                this.$store.commit('setPhotoCheckList', {'checkList': this.checkList})
-                this.$router.push({
-                    name: 'photo',
-                    params: {
-                        uuid: uuid,
-                        callMode: this.callMode,
-                        albumUUID: this.albumUUID,
-                        peopleUUID: this.peopleUUID,
-                    }
-                })
+                this.previewPhotoUUID = uuid
+                this.isShowPreview = true
+                // 隐藏滚动条
+                document.getElementsByTagName('body')[0].classList.add("el-popup-parent--hidden")
+                if (['pick', 'cover', 'feature'].indexOf(this.callMode) === -1) {
+                    this.deviceSupportUninstall()  //卸载键盘按键支持
+                }
+            },
+            closePreview() {
+                //关闭大图预览
+                this.isShowPreview = false
+                document.getElementsByTagName('body')[0].classList.remove("el-popup-parent--hidden")
+                if (['pick','cover','feature'].indexOf(this.callMode) === -1) {
+                    this.deviceSupportInstall()  //注册键盘按键支持
+                }
             },
             clickImage(uuid, timestamp) {
                 //点击照片时发生，按下shift等修饰键时不会触发单击事件
@@ -592,23 +620,23 @@
                 if (e.target.tagName === 'SPAN') return  //因为原生click事件会执行两次，第一次在label标签上，第二次在input标签上，故此处理
                 //当起始照片uuid不存在时，不执行连续选择操作
                 if (this.lastSelectedUUID != null) {
-                    let startIdx = this.photoList.findIndex(t => t.uuid === this.lastSelectedUUID)
-                    let endIdx = this.photoList.findIndex(t => t.uuid === uuid)
+                    let startIdx = this.photos.photoList.findIndex(t => t.uuid === this.lastSelectedUUID)
+                    let endIdx = this.photos.photoList.findIndex(t => t.uuid === uuid)
                     let startIndex = endIdx > startIdx ? startIdx : endIdx
                     let endIndex = endIdx > startIdx ? endIdx : startIdx
                     if (this.checkList.indexOf(uuid) === -1) {  //当前照片处于未选中状态，执行连续选中操作
                         for (let i = startIndex; i <= endIndex; i++) {
-                            if (this.checkList.indexOf(this.photoList[i].uuid) === -1) {
-                                this.checkList.push(this.photoList[i].uuid)
-                                this.selectPhoto(this.photoList[i].uuid, this.photoList[i].timestamp)  //触发照片选择事件
+                            if (this.checkList.indexOf(this.photos.photoList[i].uuid) === -1) {
+                                this.checkList.push(this.photos.photoList[i].uuid)
+                                this.selectPhoto(this.photos.photoList[i].uuid, this.photos.photoList[i].timestamp)  //触发照片选择事件
                             }
                         }
                     } else {  //当前照片处于选中状态，执行连续取消选中操作
                         for (let i = startIndex; i <= endIndex; i++) {
-                            let idx = this.checkList.indexOf(this.photoList[i].uuid)
+                            let idx = this.checkList.indexOf(this.photos.photoList[i].uuid)
                             if (idx !== -1) {
                                 this.checkList.splice(idx, 1)
-                                this.selectPhoto(this.photoList[i].uuid, this.photoList[i].timestamp)  //触发照片选择事件
+                                this.selectPhoto(this.photos.photoList[i].uuid, this.photos.photoList[i].timestamp)  //触发照片选择事件
                             }
                         }
                     }
@@ -688,12 +716,12 @@
                         }
                     }).then(() => {
                         let msg = this.checkList.length + ' 张照片已从影集 [' + this.albumName + '] 中移除'
-                        this.unselectPhoto()
                         this.$message({
                             message: msg,
                             type: 'success',
                         })
-                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                        this.$store.commit('refreshPhoto', {action: 'delete', list: this.checkList})
+                        this.unselectPhoto()
                     })
                 }).catch(() => {
                     this.deviceSupportInstall()
@@ -716,13 +744,13 @@
                         }
                     }).then(() => {
                         let msg = '已将' + this.checkList.length + ' 张照片移到回收站'
-                        this.unselectPhoto()
                         this.$message({
                             message: msg,
                             type: 'success',
                         })
-                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                        this.$store.commit('refreshPhoto', {action: 'delete', list: this.checkList})
                         this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
+                        this.unselectPhoto()
                     })
                 }).catch(() => {
                     this.deviceSupportInstall()
@@ -745,13 +773,13 @@
                         }
                     }).then(() => {
                         let msg = this.checkList.length + ' 张照片成功恢复'
-                        this.unselectPhoto()
                         this.$message({
                             message: msg,
                             type: 'success',
                         })
-                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                        this.$store.commit('refreshPhoto', {action: 'delete', list: this.checkList})
                         this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
+                        this.unselectPhoto()
                     })
                 }).catch(() => {
                     this.deviceSupportInstall()
@@ -774,12 +802,12 @@
                         }
                     }).then(() => {
                         let msg = this.checkList.length + ' 张照片成功删除'
-                        this.unselectPhoto()
                         this.$message({
                             message: msg,
                             type: 'success',
                         })
-                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                        this.$store.commit('refreshPhoto', {action: 'delete', list: this.checkList})
+                        this.unselectPhoto()
                     })
                 }).catch(() => {
                     this.deviceSupportInstall()
@@ -811,7 +839,7 @@
                         //获取选中照片中包含的位置列表
                         this.photoLocationList = []
                         for (let uuid of this.checkList) {
-                            let photo = this.photoList.find(t => t.uuid === uuid)
+                            let photo = this.photos.photoList.find(t => t.uuid === uuid)
                             if (photo && photo.address__address) {
                                 let address = photo.address__address
                                 if (photo.address__poi_name) {
@@ -838,12 +866,16 @@
                     }
                 }).then(() => {
                     let msg = '已将' + this.checkList.length + ' 张照片添加到收藏夹'
-                    this.unselectPhoto()
                     this.$message({
                         message: msg,
                         type: 'success',
                     })
-                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                    //更新前端列表
+                    for (let item of this.checkList) {
+                        let photo = this.photos.photoList.find(t => t.uuid === item)
+                        photo.is_favorited = true
+                    }
+                    this.unselectPhoto()
                 })
             },
             removeFromFavorites() {
@@ -856,12 +888,21 @@
                     }
                 }).then(() => {
                     let msg = '已将' + this.checkList.length + ' 张照片从收藏夹中移除'
-                    this.unselectPhoto()
                     this.$message({
                         message: msg,
                         type: 'success',
                     })
-                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                    if (this.callMode === 'favorites') {
+                        this.$store.commit('refreshPhoto', {action: 'delete', list: this.checkList})
+                    }
+                    else {
+                        //更新前端列表
+                        for (let item of this.checkList) {
+                            let photo = this.photos.photoList.find(t => t.uuid === item)
+                            photo.is_favorited = false
+                        }
+                    }
+                    this.unselectPhoto()
                 })
             },
             showModifyDateTime() {
@@ -869,7 +910,7 @@
                 this.deviceSupportUninstall()  //卸载键盘按键支持，避免与dialog的esc关闭冲突
                 if (this.checkList.length > 0) {
                     let uuid = this.checkList[0]
-                    let photo = this.photoList.find(t => t.uuid === uuid)
+                    let photo = this.photos.photoList.find(t => t.uuid === uuid)
                     this.photoDateTime = photo.exif_datetime
                 }
                 this.isShowModifyDateTimeDialog = true
@@ -893,12 +934,17 @@
                     }
                 }).then(() => {
                     let msg = '成功将 ' + this.checkList.length + ' 张照片的拍摄时间修改为 ' + this.photoDateTime
-                    this.unselectPhoto()
                     this.$message({
                         message: msg,
                         type: 'success',
                     })
-                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                    //更新前端列表
+                    for (let item of this.checkList) {
+                        let photo = this.photos.photoList.find(t => t.uuid === item)
+                        photo.exif_datetime = this.photoDateTime
+                    }
+                    this.creatPhotoGroup()  //时间变了要重新分组
+                    this.unselectPhoto()
                 })
             },
             getLocationList(query) {
@@ -913,7 +959,13 @@
                         }
                     }).then(response => {
                         this.locationLoading = false
-                        this.locationOptions = response.data
+                        //查询类似于“湖北省”这样的地点时，返回结果中没有经纬度信息，过滤掉
+                        this.locationOptions = []
+                        for (let item of response.data) {
+                            if (item.location) {
+                                this.locationOptions.push(item)
+                            }
+                        }
                     })
                 }
             },
@@ -942,17 +994,22 @@
                     let res = response.data
                     let msg
                     if (res.address) {
-                        msg = '成功将 ' + this.checkList.length + ' 张照片的位置信息修改为 ' + res.address
+                        msg = '成功将 ' + this.checkList.length + ' 张照片的位置信息修改为 ' + res.poi_name
                     }
                     else {
                         msg = '成功删除了 ' + this.checkList.length + ' 张照片的位置信息'
                     }
-                    this.unselectPhoto()
                     this.$message({
                         message: msg,
                         type: 'success',
                     })
-                    this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                    //更新前端列表
+                    for (let item of this.checkList) {
+                        let photo = this.photos.photoList.find(t => t.uuid === item)
+                        photo.address__poi_name = res.poi_name
+                        photo.address__address = res.address
+                    }
+                    this.unselectPhoto()
                 })
             },
             removeFromPeople() {
@@ -974,12 +1031,12 @@
                         }
                     }).then(() => {
                         let msg = '已将' + this.checkList.length + ' 张照片从人物中移除'
-                        this.unselectPhoto()
                         this.$message({
                             message: msg,
                             type: 'success',
                         })
-                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
+                        this.$store.commit('refreshPhoto', {action: 'delete', list: this.checkList})
+                        this.unselectPhoto()
                     })
                 }).catch(() => {
                     this.deviceSupportInstall()
@@ -1209,7 +1266,8 @@
     }
     .div-float-tools {
         position: fixed;
-        right: 20px;
+        margin-left: 10px;
+        bottom: 50px;
         z-index: 1;
     }
     .btn-float-tools { /*照片分组和尺寸工具按钮*/

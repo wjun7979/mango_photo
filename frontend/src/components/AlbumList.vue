@@ -264,7 +264,6 @@
                         }
                     }).then(() => {
                         this.showAlbums()  //刷新影集列表
-                        this.$store.commit('refreshPhoto', {show: true})  //刷新图片列表
                         this.$message({
                             message: '影集 [' + command.name + '] 删除成功',
                             type: 'success',

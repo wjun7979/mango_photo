@@ -16,7 +16,7 @@
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
-            <FaceList callMode="pick" :peopleUUID="peopleUUID" :on-pick="onPick"></FaceList>
+            <FaceList callMode="pick_face" :on-pick="onPick"></FaceList>
         </el-main>
     </el-container>
 </template>
@@ -103,9 +103,9 @@
                             message: msg,
                             type: 'success',
                         })
+                        this.$store.commit('refreshFace', {action: 'delete', list: this.addList})
                         this.addList = []
                         this.$store.commit('cancelSelectFace', {action: true})  //取消已选中的面孔
-                        this.$store.commit('refreshFace', {show: true})  //刷新面孔列表
                     })
                 }).catch(() => {
                 });

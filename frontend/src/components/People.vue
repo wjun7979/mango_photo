@@ -3,17 +3,13 @@
         <el-header class="mp-page-header" height="64px">
             <el-col class="mp-page-header-title" :span="14">
                 <div style="float: left;width: 40px"><i class="el-icon-back mp-page-header-back" @click="$router.back()"></i></div>
-                <div class="people-cover hidden-xs-only" :style="{'background-image':'url('+apiUrl+'/'+people.cover_path+'/'+people.cover_name+')'}"></div>
-                <div class="people-title">{{people.name}}
-                    <span v-if="showType==='photo'">({{people.photos}})</span>
-                    <span v-if="showType==='face'">({{people.faces}})</span>
-                </div>
+                <div class="people-title">{{people.name}}</div>
             </el-col>
             <el-col :span="10" style="text-align: right; padding-right: 20px">
-                <el-button v-if="showType==='face'" icon="el-icon-user-solid" size="small" type="success"
+                <el-button icon="el-icon-user-solid" size="small" type="success"
                            @click="openPick" style="margin: 15px 20px 0 0" class="hidden-mobile-only">确认其他面孔
                 </el-button>
-                <i v-if="showType==='face'" class="iconfont iconzengjiarenwu icon-button hidden-pc-only"
+                <i class="iconfont iconzengjiarenwu icon-button hidden-pc-only"
                    @click="openPick" style="font-size: 32px; margin-top: 15px;"></i>
                 <el-radio-group v-model="showType" size="small" @change="changeShowType" class="hidden-mobile-only"
                                 style="float:right; margin-top: 15px">
@@ -144,22 +140,9 @@
 </script>
 
 <style scoped>
-    .people-cover {  /*人物封面*/
-        float: left;
-        margin-top: 17px;
-        margin-right: 10px;
-        width: 30px;
-        height: 30px;
-        background-color: #80868b;
-        background-size: cover;
-        background-position: center;
-        background-repeat: no-repeat;
-        border-radius: 5px;
-    }
-
     .people-title {
         float: left;
-        width: calc(100% - 80px);
+        width: calc(100% - 40px);
         white-space: nowrap;
         text-overflow: ellipsis;
         overflow: hidden;

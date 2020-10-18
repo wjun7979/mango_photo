@@ -116,7 +116,7 @@
                             <!--叠加特征标志-->
                             <i v-if="face.feature_token" class="el-icon-user-solid face-feature"></i>
                         </div>
-                        <el-dropdown v-if="['photo','album','favorites','people','pick_face'].indexOf(callMode)>-1"
+                        <el-dropdown v-if="['photo','album','favorites','people','pick','pick_face'].indexOf(callMode)>-1"
                                      trigger="click"
                                      placement="bottom-start" @command="faceCommand" style="cursor: pointer">
                             <span class="face-name" v-if="face.people_name">
@@ -150,7 +150,7 @@
                                 </el-dropdown-item>
                             </el-dropdown-menu>
                         </el-dropdown>
-                        <div v-if="['trash','pick','cover','feature'].indexOf(callMode)>-1">
+                        <div v-if="['trash','cover','feature'].indexOf(callMode)>-1">
                             <span class="face-name" v-if="face.people_name">{{face.people_name}}</span>
                             <span class="face-name" v-else>Ta是谁</span>
                         </div>
@@ -354,11 +354,7 @@
         name: "Photo",
         data() {
             return {
-                uuid: this.$route.params.uuid,  //当前点击的照片uuid
-                callMode: this.$route.params.callMode,  //调用模式
-                albumUUID: this.$route.params.albumUUID,  //当调用模式为album时，必须指定影集uuid
                 albumName: '',  //影集标题
-                peopleUUID: this.$route.params.peopleUUID,  //当调用模式为people时，必须指定人物uuid
                 previewListOrder: [],  //大图预览列表
                 index: 0,  //当前预览图编号
                 currentImg: {},  //当前预览图
@@ -400,6 +396,31 @@
                     startTouches: [],  //双指触摸时的起始坐标
                 },
             }
+        },
+        props: {
+            uuid: {
+                type: String
+            },
+            callMode: {  //调用模式
+                type: String,
+                default: 'photo'
+            },
+            photoList: {  //照片列表
+                type: Array,
+                default: () => []
+            },
+            albumUUID: {  //当调用模式为album时，必须指定影集uuid
+                type: String,
+                default: 'none'
+            },
+            peopleUUID: {  //当调用模式为people和feature时，必须指定人物uuid
+                type: String,
+                default: 'none'
+            },
+            onClose: {
+                type: Function,
+                default: () => {}
+            },
         },
         watch: {
             index: {
@@ -453,18 +474,21 @@
             this.getPreviewList()  //获取预览列表
             this.deviceSupportInstall()
             this.$refs['viewer-wrapper'].focus()
+            //防止点击浏览器后退，插入一条空的记录
+            history.pushState(null, null, document.URL)
         },
         beforeDestroy() {
             this.deviceSupportUninstall()  //卸载键盘按键支持
         },
         methods: {
-            deviceSupportInstall() {  //注册键盘按键、鼠标滚动、多点触摸支持
+            deviceSupportInstall() {
+                //注册键盘按键、鼠标滚动、多点触摸支持
                 //键盘按键
                 this._keyDownHandler = rafThrottle(e => {
                     const keyCode = e.keyCode
                     switch (keyCode) {
                         case 27:  //ESC退出
-                            this.$router.back()
+                            this.onClose()
                             break
                         case 32:  //SPACE切换显示模式:1:1或合适缩放
                             this.toggleMode()
@@ -498,19 +522,29 @@
                         })
                     }
                 })
+                //点击浏览器后退按钮时，关闭大图预览
+                this._backHandler = rafThrottle(() => {
+                    this.onClose()
+                })
                 on(document, 'keydown', this._keyDownHandler)
                 on(this.$refs.img, mousewheelEventName, this._mouseWheelHandler)
+                on(window, 'popstate', this._backHandler)
             },
-            deviceSupportUninstall() {  //卸载键盘按键和鼠标滚动支持
+            deviceSupportUninstall() {
+                //卸载键盘按键和鼠标滚动支持
                 off(document, 'keydown', this._keyDownHandler)
                 off(this.$refs.img, mousewheelEventName, this._mouseWheelHandler)
+                off(window, 'popstate', this._backHandler)
                 this._keyDownHandler = null
                 this._mouseWheelHandler = null
+                this._backHandler = null
             },
-            handleImgLoad() {  //图片加载完毕时
+            handleImgLoad() {
+                //图片加载完毕时
                 this.loading = false;
             },
-            handleImgError(e) {  //图片加载失败时
+            handleImgError(e) {
+                //图片加载失败时
                 this.loading = false;
                 e.target.alt = '加载失败';
             },
@@ -626,31 +660,16 @@
                 this.reset();
             },
             close() {
-                this.$router.back()
+                history.back()  //清除之前为了防止页面后退而加入的空历史
+                this.onClose()
             },
             prev() {  //上一张
                 const len = this.previewListOrder.length;
                 this.index = (this.index - 1 + len) % len;
-                this.$router.replace({
-                    name: 'photo',
-                    params: {
-                        uuid: this.previewListOrder[this.index].uuid,
-                        callMode: this.callMode,
-                        albumUUID: this.albumUUID
-                    }
-                })
             },
             next() {  //下一张
                 const len = this.previewListOrder.length;
                 this.index = (this.index + 1) % len;
-                this.$router.replace({
-                    name: 'photo',
-                    params: {
-                        uuid: this.previewListOrder[this.index].uuid,
-                        callMode: this.callMode,
-                        albumUUID: this.albumUUID
-                    }
-                })
             },
             handleActions(action, options = {}) {  //对图片进行缩放和旋转操作
                 if (this.loading) return;
@@ -689,6 +708,12 @@
                             this.previewListOrder[this.index].name = res.file_name
                             this.previewListOrder[this.index].url = this.apiUrl + '/' + res.path_thumbnail_l + '/' + res.file_name
                             this.reset()
+                            //更新前端列表
+                            let photo = this.photoList.find(t => t.uuid === this.currentImg.uuid)
+                            photo.name = res.file_name
+                            photo.width = res.width
+                            photo.height = res.height
+                            this.$store.commit('refreshPhoto', {action: 'update', list: photo, refreshPhotoGroup: false})
                         })
                         break;
                     case 'clocelise':  //右旋转
@@ -705,6 +730,12 @@
                             this.previewListOrder[this.index].name = res.file_name
                             this.previewListOrder[this.index].url = this.apiUrl + '/' + res.path_thumbnail_l + '/' + res.file_name
                             this.reset()
+                            //更新前端列表
+                            let photo = this.photoList.find(t => t.uuid === this.currentImg.uuid)
+                            photo.name = res.file_name
+                            photo.width = res.width
+                            photo.height = res.height
+                            this.$store.commit('refreshPhoto', {action: 'update', list: photo, refreshPhotoGroup: false})
                         })
                         break;
                 }
@@ -724,38 +755,25 @@
                 })
             },
             getPreviewList() {
-                //获取预览列表
-                this.$axios({
-                    method: 'get',
-                    url: this.apiUrl + '/api/photo_list',
-                    params: {
-                        userid: localStorage.getItem('userid'),
-                        call_mode: this.callMode,
-                        album_uuid: this.albumUUID,
-                        people_uuid: this.peopleUUID,
-                    }
-                }).then(response => {
-                    let photoList = response.data
-                    // 生成大图预览列表
-                    let previewList = []
-                    for (let item of photoList) {
-                        previewList.push({
-                            'uuid': item.uuid,
-                            'name': item.name,
-                            'url': this.apiUrl + '/' + item.path_thumbnail_l + '/' + item.name,
-                            'comments': item.comments,
-                            'is_favorited': item.is_favorited,
-                        })
-                    }
-                    let index = previewList.findIndex(t => t.uuid === this.uuid)  //获取即将预览的照片索引
-                    //根据索引对预览数组重新排序
-                    this.previewListOrder = previewList.slice(index).concat(previewList.slice(0, index))
-                    this.currentImg = this.previewListOrder[0]
-                    //如果用户上一次操作时，信息侧边栏是打开状态的，则恢复它
-                    if (this.infoSideStatus) {
-                        this.showInfo()
-                    }
-                })
+                // 生成大图预览列表
+                let previewList = []
+                for (let item of this.photoList) {
+                    previewList.push({
+                        'uuid': item.uuid,
+                        'name': item.name,
+                        'url': this.apiUrl + '/' + item.path_thumbnail_l + '/' + item.name,
+                        'comments': item.comments,
+                        'is_favorited': item.is_favorited,
+                    })
+                }
+                let index = previewList.findIndex(t => t.uuid === this.uuid)  //获取即将预览的照片索引
+                //根据索引对预览数组重新排序
+                this.previewListOrder = previewList.slice(index).concat(previewList.slice(0, index))
+                this.currentImg = this.previewListOrder[0]
+                //如果用户上一次操作时，信息侧边栏是打开状态的，则恢复它
+                if (this.infoSideStatus) {
+                    this.showInfo()
+                }
             },
             showModify() {  //显示修改侧边栏
                 this.isShowInfoSide = false
@@ -853,6 +871,10 @@
                         type: 'success',
                     })
                     this.currentImg.is_favorited = true
+                    //更新前端列表
+                    let photo = this.photoList.find(t => t.uuid === this.currentImg.uuid)
+                    photo.is_favorited = true
+                    this.$store.commit('refreshPhoto', {action: 'update', list: photo, refreshPhotoGroup: false})
                 })
             },
             removeFromFavorites() {
@@ -869,6 +891,30 @@
                         type: 'success',
                     })
                     this.currentImg.is_favorited = false
+                    if (this.callMode === 'favorites') {
+                        let photo_uuid = this.currentImg.uuid
+                        this.$store.commit('refreshPhoto', {action: 'delete', list: [photo_uuid]})
+                        //从当前预览列表中移除当前照片
+                        this.previewListOrder.splice(this.index, 1)
+                        if (this.previewListOrder.length > 0) {
+                            if (this.index > this.previewListOrder.length - 1)
+                                this.index = 0
+                            this.currentImg = this.previewListOrder[this.index]
+                            if (this.isShowInfoSide) {
+                                this.getPhotoInfo()  //重新获取照片详细信息
+                                this.getPhotoAlbums()  //重新获取照片所属的影集列表
+                                this.getPhotoFaces()  //重新获取照片中的人物
+                            }
+                        }
+                        else
+                            this.close()  //否则关闭预览
+                    }
+                    else {
+                        //更新前端列表
+                        let photo = this.photoList.find(t => t.uuid === this.currentImg.uuid)
+                        photo.is_favorited = false
+                        this.$store.commit('refreshPhoto', {action: 'update', list: photo, refreshPhotoGroup: false})
+                    }
                 })
             },
             handCommand(command) {
@@ -969,6 +1015,8 @@
                             message: msg,
                             type: 'success',
                         })
+                        let photo_uuid = this.currentImg.uuid
+                        this.$store.commit('refreshPhoto', {action: 'delete', list: [photo_uuid]})
                         //从当前预览列表中移除当前照片
                         this.previewListOrder.splice(this.index, 1)
                         if (this.previewListOrder.length > 0) {
@@ -1009,6 +1057,8 @@
                             message: msg,
                             type: 'success',
                         })
+                        let photo_uuid = this.currentImg.uuid
+                        this.$store.commit('refreshPhoto', {action: 'delete', list: [photo_uuid]})
                         //从当前预览列表中移除当前照片
                         this.previewListOrder.splice(this.index, 1)
                         if (this.previewListOrder.length > 0) {
@@ -1070,6 +1120,8 @@
                             message: msg,
                             type: 'success',
                         })
+                        let photo_uuid = this.currentImg.uuid
+                        this.$store.commit('refreshPhoto', {action: 'delete', list: [photo_uuid]})
                         //从当前预览列表中移除当前照片
                         this.previewListOrder.splice(this.index, 1)
                         if (this.previewListOrder.length > 0) {
@@ -1103,6 +1155,8 @@
                         message: msg,
                         type: 'success',
                     })
+                    let photo_uuid = this.currentImg.uuid
+                    this.$store.commit('refreshPhoto', {action: 'delete', list: [photo_uuid]})
                     //从当前预览列表中移除当前照片
                     this.previewListOrder.splice(this.index, 1)
                     if (this.previewListOrder.length > 0) {
@@ -1148,6 +1202,10 @@
                                         type: 'success',
                                     })
                                 }
+                                //更新前端列表
+                                let photo = this.photoList.find(t => t.uuid === this.currentImg.uuid)
+                                photo.comments = instance.inputValue
+                                this.$store.commit('refreshPhoto', {action: 'update', list: photo, refreshPhotoGroup: false})
                             })
                         }
                         this.deviceSupportInstall()  //恢复键盘按键支持
@@ -1186,6 +1244,10 @@
                         message: msg,
                         type: 'success',
                     })
+                    //更新前端列表
+                    let photo = this.photoList.find(t => t.uuid === this.currentImg.uuid)
+                    photo.exif_datetime = this.photoDateTime
+                    this.$store.commit('refreshPhoto', {action: 'update', list: photo, refreshPhotoGroup: true})
                 })
             },
             showModifyLocation(){
@@ -1220,7 +1282,13 @@
                         }
                     }).then(response => {
                         this.locationLoading = false
-                        this.locationOptions = response.data
+                        //查询类似于“湖北省”这样的地点时，返回结果中没有经纬度信息，过滤掉
+                        this.locationOptions = []
+                        for (let item of response.data) {
+                            if (item.location) {
+                                this.locationOptions.push(item)
+                            }
+                        }
                     })
                 }
             },
@@ -1259,6 +1327,11 @@
                         message: msg,
                         type: 'success',
                     })
+                    //更新前端列表
+                    let photo = this.photoList.find(t => t.uuid === this.currentImg.uuid)
+                    photo.address__poi_name = res.poi_name
+                    photo.address__address = res.address
+                    this.$store.commit('refreshPhoto', {action: 'update', list: photo, refreshPhotoGroup: false})
                 })
             },
             beforeFaceCommand(uuid, people_uuid, command) {
@@ -1293,7 +1366,7 @@
                         this.setPeopleCover(command.uuid, command.people_uuid)
                         break
                     case 'removeFace':  //删除面孔
-                        this.removeFace(command.uuid)
+                        this.removeFace(command.uuid, command.people_uuid)
                         break
                 }
             },
@@ -1347,11 +1420,38 @@
                         face_list: [uuid],
                     }
                 }).then(() => {
-                    this.getPhotoFaces()
                     this.$message({
                         message: '成功清除了人物姓名',
                         type: 'success',
                     })
+                    //在人物影集下，清除当前人物的姓名就是删除照片，但前提条件是该人物在当前照片中没有其它的面孔了
+                    if (this.callMode === 'people') {
+                        let hasMoreFace = false
+                        for (let face of this.photoFaces) {
+                            if (face.uuid !== uuid && face.people_uuid === this.peopleUUID) {
+                                hasMoreFace = true
+                            }
+                        }
+                        if (!hasMoreFace) {
+                            let photo_uuid = this.currentImg.uuid
+                            this.$store.commit('refreshPhoto', {action: 'delete', list: [photo_uuid]})
+                            //从当前预览列表中移除当前照片
+                            this.previewListOrder.splice(this.index, 1)
+                            if (this.previewListOrder.length > 0) {
+                                if (this.index > this.previewListOrder.length - 1)
+                                    this.index = 0
+                                this.currentImg = this.previewListOrder[this.index]
+                                if (this.isShowInfoSide) {
+                                    this.getPhotoInfo()  //重新获取照片详细信息
+                                    this.getPhotoAlbums()  //重新获取照片所属的影集列表
+                                    this.getPhotoFaces()  //重新获取照片中的人物
+                                }
+                            } else
+                                this.close()  //否则关闭预览
+                        }
+                        this.$store.commit('refreshFace', {action: 'delete', list: [uuid]})
+                    }
+                    this.getPhotoFaces()
                 })
             },
             addPeopleFeature(uuid) {
@@ -1368,6 +1468,12 @@
                         message: '成功添加了人物特征',
                         type: 'success',
                     })
+                    //更新前端列表
+                    if (this.callMode === 'people') {
+                        let face = this.photoFaces.find(t => t.uuid === uuid)
+                        face.feature_token = 'feature'  //这里填一个占位符即可，不用等待后台返回真实的token
+                        this.$store.commit('refreshFace', {action: 'update', list: face})
+                    }
                 })
             },
             removePeopleFeature(uuid) {
@@ -1384,6 +1490,12 @@
                         message: '成功删除了人物特征',
                         type: 'success',
                     })
+                    //更新前端列表
+                    if (this.callMode === 'people') {
+                        let face = this.photoFaces.find(t => t.uuid === uuid)
+                        face.feature_token = ''
+                        this.$store.commit('refreshFace', {action: 'update', list: face})
+                    }
                 })
             },
             setPeopleCover(uuid, people_uuid) {
@@ -1402,7 +1514,7 @@
                     })
                 })
             },
-            removeFace(uuid) {
+            removeFace(uuid, people_uuid) {
                 this.$confirm('面孔一旦删除将无法恢复', '要删除选中的面孔吗？', {
                     confirmButtonText: '删除',
                     cancelButtonText: '取消',
@@ -1420,6 +1532,38 @@
                             message: '面孔已删除',
                             type: 'success',
                         })
+                        //在人物影集下，删除当前人物的面孔就是删除照片，但前提条件是该人物在当前照片中没有其它的面孔了
+                        if (this.callMode === 'people') {
+                            let hasMoreFace = false
+                            for (let face of this.photoFaces) {
+                                console.log(face.uuid)
+                                console.log(uuid)
+                                console.log(face.people_uuid)
+                                console.log(people_uuid)
+                                if (face.uuid !== uuid && face.people_uuid === this.peopleUUID) {
+                                    hasMoreFace = true
+                                    break
+                                }
+                            }
+                            if (!hasMoreFace) {
+                                let photo_uuid = this.currentImg.uuid
+                                this.$store.commit('refreshPhoto', {action: 'delete', list: [photo_uuid]})
+                                //从当前预览列表中移除当前照片
+                                this.previewListOrder.splice(this.index, 1)
+                                if (this.previewListOrder.length > 0) {
+                                    if (this.index > this.previewListOrder.length - 1)
+                                        this.index = 0
+                                    this.currentImg = this.previewListOrder[this.index]
+                                    if (this.isShowInfoSide) {
+                                        this.getPhotoInfo()  //重新获取照片详细信息
+                                        this.getPhotoAlbums()  //重新获取照片所属的影集列表
+                                        this.getPhotoFaces()  //重新获取照片中的人物
+                                    }
+                                } else
+                                    this.close()  //否则关闭预览
+                            }
+                        }
+                        this.$store.commit('refreshFace', {action: 'delete', list: [uuid]})
                         this.getPhotoFaces()  //刷新人脸列表
                     })
                 }).catch(() => {
@@ -1437,6 +1581,7 @@
         right: 0;
         bottom: 0;
         left: 0;
+        z-index: 10;
     }
     /*遮罩*/
     .viewer-mask {
@@ -1592,7 +1737,7 @@
         position: fixed;
         top: 0;
         right: 0;
-        z-index: 1;
+        z-index: 10;
         width: 360px;
         height: 100%;
         overflow-x: hidden;

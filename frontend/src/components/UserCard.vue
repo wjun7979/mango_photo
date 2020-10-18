@@ -87,6 +87,7 @@
             },
             logout() {
                 //退出登录
+                this.$store.commit('showMenu', {show: false})  //隐藏菜单
                 if (localStorage.getItem('userid')) {
                     localStorage.removeItem('userid')  //清除本地token
                     localStorage.removeItem('token')

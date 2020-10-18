@@ -4,10 +4,7 @@
             <el-col class="mp-page-header-title" :span="14">
                 <div style="float: left;width: 40px"><i class="el-icon-back mp-page-header-back" @click="$router.back()"></i></div>
                 <div class="album-cover hidden-xs-only" :style="{'background-image':'url('+apiUrl+'/'+album.cover_path+'/'+album.cover_name+')'}"></div>
-                <div class="album-title">{{album.name}}
-                    <span class="hidden-xs-only" v-if="album.photos>0">({{album.photos}} 张)</span>
-                    <span class="hidden-sm-and-up" v-if="album.photos>0">({{album.photos}})</span>
-                </div>
+                <div class="album-title">{{album.name}}</div>
             </el-col>
             <el-col :span=10 style="text-align: right">
                 <CreateAlbum buttonText="创建子影集" :parentUUID="albumUUID"></CreateAlbum>

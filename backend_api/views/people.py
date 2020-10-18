@@ -14,6 +14,7 @@ from django.db import transaction
 from django.http import JsonResponse
 from django.db.models import Count, F, Q
 from django.views.decorators.http import require_http_methods
+from django.core.paginator import Paginator
 from backend_api.common.date_encoder import DateEncoder
 from backend_api.models import User, Photo, People, PeopleFace, PeopleFaceExcept
 
@@ -136,8 +137,7 @@ def people_face_detect(userid):
             continue
         finally:
             # 写入Photo表的人脸检测标志
-            photo.is_detect_face = True
-            photo.save()
+            Photo.objects.filter(uuid=photo.uuid).update(is_detect_face=True)
         time.sleep(0.5)  # 暂停一会儿，避免qps超限额
     print('用户' + userid + '的人脸检测任务执行成功...')
     # 执行人脸识别
@@ -408,18 +408,31 @@ def people_set_cover(request):
 @require_http_methods(['GET'])
 def people_get_faces(request):
     """获取面孔列表"""
+    response = {}
     call_mode = request.GET.get('call_mode')
     people_uuid = request.GET.get('people_uuid')
+    page = request.GET.get('page')
+    pagesize = request.GET.get('pagesize')
+
     faces = PeopleFace.objects
     faces = faces.filter(is_delete=False)
     if call_mode == 'people':
         faces = faces.filter(people_uuid=people_uuid)
-    if call_mode == 'pick':
+    if call_mode == 'pick_face':
         faces = faces.filter(people_uuid__isnull=True)
-    faces = faces.values('uuid', 'path_thumbnail', 'name', 'people_uuid', 'photo_uuid', 'feature_token',
+    faces = faces.values('uuid', 'path', 'path_thumbnail', 'name', 'input_date', 'people_uuid', 'photo_uuid',
+                         'feature_token', people_name=F('people_uuid__name'),
                          exif_datetime=F('photo_uuid__exif_datetime'))
     faces = faces.order_by('-exif_datetime')
-    response = json.loads(json.dumps(list(faces), cls=DateEncoder))
+
+    # 分页
+    if page:
+        paginator = Paginator(faces, pagesize)
+        response['total'] = paginator.count
+        faces = paginator.page(page)
+        response['list'] = json.loads(json.dumps(list(faces), cls=DateEncoder))
+    else:
+        response = json.loads(json.dumps(list(faces), cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)
 
 
@@ -446,7 +459,7 @@ def people_remove(request):
             people_uuid = request_data.get('uuid')
 
             # 删除人脸库中已经注册的照片
-            features = PeopleFace.objects.filter(people_uuid=people_uuid, face_token__isnull=False)
+            features = PeopleFace.objects.filter(people_uuid=people_uuid, feature_token__isnull=False)
             for feature in features:
                 baidu_ai_facelib_delete.delay(userid, people_uuid, feature.feature_token)
 
@@ -515,9 +528,9 @@ def baidu_ai_facelib_add(face_uuid):
             if result['error_code'] != 0:  # 接口调用失败
                 raise Exception(str(result['error_code']) + result['error_msg'])  # 抛出异常
             face_token = result['result']['face_token']
-            people_face.feature_token = face_token
-            people_face.feature_ctime = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-            people_face.save()
+            PeopleFace.objects.filter(uuid=face_uuid).update(feature_token=face_token,
+                                                             feature_ctime=time.strftime("%Y-%m-%d %H:%M:%S",
+                                                                                         time.localtime()))
             print('在人脸库中' + people_face.userid.userid + '注册了照片:' + result['result']['face_token'])
             print('暂停5秒等待上传到人脸库的照片生效...')
             time.sleep(5)  # 等待上传到人脸库的照片生效
