@@ -93,7 +93,6 @@
                     cover_name: '',
                 },
                 isShowPreview: false,  //是否显示大图预览
-                previewPhotoUUID: '',  //当前预览的照片
             }
         },
         props: {
@@ -138,6 +137,9 @@
             showPhotoTools() {  //是否始终显示照片上的浮动选择框预览按钮
                 return ['pick_face'].indexOf(this.callMode) > -1 || this.pickFaceMode
             },
+            previewPhotoUUID() {
+                return this.$route.params.photo_uuid  //当前预览的照片
+            },
         },
         watch: {
             refreshFace() {
@@ -181,6 +183,15 @@
                 //将选中的面孔列表传递给上级组件
                 if (this.callMode === 'pick_face') {
                     this.onPick(this.checkList)
+                }
+            },
+            previewPhotoUUID(val) {
+                //当照片uuid变化时，判断是否需要显示大图预览
+                if (val === undefined) {
+                    this.isShowPreview = false
+                }
+                else {
+                    this.isShowPreview = true
                 }
             },
         },
@@ -277,17 +288,18 @@
             },
             showPreview(photo_uuid) {
                 //显示大图预览
-                this.previewPhotoUUID = photo_uuid
-                this.isShowPreview = true
+                this.deviceSupportUninstall()  //卸载键盘按键支持
                 // 隐藏滚动条
                 document.getElementsByTagName('body')[0].classList.add("el-popup-parent--hidden")
-                this.deviceSupportUninstall()  //卸载键盘按键支持
+                this.$router.push({
+                    name: this.$route.name,
+                    params: {photo_uuid: photo_uuid}
+                })
             },
             closePreview() {
                 //关闭大图预览
-                this.isShowPreview = false
-                document.getElementsByTagName('body')[0].classList.remove("el-popup-parent--hidden")
                 this.deviceSupportInstall()  //注册键盘按键支持
+                document.getElementsByTagName('body')[0].classList.remove("el-popup-parent--hidden")
             },
             clickImage(face_uuid, photo_uuid) {
                 //点击照片时发生，按下shift等修饰键时不会触发单击事件

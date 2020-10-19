@@ -106,6 +106,10 @@
                     this.showAlbums()
                 }
             },
+            parentUUID() {
+                //当上级影集uuid变化时，重新载入影集列表
+                this.showAlbums()
+            }
         },
         mounted() {
             this.showAlbums()
@@ -283,7 +287,7 @@
                 //跳转到指定的影集
                 this.$router.push({
                     name: 'album',
-                    params: {uuid: uuid}
+                    params: {album_uuid: uuid}
                 })
             },
         }

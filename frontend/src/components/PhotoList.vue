@@ -265,7 +265,6 @@
                 locationLoading: false,  //位置选择框是否正在从远程获取数据
                 locationOptions: [],  //地点检索的结果
                 isShowPreview: false,  //是否显示大图预览
-                previewPhotoUUID: '',  //当前预览的照片
             }
         },
         props: {
@@ -319,6 +318,9 @@
             },
             showPhotoTools() {  //是否始终显示照片上的浮动选择框预览按钮
                 return ['pick', 'cover', 'feature'].indexOf(this.callMode) > -1  || this.pickPhotoMode
+            },
+            previewPhotoUUID() {
+                return this.$route.params.photo_uuid  //当前预览的照片
             },
         },
         watch: {
@@ -394,6 +396,20 @@
                         this.checkList.push(item)  //将当前影集中的照片默认选中
                     }
                 }
+            },
+            previewPhotoUUID(val) {
+                //当照片uuid变化时，判断是否需要显示大图预览
+                if (val === undefined) {
+                    this.isShowPreview = false
+                }
+                else {
+                    this.isShowPreview = true
+                }
+            },
+            albumUUID() {
+                //当影集uuid变化时，重新载入照片列表
+                this.photos.photoList = []
+                this.showPhotos()
             },
         },
         mounted() {
@@ -512,21 +528,22 @@
             },
             showPreview(uuid) {
                 //显示大图预览
-                this.previewPhotoUUID = uuid
-                this.isShowPreview = true
-                // 隐藏滚动条
-                document.getElementsByTagName('body')[0].classList.add("el-popup-parent--hidden")
                 if (['pick', 'cover', 'feature'].indexOf(this.callMode) === -1) {
                     this.deviceSupportUninstall()  //卸载键盘按键支持
                 }
+                // 隐藏滚动条
+                document.getElementsByTagName('body')[0].classList.add("el-popup-parent--hidden")
+                this.$router.push({
+                    name: this.$route.name,
+                    params: {photo_uuid: uuid}
+                })
             },
             closePreview() {
                 //关闭大图预览
-                this.isShowPreview = false
-                document.getElementsByTagName('body')[0].classList.remove("el-popup-parent--hidden")
                 if (['pick','cover','feature'].indexOf(this.callMode) === -1) {
                     this.deviceSupportInstall()  //注册键盘按键支持
                 }
+                document.getElementsByTagName('body')[0].classList.remove("el-popup-parent--hidden")
             },
             clickImage(uuid, timestamp) {
                 //点击照片时发生，按下shift等修饰键时不会触发单击事件

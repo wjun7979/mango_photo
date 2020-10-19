@@ -4,7 +4,6 @@ import Login from './components/Login'
 import UserInfo from "./components/UserInfo";
 import Main from './components/layout/Main'
 import Photos from "./components/Photos"
-import Photo from "./components/Photo";
 import Albums from "./components/Albums";
 import Album from "./components/Album";
 import PickPhoto from "./components/PickPhoto";
@@ -36,12 +35,12 @@ const routes = [
     {
         path: '/main', component: Main, children: [
             {
-                path: '/photos', name: 'photos', component: Photos, meta: {
+                path: '/photos/:photo_uuid?', name: 'photos', component: Photos, meta: {
                     title: '照片'
                 }
             },
             {
-                path: '/favorites', name: 'favorites', component: Favorites, meta: {
+                path: '/favorites/:photo_uuid?', name: 'favorites', component: Favorites, meta: {
                     title: '收藏夹'
                 }
             },
@@ -51,7 +50,7 @@ const routes = [
                 }
             },
             {
-                path: '/album/:uuid', name: 'album', component: Album, meta: {
+                path: '/album/:album_uuid/:photo_uuid?', name: 'album', component: Album, meta: {
                     title: '影集'
                 }
             },
@@ -61,12 +60,12 @@ const routes = [
                 }
             },
             {
-                path: '/people/:uuid/:type', name: 'people', component: People, meta: {
+                path: '/people/:uuid/:type/:photo_uuid?', name: 'people', component: People, meta: {
                     title: '人物'
                 }
             },
             {
-                path: '/trash', name: 'trash', component: Trash, meta: {
+                path: '/trash/:photo_uuid?', name: 'trash', component: Trash, meta: {
                     title: '回收站'
                 }
             },
@@ -78,27 +77,22 @@ const routes = [
         ]
     },
     {
-        path: '/photo/:uuid/:callMode/:albumUUID/:peopleUUID', name: 'photo', component: Photo, meta: {
-            title: '照片'
-        }
-    },
-    {
-        path: '/pick_photo/:albumUUID', name: 'pick_photo', component: PickPhoto, meta: {
+        path: '/pick_photo/:albumUUID/:photo_uuid?', name: 'pick_photo', component: PickPhoto, meta: {
             title: '添加照片到影集'
         }
     },
     {
-        path: '/pick_cover/:albumUUID', name: 'pick_cover', component: PickCover, meta: {
+        path: '/pick_cover/:albumUUID/:photo_uuid?', name: 'pick_cover', component: PickCover, meta: {
             title: '选择影集封面'
         }
     },
     {
-        path: '/pick_face/:peopleUUID', name: 'pick_face', component: PickFace, meta: {
+        path: '/pick_face/:peopleUUID/:photo_uuid?', name: 'pick_face', component: PickFace, meta: {
             title: '添加面孔到人物'
         }
     },
     {
-        path: '/pick_feature/:peopleUUID', name: 'pick_feature', component: PickFeature, meta: {
+        path: '/pick_feature/:peopleUUID/:photo_uuid?', name: 'pick_feature', component: PickFeature, meta: {
             title: '选择人物特征照片'
         }
     },
@@ -109,18 +103,18 @@ const routes = [
 const router = new VueRouter({
     mode: 'history',
     routes,  //ES6简写，等于routes:routes
-    scrollBehavior(to, from, savedPosition) {
-        //点击浏览器后退按钮时，定位到之前的滚动条位置
-        if (savedPosition) {
-            return new Promise((resolve) => {
-                setTimeout(() => {
-                    resolve(savedPosition)
-                }, 500)
-            })
-        } else {
-            return {x: 0, y: 0}
-        }
-    }
+    // scrollBehavior(to, from, savedPosition) {
+    //     //点击浏览器后退按钮时，定位到之前的滚动条位置
+    //     if (savedPosition) {
+    //         return new Promise((resolve) => {
+    //             setTimeout(() => {
+    //                 resolve(savedPosition)
+    //             }, 500)
+    //         })
+    //     } else {
+    //         return {x: 0, y: 0}
+    //     }
+    // }
 })
 
 //路由拦截

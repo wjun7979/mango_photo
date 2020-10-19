@@ -474,10 +474,9 @@
             this.getPreviewList()  //获取预览列表
             this.deviceSupportInstall()
             this.$refs['viewer-wrapper'].focus()
-            //防止点击浏览器后退，插入一条空的记录
-            history.pushState(null, null, document.URL)
         },
         beforeDestroy() {
+            this.onClose()
             this.deviceSupportUninstall()  //卸载键盘按键支持
         },
         methods: {
@@ -488,7 +487,7 @@
                     const keyCode = e.keyCode
                     switch (keyCode) {
                         case 27:  //ESC退出
-                            this.onClose()
+                            this.close()
                             break
                         case 32:  //SPACE切换显示模式:1:1或合适缩放
                             this.toggleMode()
@@ -522,22 +521,15 @@
                         })
                     }
                 })
-                //点击浏览器后退按钮时，关闭大图预览
-                this._backHandler = rafThrottle(() => {
-                    this.onClose()
-                })
                 on(document, 'keydown', this._keyDownHandler)
                 on(this.$refs.img, mousewheelEventName, this._mouseWheelHandler)
-                on(window, 'popstate', this._backHandler)
             },
             deviceSupportUninstall() {
                 //卸载键盘按键和鼠标滚动支持
                 off(document, 'keydown', this._keyDownHandler)
                 off(this.$refs.img, mousewheelEventName, this._mouseWheelHandler)
-                off(window, 'popstate', this._backHandler)
                 this._keyDownHandler = null
                 this._mouseWheelHandler = null
-                this._backHandler = null
             },
             handleImgLoad() {
                 //图片加载完毕时
@@ -660,16 +652,23 @@
                 this.reset();
             },
             close() {
-                history.back()  //清除之前为了防止页面后退而加入的空历史
-                this.onClose()
+                history.back()
             },
             prev() {  //上一张
-                const len = this.previewListOrder.length;
-                this.index = (this.index - 1 + len) % len;
+                const len = this.previewListOrder.length
+                this.index = (this.index - 1 + len) % len
+                this.$router.replace({
+                    name: this.$route.name,
+                    params: {photo_uuid: this.previewListOrder[this.index].uuid}
+                })
             },
             next() {  //下一张
-                const len = this.previewListOrder.length;
-                this.index = (this.index + 1) % len;
+                const len = this.previewListOrder.length
+                this.index = (this.index + 1) % len
+                this.$router.replace({
+                    name: this.$route.name,
+                    params: {photo_uuid: this.previewListOrder[this.index].uuid}
+                })
             },
             handleActions(action, options = {}) {  //对图片进行缩放和旋转操作
                 if (this.loading) return;

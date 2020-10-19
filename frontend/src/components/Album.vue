@@ -32,7 +32,6 @@
         components: {MoreOption, PhotoList, CreateAlbum},
         data() {
             return {
-                albumUUID: this.$route.params.uuid,  //影集uuid
                 album: {  //影集信息
                     name: '',
                     cover_path: '',
@@ -51,6 +50,9 @@
             refreshPhoto() {
                 return this.$store.state.refreshPhoto  //是否刷新照片列表
             },
+            albumUUID() {
+                return this.$route.params.album_uuid  //当前的影集uuid
+            },
         },
         watch: {
             refreshPhoto() {
@@ -59,6 +61,9 @@
                     this.getAlbum()
                 }
             },
+            albumUUID() {
+                this.getAlbum()
+            }
         },
         mounted() {
             this.getAlbum()

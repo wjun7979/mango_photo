@@ -9,7 +9,7 @@
             </el-aside>
             <el-main class="div-main">
                 <transition name="fade" :duration="{ enter: 1000, leave: 0 }">
-                    <router-view :key="$route.fullPath"></router-view>
+                    <router-view></router-view>
                 </transition>
             </el-main>
         </el-container>
