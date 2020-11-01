@@ -50,7 +50,7 @@
                         const uuid = result.uuid
                         this.$router.push({
                             name: 'album',
-                            params: {uuid: uuid}
+                            params: {album_uuid: uuid}
                         })
                         this.$message({
                             message: '影集 [' + value + '] 创建成功',

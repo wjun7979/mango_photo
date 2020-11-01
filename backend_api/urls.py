@@ -17,6 +17,7 @@ urlpatterns = [
     path('user_upload_avatar', user_upload_avatar),  # 上传用户头像
     path('user_remove_avatar', user_remove_avatar),  # 清除用户头像
     path('photo_list', photo_list),  # 获取照片列表
+    path('photo_get_groups', photo_get_groups),  # 获取照片的分组列表
     path('photo_get_info', photo_get_info),  # 获取指定照片详细信息
     path('photo_get_albums', photo_get_albums),  # 获取指定照片所属的影集列表
     path('photo_statistics', photo_statistics),  # 统计照片数量和占用空间等信息
@@ -32,6 +33,7 @@ urlpatterns = [
     path('photo_unfavorites', photo_unfavorites),  # 取消收藏
     path('photo_get_faces', photo_get_faces),  # 获取指定照片中的人脸列表
     path('photo_rotate', photo_rotate),  # 旋转照片
+    path('photo_query_peoples', photo_query_peoples),  # 查询人物列表
     path('album_list', album_list),  # 获取影集列表
     path('album_target_list', album_target_list),  # 获取影集列表（用于影集移动）
     path('album_get', album_get),  # 获取指定的影集信息

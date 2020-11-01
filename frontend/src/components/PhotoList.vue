@@ -2,16 +2,24 @@
     <div>
         <!--照片分组尺寸快捷工具-->
         <div v-if="photos.photoList.length>0" class="div-float-tools">
-            <el-popover placement="bottom-end">
+            <el-popover placement="top-start">
                 <label>分组：</label>
                 <el-radio-group v-model="groupType" size="small">
                     <el-radio-button label="year">按年</el-radio-button>
                     <el-radio-button label="month">按月</el-radio-button>
                     <el-radio-button label="day">按天</el-radio-button>
                 </el-radio-group>
+                <ul class="photo-groups">
+                    <li v-for="(group,index) of photoGroups" :key="index" @click="filterPhotos(group.exif_datetime)"
+                        :class="{active: dateFilter===group.exif_datetime}">
+                        <span v-if="groupType==='year'">{{$common.dateFormat(group.exif_datetime, 'yyyy年')}}</span>
+                        <span v-if="groupType==='month'">{{$common.dateFormat(group.exif_datetime, 'yyyy年MM月')}}</span>
+                        <span v-if="groupType==='day'">{{$common.dateFormat(group.exif_datetime, 'yyyy年MM月dd日')}}</span>
+                    </li>
+                </ul>
                 <i class="el-icon-menu btn-float-tools" slot="reference"></i>
             </el-popover>
-            <el-popover placement="bottom-end">
+            <el-popover placement="top-start">
                 <label>尺寸：</label>
                 <el-slider v-model="imgHeight" :min="110" :max="300" :show-tooltip="false" style="width: 200px"></el-slider>
                 <i class="el-icon-picture btn-float-tools" slot="reference"></i>
@@ -22,13 +30,15 @@
         <!--当照片列表为空时显示一些提示信息-->
         <div v-if="isShowTips" style="text-align: center; padding-top: 80px">
             <div style="font-size: 18px; font-weight: 400; color: #202124; margin-bottom: 20px">空空如也，没有任何内容。</div>
-            <UploadFile v-if="callMode==='photo'" button-type="primary"></UploadFile>
+            <div>
+                <UploadFile v-if="callMode==='photo'" button-type="primary"></UploadFile>
+            </div>
             <img src="../assets/images/empty.png" alt=""/>
         </div>
         <!--照片列表-->
         <el-checkbox-group v-model="checkGroupList" class="images-wrap"
                            :class="{'show-checkbox': checkList.length > 0}">
-            <el-row v-for="(photoGroup, index) of photoListGroup" :key="index" style="margin-right: 5px">
+            <el-row v-for="(photoGroup, index) of photos.photoListGroup" :key="index" style="margin-right: 5px">
                 <el-checkbox v-if="multiple" class="chk-group" :label="photoGroup.timestamp"
                              @change="selectPhotoGroup(photoGroup.timestamp)">
                 </el-checkbox>
@@ -207,17 +217,9 @@
                     <span>{{address}}</span>
                 </p>
             </div>
-            <el-select v-model="photoLocation" :remote="true" :filterable="true" placeholder="输入地理位置"
-                       :remote-method="getLocationList" :loading="locationLoading" :clearable="true"
-                       @clear="locationOptions=[]"
-                       style="width: 280px">
-                <el-option v-for="item in locationOptions" :key="item.uid"
-                           :label="item.name"
-                           :value="item.location.lat+','+item.location.lng+','+item.name">
-                    <span style="float: left">{{ item.name }}</span>
-                    <span style="float: right; color: #8492a6; font-size: 13px">{{ item.province + item.city + item.district }}</span>
-                </el-option>
-            </el-select>
+            <el-autocomplete v-model="photoLocationName" placeholder="输入地理位置" :fetch-suggestions="getLocationList"
+                             value-key="name" :clearable="true" :trigger-on-focus="true" @select="selectLocation"
+                             @clear="photoLocationValue=''" style="width: 280px"></el-autocomplete>
             <span slot="footer">
                 <el-button v-if="photoLocationList.length>0" type="danger" size="small" @click="modifyLocation">清除位置信息</el-button>
                 <el-button size="small" @click="isShowModifyLocationDialog=false">取消</el-button>
@@ -242,14 +244,16 @@
                 albumName: '',  //当callMode为album时，影集的名称
                 photos: {
                     photoList: [],  //照片列表
+                    photoListGroup: [],  //分组后的照片列表
                     total: 0,  //照片总数
                     page: 1,  //当前页号
                     pages: 1,  //总页数
                     pageSize: 100,  //每页的数量
                     isLoading: false,  //当前是否为加载状态
                 },
+                photoGroups: [],  //当前所有照片的分组列表
+                dateFilter: '',  //当前日期分组过滤的值
                 checkList: [],  //选中的照片列表
-                photoListGroup: [],  //分组后的照片列表
                 isShowTips: false,  //是否显示上传提示
                 groupType: 'month',  //分组类型 day, month, year
                 checkGroupList: [],  //选中的分组列表
@@ -260,7 +264,8 @@
                 isShowModifyDateTimeDialog: false,  //是否显示修改日期时间对话框
                 photoDateTime: null,  //照片的拍摄时间
                 isShowModifyLocationDialog: false,  //是否显示修改位置信息对话框
-                photoLocation: '',  //照片的拍摄地点
+                photoLocationName: '', //照片的拍摄地点（输入框中显示的内容）
+                photoLocationValue: '', //照片的拍摄地点（提交给后台的内容）
                 photoLocationList: [],  //选中照片中包含的位置列表
                 locationLoading: false,  //位置选择框是否正在从远程获取数据
                 locationOptions: [],  //地点检索的结果
@@ -408,8 +413,9 @@
             },
             albumUUID() {
                 //当影集uuid变化时，重新载入照片列表
-                this.photos.photoList = []
-                this.showPhotos()
+                window.scrollTo(0,0)
+                this.dateFilter = ''
+                this.reloadPhotos()
             },
         },
         mounted() {
@@ -457,8 +463,8 @@
             },
             listenScroll() {
                 //监听滚动事件，实现滚动加载
-                let bottomOfWindow = document.documentElement.offsetHeight - document.documentElement.scrollTop - window.innerHeight <= 20
-                if (bottomOfWindow && this.photos.isLoading === false) {
+                let bottomOfWindow = document.documentElement.offsetHeight - document.documentElement.scrollTop - window.innerHeight
+                if (bottomOfWindow >= 0 && bottomOfWindow <= 20 && this.photos.isLoading === false) {
                     this.photos.isLoading = true  //当前正处于加载状态
                     if (this.photos.page < this.photos.pages) {
                         this.photos.page ++
@@ -485,7 +491,7 @@
                     this.albumName = result.name
                 })
             },
-            showPhotos() {
+            showPhotos(scrollToDivider = false) {
                 //获取并显示照片列表
                 this.$axios({
                     method: 'get',
@@ -495,6 +501,8 @@
                         call_mode: this.callMode,
                         album_uuid: this.albumUUID,
                         people_uuid: this.peopleUUID,
+                        group_type: this.groupType,
+                        date_filter: this.dateFilter,
                         page: this.photos.page,
                         pagesize: this.photos.pageSize,
                     }
@@ -502,17 +510,69 @@
                     this.photos.total = response.data.total  //总照片数
                     this.photos.pages = Math.ceil(this.photos.total / this.photos.pageSize)  //总页数
                     let tempPhotoList = response.data.list
-                    //为照片列表增加分组信息
-                    for (let index in tempPhotoList) {
-                        tempPhotoList[index]['timestamp'] = this.getGroupLabel(tempPhotoList[index]['exif_datetime'])
+                    if (tempPhotoList.length > 0) {
+                        //为照片列表增加分组信息
+                        for (let index in tempPhotoList) {
+                            tempPhotoList[index]['timestamp'] = this.getGroupLabel(tempPhotoList[index]['exif_datetime'])
+                        }
+                        this.photos.photoList.push.apply(this.photos.photoList, tempPhotoList)
+                        this.creatPhotoGroup()  //创建照片分组
+                        //列表载入成功后，是否需要滚动到子影集列表的下面
+                        if (scrollToDivider) {
+                            this.$nextTick(() => {
+                                let divider = document.getElementById('album_divider')
+                                if (divider !== null) {
+                                    let rect = divider.getBoundingClientRect()  //返回元素的大小及其相对于窗口的位置
+                                    let top = window.pageYOffset + rect.top  //获取元素相对窗口的top值，此处应加上窗口本身的偏移
+                                    //减去页头的高度
+                                    let screenWidth = document.documentElement.clientWidth
+                                    if (screenWidth <= 767)
+                                        top = top - 64
+                                    else
+                                        top = top - 128
+                                    window.scrollTo(0, top)
+                                } else {
+                                    window.scrollTo(0, 0)
+                                }
+                            })
+                        }
                     }
-                    this.photos.photoList.push.apply(this.photos.photoList, tempPhotoList)
-                    this.creatPhotoGroup()  //创建照片分组
-
                     // 当没有照片时显示上传提示
                     this.isShowTips = this.photos.photoList.length === 0
                     this.photos.isLoading = false  //重置加载状态
                 })
+            },
+            reloadPhotos(scrollToDivider = false) {
+                //重新载入照片列表
+                this.photos.isLoading = true  //当前正处于加载状态
+                this.photos.photoList = []
+                this.photos.photoListGroup = []
+                this.photoGroups = []
+                this.checkList = []
+                this.photos.page = 1
+                this.showPhotos(scrollToDivider)
+            },
+            getPhotoGroups() {
+                //获取照片的分组列表
+                this.photoGroups = []
+                this.$axios({
+                    method: 'get',
+                    url: this.apiUrl + '/api/photo_get_groups',
+                    params: {
+                        group_type: this.groupType,
+                        userid: localStorage.getItem('userid'),
+                        call_mode: this.callMode,
+                        album_uuid: this.albumUUID,
+                        people_uuid: this.peopleUUID,
+                    }
+                }).then(response => {
+                    this.photoGroups = response.data
+                })
+            },
+            filterPhotos(val) {
+                //按照分组日期对照片进行过滤
+                this.dateFilter = val
+                this.reloadPhotos(true)
             },
             creatPhotoGroup() {
                 //将照片列表转换成时间线要求的分组格式
@@ -524,7 +584,8 @@
                     else
                         findData.list.push(d)
                 }
-                this.photoListGroup = dataMap
+                this.photos.photoListGroup = dataMap
+                this.getPhotoGroups()  //获取照片的分组列表
             },
             showPreview(uuid) {
                 //显示大图预览
@@ -590,7 +651,7 @@
             },
             selectPhotoGroup(timestamp) {
                 //按组选择照片时
-                let photoGroup = this.photoListGroup.find(t => t.timestamp === timestamp)
+                let photoGroup = this.photos.photoListGroup.find(t => t.timestamp === timestamp)
                 let timeStamp = photoGroup.timestamp
                 let photos = photoGroup.list
                 for (let item of photos) {
@@ -608,7 +669,7 @@
             },
             selectPhoto(uuid, timestamp) {
                 //选择照片时，判断分组复选框是否勾选
-                let photoGroup = this.photoListGroup.find(t => t.timestamp === timestamp)
+                let photoGroup = this.photos.photoListGroup.find(t => t.timestamp === timestamp)
                 let timeStamp = photoGroup.timestamp
                 let photos = photoGroup.list
                 let tmpArr = []
@@ -850,7 +911,8 @@
                         break
                     case 'modify_location':
                         this.deviceSupportUninstall()  //卸载键盘按键支持，避免与dialog的esc关闭冲突
-                        this.photoLocation = ''
+                        this.photoLocationName = ''
+                        this.photoLocationValue = ''
                         this.locationOptions = []
                         this.isShowModifyLocationDialog = true
                         //获取选中照片中包含的位置列表
@@ -964,7 +1026,7 @@
                     this.unselectPhoto()
                 })
             },
-            getLocationList(query) {
+            getLocationList(query, cb) {
                 //根据用户输入的关键字返回位置列表
                 if (query !== '') {
                     this.locationLoading = true
@@ -980,17 +1042,26 @@
                         this.locationOptions = []
                         for (let item of response.data) {
                             if (item.location) {
+                                item.name = item.name + '(' + item.province + item.city + item.district + ')'
                                 this.locationOptions.push(item)
                             }
                         }
+                        cb(this.locationOptions)
                     })
                 }
+                else {
+                    cb([])
+                }
+            },
+            selectLocation(item) {
+                //选择位置
+                this.photoLocationValue = item.location.lat+','+item.location.lng+','+item.name
             },
             checkLocation() {
                 //检查输入的位置信息
-                if (this.photoLocation === '') {
+                if (this.photoLocationName === '' || this.photoLocationValue === '') {
                     this.$message({
-                        message: '请输入正确的地理位置',
+                        message: '请输入并选择正确的地理位置',
                         type: 'error',
                     })
                     return false
@@ -1005,7 +1076,7 @@
                     url: this.apiUrl + '/api/photo_set_location',
                     data: {
                         photo_list: this.checkList,
-                        location: this.photoLocation,
+                        location: this.photoLocationValue,
                     }
                 }).then(response => {
                     let res = response.data
@@ -1294,6 +1365,24 @@
         background-color: #ecf5ff;
         border-radius: 50%;
         cursor: pointer;
+    }
+    .photo-groups {  /*照片的分组列表*/
+        width: 208px;
+        height: 250px;
+        margin: 15px 0;
+        overflow: auto;
+        list-style: none;
+    }
+    .photo-groups li {
+        float: left;
+        padding: 0 5px;
+        margin-right: 10px;
+        line-height: 30px;
+        cursor: pointer;
+    }
+    .photo-groups .active {
+        background-color: #409EFF;
+        color: #fff;
     }
     .album-tree { /*影集树*/
         height: 300px;

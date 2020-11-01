@@ -25,7 +25,7 @@ def album_list(request):
         min_time=Min('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
     albums = albums.annotate(
         max_time=Max('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
-    albums = albums.order_by('input_date')
+    albums = albums.order_by('-max_time')
 
     response = json.loads(json.dumps(list(albums), cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)
@@ -48,7 +48,7 @@ def album_target_list(request):
         min_time=Min('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
     albums = albums.annotate(
         max_time=Max('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
-    albums = albums.order_by('name')
+    albums = albums.order_by('-max_time')
 
     response = json.loads(json.dumps(list(albums), cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)

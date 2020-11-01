@@ -3,6 +3,8 @@ import json
 import traceback
 import requests  # 调用api
 import uuid
+from datetime import datetime, timedelta
+from dateutil.relativedelta import relativedelta
 from PIL import Image  # 图像处理
 from django.db import transaction
 from django.db.models import Count, Sum, Q, F, Min, Max
@@ -24,6 +26,8 @@ def photo_list(request):
     userid = request.GET.get('userid')
     album_uuid = request.GET.get('album_uuid')
     people_uuid = request.GET.get('people_uuid')
+    group_type = request.GET.get('group_type')
+    date_filter = request.GET.get('date_filter')
     page = request.GET.get('page')
     pagesize = request.GET.get('pagesize')
 
@@ -59,6 +63,15 @@ def photo_list(request):
             photos = photos.filter(peopleface__people_uuid__isnull=True, faces__gt=0, peopleface__is_delete=False)
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
+    if date_filter:  # 按日期条件进行过滤
+        if group_type == 'year':
+            photos = photos.filter(
+                exif_datetime__lt=datetime.strptime(date_filter, '%Y-%m-%d') + relativedelta(years=1))
+        if group_type == 'month':
+            photos = photos.filter(
+                exif_datetime__lt=datetime.strptime(date_filter, '%Y-%m-%d') + relativedelta(months=1))
+        if group_type == 'day':
+            photos = photos.filter(exif_datetime__lt=datetime.strptime(date_filter, '%Y-%m-%d') + timedelta(days=1))
     # 排序
     photos = photos.order_by('-exif_datetime')
 
@@ -71,6 +84,57 @@ def photo_list(request):
     else:
         response = json.loads(json.dumps(list(photos), cls=DateEncoder))
     # safe 控制是否只有字典类型的数据才能被序列化，这里的response是一个数组，所以要将safe设置为False
+    return JsonResponse(response, safe=False, status=200)
+
+
+@require_http_methods(['GET'])
+def photo_get_groups(request):
+    """获取照片的分组列表"""
+    group_type = request.GET.get('group_type')
+    call_mode = request.GET.get('call_mode')
+    userid = request.GET.get('userid')
+    album_uuid = request.GET.get('album_uuid')
+    people_uuid = request.GET.get('people_uuid')
+
+    photos = Photo.objects.distinct()
+    if group_type == 'year':
+        photos = photos.extra(select={"exif_datetime": "DATE_FORMAT(exif_datetime, '%%Y-01-01')"})
+    if group_type == 'month':
+        photos = photos.extra(select={"exif_datetime": "DATE_FORMAT(exif_datetime, '%%Y-%%m-01')"})
+    if group_type == 'day':
+        photos = photos.extra(select={"exif_datetime": "DATE_FORMAT(exif_datetime, '%%Y-%%m-%%d')"})
+    photos = photos.values('exif_datetime')
+    # 过滤条件
+    photos = photos.filter(userid=userid)
+    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people', 'feature', 'pick_face']:
+        photos = photos.filter(is_deleted=False)
+        if call_mode == 'album':  # 在影集中调用
+            photos = photos.filter(albumphoto__album_uuid=album_uuid)
+        if call_mode == 'favorites':  # 在收藏夹中调用
+            photos = photos.filter(is_favorited=True)
+        if call_mode == 'cover':  # 在设置影集封面中调用
+            albums = Album.objects.raw('''
+                WITH RECURSIVE tmp_albums AS (
+                    SELECT uuid AS rootId FROM m_album WHERE uuid= %s
+                    UNION ALL
+                    SELECT uuid FROM m_album a,tmp_albums b WHERE a.parent_uuid = b.rootId
+                )
+                SELECT uuid FROM m_album WHERE EXISTS(SELECT uuid FROM tmp_albums WHERE rootId = uuid)
+            ''', [album_uuid])
+            photos = photos.filter(albumphoto__album_uuid__in=albums)
+        if call_mode == 'people':  # 在人物中调用
+            photos = photos.filter(peopleface__people_uuid=people_uuid)
+        if call_mode == 'feature':  # 在选择人物特征中调用，只显示面孔数量为1的照片
+            photos = photos.filter(peopleface__people_uuid=people_uuid, faces=1, peopleface__feature_token__isnull=True,
+                                   peopleface__is_delete=False)
+        if call_mode == 'pick_face':  # 在选择面孔添加到人物中使用
+            photos = photos.filter(peopleface__people_uuid__isnull=True, faces__gt=0, peopleface__is_delete=False)
+    if call_mode == 'trash':  # 在回收站中调用
+        photos = photos.filter(is_deleted=True)
+    # 排序
+    photos = photos.order_by('-exif_datetime')
+
+    response = json.loads(json.dumps(list(photos)))
     return JsonResponse(response, safe=False, status=200)
 
 
@@ -433,3 +497,17 @@ def photo_rotate(request):
     finally:
         if im:
             im.close()
+
+
+@require_http_methods(['GET'])
+def photo_query_peoples(request):
+    """查询人物列表"""
+    userid = request.GET.get('userid')
+    query = request.GET.get('query')
+    peoples = People.objects.filter(userid=userid)
+    if query:
+        peoples = peoples.filter(name__contains=query)
+    peoples = peoples.values('uuid', 'name')
+    peoples = peoples.order_by('name')
+    response = json.loads(json.dumps(list(peoples), cls=DateEncoder))
+    return JsonResponse(response, safe=False, status=200)

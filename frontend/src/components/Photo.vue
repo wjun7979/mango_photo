@@ -284,22 +284,14 @@
         </el-dialog>
         <!--修改位置信息对话框-->
         <el-dialog title="修改位置信息" :visible.sync="isShowModifyLocationDialog" width="320px" top="80px"
-                   :close-on-click-modal="false" @opened="fixSelect" @closed="deviceSupportInstall">
+                   :close-on-click-modal="false" @closed="deviceSupportInstall">
             <p v-if="photoInfo.photo_address" style="margin-bottom: 20px">
                 <span v-if="photoInfo.photo_poi_name">{{photoInfo.photo_poi_name}} - </span>
                 <span>{{photoInfo.photo_address}}</span>
             </p>
-            <el-select ref="location" v-model="photoLocation" :remote="true" :filterable="true" placeholder="输入地理位置"
-                       :remote-method="getLocationList" :loading="locationLoading" :clearable="true"
-                       @clear="locationOptions=[]"
-                       style="width: 280px">
-                <el-option v-for="item in locationOptions" :key="item.uid"
-                           :label="item.name"
-                           :value="item.location.lat+','+item.location.lng+','+item.name">
-                    <span style="float: left">{{ item.name }}</span>
-                    <span style="float: right; color: #8492a6; font-size: 13px">{{ item.province + item.city + item.district }}</span>
-                </el-option>
-            </el-select>
+            <el-autocomplete v-model="photoLocationName" placeholder="输入地理位置" :fetch-suggestions="getLocationList"
+                             value-key="name" :clearable="true" :trigger-on-focus="true" @select="selectLocation"
+                             @clear="photoLocationValue=''" style="width: 280px"></el-autocomplete>
             <span slot="footer">
             <el-button v-if="photoInfo.photo_address" type="danger" size="small"
                        @click="modifyLocation">清除位置信息</el-button>
@@ -310,13 +302,9 @@
         <!--指定人物对话框-->
         <el-dialog title="Ta是谁" :visible.sync="isShowPeopleDialog" width="320px"
                    :close-on-click-modal="false" @closed="deviceSupportInstall">
-            <el-select v-model="currFace.name" filterable allow-create placeholder="请输入人物姓名"
-                       style="width: 270px">
-                <el-option v-for="item in peopleOptions" :key="item.uuid"
-                           :label="item.name"
-                           :value="item.name">
-                </el-option>
-            </el-select>
+            <el-autocomplete v-model="currFace.name" placeholder="请输入人物姓名" :fetch-suggestions="getPeopleList"
+                             value-key="name" :clearable="true" :trigger-on-focus="true"
+                             style="width: 280px"></el-autocomplete>
             <el-checkbox v-if="photoFaces.length===1" v-model="setPeopleFeature" style="margin-top: 20px">
                 <span>同时设为该人物的特征</span>
                 <el-tooltip effect="light" placement="bottom-start" style="margin-left: 10px;">
@@ -378,7 +366,8 @@
                 isShowModifyDateTimeDialog: false,  //是否显示修改日期时间对话框
                 photoDateTime: null,  //照片的拍摄时间
                 isShowModifyLocationDialog: false,  //是否显示修改位置信息对话框
-                photoLocation: '',  //照片的拍摄地点
+                photoLocationName: '', //照片的拍摄地点（输入框中显示的内容）
+                photoLocationValue: '', //照片的拍摄地点（提交给后台的内容）
                 locationLoading: false,  //位置选择框是否正在从远程获取数据
                 locationOptions: [],  //地点的检索结果
                 isShowPeopleDialog: false,  //是否显示指定人物对话框
@@ -394,6 +383,7 @@
                     startX: 0,  //单点触摸的起始坐标
                     startY: 0,
                     startTouches: [],  //双指触摸时的起始坐标
+                    touchTime: 0,  //点击时的时间
                 },
             }
         },
@@ -573,7 +563,10 @@
                     this.touchStart.startX = e.touches[0].pageX
                     this.touchStart.startY = e.touches[0].pageY
                 }
-                // e.preventDefault()
+                //当照片比屏幕小时，禁止系统事件，防止在浏览大图时手指滑动操作会带动列表滚动
+                if (this.checkPhotoSize()) {
+                    e.preventDefault()
+                }
             },
             handleTouchMove(e) {
                 //单指滑动
@@ -618,6 +611,13 @@
                                 this.prev()
                                 break;
                         }
+                    }
+                    else {  //照片比屏幕大时，判断是否为双击操作
+                        let nowTime = new Date()
+                        if (nowTime.getTime() - this.touchStart.touchTime <= 300) {
+                            this.handleDblclick()
+                        }
+                        this.touchStart.touchTime = nowTime.getTime()
                     }
                 }
             },
@@ -1201,6 +1201,7 @@
                                         type: 'success',
                                     })
                                 }
+                                this.photoInfo.comments = instance.inputValue
                                 //更新前端列表
                                 let photo = this.photoList.find(t => t.uuid === this.currentImg.uuid)
                                 photo.comments = instance.inputValue
@@ -1254,23 +1255,14 @@
                 if (['photo','album','favorites','people'].indexOf(this.callMode) === -1)
                     return false
                 this.deviceSupportUninstall()
-                this.photoLocation = ''
+                this.photoLocationName = ''
+                this.photoLocationValue = ''
                 this.locationOptions = []
                 this.isShowModifyLocationDialog = true
             },
-            fixSelect() {
-                //修正搜索下拉框在移动端无法弹出软键盘的问题
-                let elSelect = this.$refs.location.$children[0].$refs.input
-                elSelect.removeAttribute('readOnly')
-                elSelect.onblur = function () {
-                    let _this = this
-                    setTimeout(() => {
-                        _this.removeAttribute('readOnly')
-                    }, 200)
-                }
-            },
-            getLocationList(query) {
+            getLocationList(query, cb) {
                 //根据用户输入的关键字返回位置列表
+                this.photoLocationValue = ''
                 if (query !== '') {
                     this.locationLoading = true
                     this.$axios({
@@ -1285,17 +1277,26 @@
                         this.locationOptions = []
                         for (let item of response.data) {
                             if (item.location) {
+                                item.name = item.name + '(' + item.province + item.city + item.district + ')'
                                 this.locationOptions.push(item)
                             }
                         }
+                        cb(this.locationOptions)
                     })
                 }
+                else {
+                    cb([])
+                }
+            },
+            selectLocation(item) {
+                //选择位置
+                this.photoLocationValue = item.location.lat+','+item.location.lng+','+item.name
             },
             checkLocation() {
                 //检查输入的位置信息
-                if (this.photoLocation === '') {
+                if (this.photoLocationName === '' || this.photoLocationValue === '') {
                     this.$message({
-                        message: '请输入正确的地理位置',
+                        message: '请输入并选择正确的地理位置',
                         type: 'error',
                     })
                     return false
@@ -1310,7 +1311,7 @@
                     url: this.apiUrl + '/api/photo_set_location',
                     data: {
                         photo_list: [this.photoInfo.uuid],
-                        location: this.photoLocation,
+                        location: this.photoLocationValue,
                     }
                 }).then(response => {
                     this.getPhotoInfo()  //刷新当前图片信息
@@ -1348,7 +1349,6 @@
                             name: '',
                         }
                         this.setPeopleFeature = false
-                        this.getPeopleList()
                         this.deviceSupportUninstall()  //卸载键盘按键支持
                         this.isShowPeopleDialog = true
                         break
@@ -1369,16 +1369,18 @@
                         break
                 }
             },
-            getPeopleList() {
+            getPeopleList(query, cb) {
                 //获取人物列表
                 this.$axios({
                     method: 'get',
-                    url: this.apiUrl + '/api/people_list',
+                    url: this.apiUrl + '/api/photo_query_peoples',
                     params: {
                         userid: localStorage.getItem('userid'),
+                        query: query,  //查询的关键字
                     }
                 }).then(response => {
                     this.peopleOptions = response.data
+                    cb(this.peopleOptions)
                 })
             },
             setPeopleName() {

@@ -35,7 +35,7 @@
                 </el-dropdown>
             </el-col>
         </el-row>
-        <el-divider v-if="parentUUID!=='' && albumList.length>0"></el-divider>
+        <el-divider id="album_divider" v-if="parentUUID!=='' && albumList.length>0"></el-divider>
         <!--移动影集对话框-->
         <el-dialog class="album-dialog" title="移动影集"
                    :visible.sync="isShowMoveAlbumDialog"

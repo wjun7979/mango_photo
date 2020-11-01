@@ -42,6 +42,8 @@ def upload_photo(request):
                     photo = Photo.objects.filter(userid=userid, md5=file_md5).first()  # 表过滤
                     if photo:
                         if call_mode == 'album':
+                            # 先删除后插入，避免重复写入
+                            AlbumPhoto.objects.filter(album_uuid=album_uuid, photo_uuid=photo_uuid).delete()
                             album_photo = AlbumPhoto()
                             album_photo.uuid = str(uuid.uuid1()).replace('-', '')
                             album_photo.album_uuid = Album.objects.get(uuid=album_uuid)
@@ -278,14 +280,21 @@ def __get_exif(full_path: str, dt: str):
     }
     with open(full_path, 'rb') as f:
         tags = exifread.process_file(f, details=False)
+        has_datetime = False  # 是否含有Image DateTime信息
         for tag in tags.keys():
             # print(tag, ":", tags[tag])
             if re.match(r'^Image DateTime$', tag, re.IGNORECASE):
                 dt = str(tags[tag])[0:16] + ':00'  # 只取到时分，忽略秒
-                exif['DateTime'] = dt.replace(':', '-', 2)
-            elif re.match(r'^EXIF DateTimeOriginal$', tag, re.IGNORECASE):
+                dt = dt.replace(':', '-', 2)
+                if __verify_date_str_lawyer(dt):
+                    exif['DateTime'] = dt
+                    has_datetime = True  # 置标志，避免进入读取EXIF DateTimeOriginal子句
+            # 只有当没有找到Image DateTime信息时，才需要尝试从EXIF DateTimeOriginal中获取拍摄时间
+            if has_datetime is False and re.match(r'^EXIF DateTimeOriginal$', tag, re.IGNORECASE):
                 dt = str(tags[tag])[0:16] + ':00'
-                exif['DateTime'] = dt.replace(':', '-', 2)
+                dt = dt.replace(':', '-', 2)
+                if __verify_date_str_lawyer(dt):
+                    exif['DateTime'] = dt
             if re.match(r'^Image Make$', tag, re.IGNORECASE):
                 exif['Make'] = str(tags[tag])
             if re.match(r'^Image Model$', tag, re.IGNORECASE):
@@ -386,3 +395,12 @@ def __convert_gps_to_decimal(*gps):
         return str(decimal_gps * -1)
     else:
         return str(decimal_gps)
+
+
+def __verify_date_str_lawyer(datetime_str):
+    """判断字符串时间的合法性"""
+    try:
+        datetime.strptime(datetime_str, '%Y-%m-%d %H:%M:%S')
+        return True
+    except ValueError:
+        return False

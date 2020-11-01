@@ -101,6 +101,11 @@ html, body {
         width: 320px;
     }
 }
+/*修正safari中无法隐藏滚动条的问题*/
+.el-popup-parent--hidden {
+    overflow: hidden;
+    position: relative;
+}
 /*pc端和移动端隐藏的全局样式*/
 @media (any-hover: hover) {
     .hidden-pc-only {

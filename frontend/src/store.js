@@ -6,6 +6,11 @@ Vue.use(Vuex)  //全局状态管理
 const store = new Vuex.Store({
     state: {
         apiUrl: 'http://127.0.0.1:8000',  //后台api调用地址
+        progress: {  //全局文件上传进度条
+            show: false,  //是否显示
+            total: 0,  //上传文件数量
+            percentage: 0,  //当前进度百分比
+        },
         refreshPhoto: {  //刷新照片列表
             action: 'none',  //none:不执行任何操作 reload:重新载入第1页 delete:删除成员 update:更新成员
             list: [],
@@ -39,21 +44,27 @@ const store = new Vuex.Store({
                 }
             }
         },
+        setProgress(state, payload) {  //设置进度条
+            if (payload.show !== undefined)
+                state.progress.show = payload.show
+            if (payload.total !== undefined)
+                state.progress.total = payload.total
+            if (payload.percentage !== undefined)
+                state.progress.percentage = payload.percentage
+        },
         refreshPhoto(state, payload) {  //更改"是否刷新照片列表"的值
             state.refreshPhoto.action = payload.action
-            if (payload.list) {
+            if (payload.list !== undefined)
                 state.refreshPhoto.list = payload.list
-            }
-            if (payload.refreshPhotoGroup) {
+            if (payload.refreshPhotoGroup !== undefined)
                 state.refreshPhoto.refreshPhotoGroup = payload.refreshPhotoGroup
-            }
         },
         refreshAlbum(state, payload) {  //更改"是否刷新影集列表"的值
             state.refreshAlbum = payload.show
         },
         refreshFace(state, payload) {  //更改"是否刷新面孔列表"的值
             state.refreshFace.action = payload.action
-            if (payload.list) {
+            if (payload.list !== undefined) {
                 state.refreshFace.list = payload.list
             }
         },

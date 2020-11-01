@@ -32,13 +32,6 @@
                 <el-button @click="showUploadDialog = false">关 闭</el-button>
             </span>
         </el-dialog>
-
-        <!--进度条-->
-        <el-card v-if="showUploadProgress" class="upload-progress">
-            <p class="upload-progress-tips">正在上传 {{this.fileList.length}} 张照片...</p>
-            <el-progress :percentage="progress" :text-inside="true" :stroke-width="20"></el-progress>
-            <p class="upload-progress-warning">操作完成前请勿关闭或刷新本页面！</p>
-        </el-card>
     </div>
 </template>
 
@@ -49,8 +42,6 @@
             return {
                 showUploadDialog: false,  //是否显示上传对话框
                 fileList: [],  //上传的文件列表
-                showUploadProgress: false,  //是否显示上传进度
-                progress: 0,  //已完成的上传进度
             }
         },
         props: {
@@ -96,6 +87,7 @@
                 }
 
                 this.showUploadDialog = false  //关闭上传对话框
+                this.$store.commit('setProgress', {show: true, total: this.fileList.length, percentage: 0})
 
                 let formData = new FormData()
                 // 因为要传一个文件数组过去，所以要循环append
@@ -119,12 +111,10 @@
                         album_uuid: this.albumUUID  //影集uuid
                     },
                     onUploadProgress: (progressEvent) => {
-                        this.showUploadProgress = true
                         let num = progressEvent.loaded / progressEvent.total * 100 | 0;  //百分比
-                        this.progress = num
+                        this.$store.commit('setProgress', {percentage: num})
                     }
                 }).then(response => {
-                    this.showUploadProgress = false
                     let res = response.data
                     let msg = '本次共上传 ' + this.fileList.length + ' 张照片'
                     if (res.success.length > 0)
@@ -157,11 +147,17 @@
                     }
                     this.$store.commit('refreshPhoto', {action: 'reload'})  //刷新图片列表
                     this.$store.commit('refreshPhotoStatistics', {show: true})  //刷新照片库统计信息
-                    this.clearFiles()
-                    this.onCompleted()  //上传完成后的回调
+                    this.$store.commit('setProgress', {show: false})  //关闭进度条
+                    //当上传组件还存在时，清空已上传的文件列表
+                    if (this.$refs.upload !== undefined) {
+                        this.clearFiles()
+                        this.onCompleted()  //上传完成后的回调
+                    }
                 }).catch(() => {
-                    this.showUploadProgress = false
-                    this.clearFiles()
+                    this.$store.commit('setProgress', {show: false})  //关闭进度条
+                    if (this.$refs.upload !== undefined) {
+                        this.clearFiles()
+                    }
                 })
             },
             handleChange(file, fileList) {
@@ -239,23 +235,5 @@
             width: 130px;
             height: 130px;
         }
-    }
-
-    .upload-progress {  /*上传进度条*/
-        position: fixed;
-        left: 20px;
-        bottom: 40px;
-        width: 320px;
-        z-index: 2;
-    }
-    .upload-progress-tips {
-        text-align: left;
-        padding: 0 0 10px 0;
-    }
-    .upload-progress-warning {
-        text-align: left;
-        font-size: 14px;
-        color: #F56C6C;
-        padding: 10px 0 0 0;
     }
 </style>

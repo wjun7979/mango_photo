@@ -50,12 +50,12 @@
         data() {
             return {
                 peopleUUID: this.$route.params.uuid,  //人物uuid
-                showType: this.$route.params.type,  //显示类型：photo:照片; face:面孔
                 people: {  //人物信息
                     name: '',
                     cover_path: '',
                     cover_name: '',
                 },
+                showType: this.$route.params.type,  //显示类型：photo:照片; face:面孔
             }
         },
         computed: {
@@ -126,12 +126,14 @@
                             name: 'people',
                             params: {uuid: this.peopleUUID, type: 'photo'}
                         })
+                        this.showType = 'photo'
                         break
                     case 'show-face':  //显示面孔
                         this.$router.replace({
                             name: 'people',
                             params: {uuid: this.peopleUUID, type: 'face'}
                         })
+                        this.showType = 'face'
                         break
                 }
             },

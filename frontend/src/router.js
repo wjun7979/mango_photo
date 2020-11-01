@@ -103,18 +103,21 @@ const routes = [
 const router = new VueRouter({
     mode: 'history',
     routes,  //ES6简写，等于routes:routes
-    // scrollBehavior(to, from, savedPosition) {
-    //     //点击浏览器后退按钮时，定位到之前的滚动条位置
-    //     if (savedPosition) {
-    //         return new Promise((resolve) => {
-    //             setTimeout(() => {
-    //                 resolve(savedPosition)
-    //             }, 500)
-    //         })
-    //     } else {
-    //         return {x: 0, y: 0}
-    //     }
-    // }
+    scrollBehavior(to, from, savedPosition) {
+        //点击浏览器后退按钮时，定位到之前的滚动条位置
+        //从大图预览返回时不作处理
+        if (from.name === to.name && from.params.photo_uuid !== undefined && from.params.photo_uuid !== '') return
+        if (savedPosition) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    resolve(savedPosition)
+                }, 300)
+            })
+        }
+        // else {
+        //     return {x: 0, y: 0}
+        // }
+    }
 })
 
 //路由拦截
