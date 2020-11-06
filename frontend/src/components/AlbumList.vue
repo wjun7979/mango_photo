@@ -1,6 +1,7 @@
 <template>
     <div style="padding-top: 10px">
-        <el-row :gutter="20" style="margin: 0">
+        <el-row ref="albums" :gutter="20"
+                :style="{margin: 0, height: albumsWrap.height, overflow: 'hidden'}">
             <el-col :xs="{span:12}" :sm="{span:8}" :lg="{span:6}" :xl="{span:4}" v-for="album of albumList"
                     :key="album.uuid" style="position: relative">
                 <div class="album-wrap" @click="showAlbum(album.uuid)">
@@ -35,12 +36,16 @@
                 </el-dropdown>
             </el-col>
         </el-row>
-        <el-divider id="album_divider" v-if="parentUUID!=='' && albumList.length>0"></el-divider>
+        <el-divider id="album_divider" v-if="parentUUID!=='' && albumList.length>0">
+            <el-button v-if="albumsWrap.type==='collapse'" icon="el-icon-arrow-down" circle @click="moreAlbums"></el-button>
+            <el-button v-if="albumsWrap.type==='expand'" icon="el-icon-arrow-up" circle @click="moreAlbums"></el-button>
+        </el-divider>
         <!--移动影集对话框-->
         <el-dialog class="album-dialog" title="移动影集"
                    :visible.sync="isShowMoveAlbumDialog"
                    width="340px"
-                   :close-on-click-modal="false">
+                   :close-on-click-modal="false"
+                   :destroy-on-close="true">
             <el-tree class="album-tree" ref="albumTree" :lazy="true" :load="loadAlbumTree" node-key="uuid"
                      :props="{label:'name'}"
                      :default-expand-all="false"
@@ -74,6 +79,10 @@
         data() {
             return {
                 albumList: [],  //影集列表
+                albumsWrap: {
+                    type: 'collapse',  //expand:全部展开; collapse:收缩
+                    height: 'auto',
+                },
                 isShowMoveAlbumDialog: false,  //是否显示移动影集对话框
                 currAlbum: {  //将要被移动的影集对象
                     'uuid': '',
@@ -81,7 +90,7 @@
                     'parent_uuid': '',
                     'command': ''
                 },
-                node: null,
+                node: null,  //影集树的节点
                 resolve: null,
             }
         },
@@ -113,8 +122,18 @@
         },
         mounted() {
             this.showAlbums()
+            window.addEventListener('resize', this.listenResize)
+        },
+        beforeDestroy() {
+            window.removeEventListener('resize', this.listenResize)
         },
         methods: {
+            listenResize() {
+                //监听浏览器窗口大小变化的事件
+                if (this.albumsHeight !== 'auto') {
+                    this.setAlbumsHeight()
+                }
+            },
             showAlbums() {
                 //获取并显示影集列表
                 this.$axios({
@@ -128,6 +147,12 @@
                     const result = response.data
                     this.albumList = result
                     this.$store.commit('refreshAlbum', {show: false})
+                    //显示子影集列表时，设置一个合适的容器高度
+                    if (this.parentUUID) {
+                        this.$nextTick(() => {
+                            this.setAlbumsHeight()
+                        })
+                    }
                 })
             },
             beforeHandleCommand(uuid, name, parent_uuid, command) {
@@ -290,6 +315,35 @@
                     params: {album_uuid: uuid}
                 })
             },
+            setAlbumsHeight() {
+                //设置一个合适的容器高度以适应大量的子影集
+                if (this.albumsWrap.type === 'expand') {  //当前处于展开状态
+                    this.albumsWrap.height = 'auto'
+                } else {  //当前处于收缩状态
+                    if (this.albumList.length > 0) {
+                        let refAlbum = this.$refs.albums.$children[0]
+                        let screenWidth = document.documentElement.clientWidth
+                        if (screenWidth <= 767)
+                            this.albumsWrap.height = (refAlbum.$el.clientHeight * 2 - 2) + 'px'
+                        else
+                            this.albumsWrap.height = (refAlbum.$el.clientHeight - 2) + 'px'
+                    } else {
+                        this.albumsWrap.height = 'auto'
+                    }
+                }
+            },
+            moreAlbums() {
+                //显示或隐藏更多影集
+                if (this.albumsWrap.type === 'expand') {  //当前处于展开状态
+                    window.scrollTo(0, 0)
+                    this.albumsWrap.type = 'collapse'
+                    this.setAlbumsHeight()
+                }
+                else {  //当前处于收缩状态
+                    this.albumsWrap.type = 'expand'
+                    this.albumsWrap.height = 'auto'
+                }
+            },
         }
     }
 </script>
@@ -298,6 +352,20 @@
     .album-wrap { /*影集容器*/
         cursor: pointer;
         margin-bottom: 15px;
+    }
+
+    /*更多影集按钮*/
+    #album_divider >>> .el-button.is-circle {
+        padding: 10px;
+    }
+    #album_divider >>> .el-button {
+        position: absolute;
+        margin-top: -50%;
+        font-size: 20px;
+        box-shadow: 0 1px 3px 0 rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15);
+    }
+    #album_divider >>> .el-divider__text.is-center {
+        left: calc(50% - 21px);
     }
 
     .album-cover { /*影集封面*/

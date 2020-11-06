@@ -2,15 +2,15 @@
     <div>
         <!--照片分组尺寸快捷工具-->
         <div v-if="photos.photoList.length>0" class="div-float-tools">
-            <el-popover placement="top-start">
+            <el-popover placement="top-start" @after-enter="scrollPhotoGroups">
                 <label>分组：</label>
                 <el-radio-group v-model="groupType" size="small">
                     <el-radio-button label="year">按年</el-radio-button>
                     <el-radio-button label="month">按月</el-radio-button>
                     <el-radio-button label="day">按天</el-radio-button>
                 </el-radio-group>
-                <ul class="photo-groups">
-                    <li v-for="(group,index) of photoGroups" :key="index" @click="filterPhotos(group.exif_datetime)"
+                <ul ref="photo_groups" class="photo-groups">
+                    <li v-for="(group,index) of photoGroups.list" :key="index" @click="filterPhotos(group.exif_datetime)"
                         :class="{active: dateFilter===group.exif_datetime}">
                         <span v-if="groupType==='year'">{{$common.dateFormat(group.exif_datetime, 'yyyy年')}}</span>
                         <span v-if="groupType==='month'">{{$common.dateFormat(group.exif_datetime, 'yyyy年MM月')}}</span>
@@ -39,10 +39,24 @@
         <el-checkbox-group v-model="checkGroupList" class="images-wrap"
                            :class="{'show-checkbox': checkList.length > 0}">
             <el-row v-for="(photoGroup, index) of photos.photoListGroup" :key="index" style="margin-right: 5px">
-                <el-checkbox v-if="multiple" class="chk-group" :label="photoGroup.timestamp"
-                             @change="selectPhotoGroup(photoGroup.timestamp)">
-                </el-checkbox>
-                <span v-if="!multiple" class="chk-group-label">{{photoGroup.timestamp}}</span>
+                <!--分组标签和位置列表-->
+                <div>
+                    <el-checkbox v-if="multiple" class="chk-group" :label="photoGroup.timestamp"
+                                 @change="selectPhotoGroup(photoGroup.timestamp)">
+                    </el-checkbox>
+                    <span v-if="!multiple" class="chk-group-label">{{photoGroup.timestamp}}</span>
+                    <el-dropdown v-if="photoGroup.list.find(t => t.address__address!==null)" class="group-locations"
+                                 size="small" trigger="click" placement="bottom-start"
+                                 @visible-change="getGroupLocations($event, photoGroup.list)">
+                        <i class="el-icon-location el-icon--right"></i>
+                        <el-dropdown-menu slot="dropdown">
+                            <el-dropdown-item class="group-locations-item"
+                                              v-for="(location, index) of groupLocationList" :key="index">
+                                {{location}}
+                            </el-dropdown-item>
+                        </el-dropdown-menu>
+                    </el-dropdown>
+                </div>
                 <el-checkbox-group v-model="checkList">
                     <!--瀑布流样式的照片列表-->
                     <div class="div-images">
@@ -51,9 +65,9 @@
                              class="div-img"
                              :class="{'chk-checked': checkList.indexOf(img.uuid) !== -1,
                                       'chk-last-checked': lastSelectedUUID === img.uuid}"
-                             :style="{'width': img.width * imgHeight / img.height + 'px',
-                                      'flex-grow':img.width * imgHeight / img.height}">
-                            <i :style="{'padding-bottom': img.height / img.width * 100 + '%', 'display':'block'}"></i>
+                             :style="{'width': setImgWidth(img) + 'px',
+                                      'flex-grow': setImgWidth(img)}">
+                            <i :style="{'padding-bottom': imgHeight / setImgWidth(img) * 100 + '%', 'display':'block'}"></i>
                             <!--叠加选择框-->
                             <el-checkbox v-if="multiple" :label="img.uuid"
                                          @change="selectPhoto(img.uuid, photoGroup.timestamp)"
@@ -70,7 +84,7 @@
                                       :alt="img.name"
                                       @click.exact="clickImage(img.uuid, photoGroup.timestamp)"
                                       @click.shift.exact="multiSelectPhotos($event, img.uuid, photoGroup.timestamp)"
-                                      style="cursor: pointer;">
+                                      style="cursor: pointer">
                                 <div slot="error">
                                     <div class="image-slot">
                                         <i class="el-icon-picture-outline"></i>
@@ -251,11 +265,15 @@
                     pageSize: 100,  //每页的数量
                     isLoading: false,  //当前是否为加载状态
                 },
-                photoGroups: [],  //当前所有照片的分组列表
+                photoGroups: {
+                    list: [],  //当前所有照片的分组列表
+                    scrollTop: 0,  //滚动条的位置
+                },
                 dateFilter: '',  //当前日期分组过滤的值
                 checkList: [],  //选中的照片列表
                 isShowTips: false,  //是否显示上传提示
                 groupType: 'month',  //分组类型 day, month, year
+                groupLocationList: [],  //分组列表中包含的位置列表
                 checkGroupList: [],  //选中的分组列表
                 multiple: true,  //是否允许多选
                 lastSelectedUUID: null,  //最后一次选中的照片uuid
@@ -392,6 +410,7 @@
             },
             groupType() {
                 //分组类型改变时重新载入照片
+                this.photoGroups.scrollTop = 0  //重置分组列表的滚动条位置
                 this.creatPhotoGroup()
             },
             albumPhotoList(val) {
@@ -472,6 +491,14 @@
                     }
                 }
             },
+            setImgWidth(img) {
+                //计算照片的宽度
+                let width = img.width * this.imgHeight / img.height
+                let screenWidth = document.documentElement.clientWidth
+                if (screenWidth <= 767 && width > 350) width = 350  //限制照片的最大宽度，避免类似全景照片在移动端超出屏幕
+                if (width < 80) width = 80  //避免照片太窄
+                return width
+            },
             setImgHeight() {
                 //浏览器窗口大小变化时改变照片的大小
                 this.imgHeight = parseInt((document.documentElement.clientWidth / 8).toString())
@@ -547,14 +574,14 @@
                 this.photos.isLoading = true  //当前正处于加载状态
                 this.photos.photoList = []
                 this.photos.photoListGroup = []
-                this.photoGroups = []
+                this. photoGroups.list= []
                 this.checkList = []
                 this.photos.page = 1
                 this.showPhotos(scrollToDivider)
             },
             getPhotoGroups() {
                 //获取照片的分组列表
-                this.photoGroups = []
+                this.photoGroups.list = []
                 this.$axios({
                     method: 'get',
                     url: this.apiUrl + '/api/photo_get_groups',
@@ -566,11 +593,18 @@
                         people_uuid: this.peopleUUID,
                     }
                 }).then(response => {
-                    this.photoGroups = response.data
+                    this.photoGroups.list = response.data
                 })
+            },
+            scrollPhotoGroups() {
+                //展开分组列表时，定位到上一次的点击位置
+                let el = this.$refs.photo_groups
+                el.scrollTo(0, this.photoGroups.scrollTop)
             },
             filterPhotos(val) {
                 //按照分组日期对照片进行过滤
+                let el = this.$refs.photo_groups
+                this.photoGroups.scrollTop = el.scrollTop  //过滤时记录当前滚动条的位置
                 this.dateFilter = val
                 this.reloadPhotos(true)
             },
@@ -586,6 +620,24 @@
                 }
                 this.photos.photoListGroup = dataMap
                 this.getPhotoGroups()  //获取照片的分组列表
+            },
+            getGroupLocations(show, photoList) {
+                //获取分组列表中的位置列表
+                if (show) {  //下拉菜单出现时
+                    for (let photo of photoList) {
+                        if (photo.address__address) {
+                            let address = photo.address__address
+                            if (photo.address__poi_name) {
+                                address = photo.address__poi_name + ' - ' + address
+                            }
+                            this.groupLocationList.push(address)
+                        }
+                    }
+                    this.groupLocationList = Array.from(new Set(this.groupLocationList))  //数组去重复
+                }
+                else {  //下拉菜单隐藏时
+                    this.groupLocationList = []
+                }
             },
             showPreview(uuid) {
                 //显示大图预览
@@ -1164,6 +1216,7 @@
         position: absolute;
         top: 0;
         width: 100%;
+        height: 100%;
         vertical-align: bottom;
     }
     .chk-group { /*分组选择*/
@@ -1442,5 +1495,18 @@
         .show-always {
             visibility: visible;
         }
+    }
+    /*分组标签后面位置列表*/
+    .group-locations {
+        margin-left: 10px;
+        color: #80868b;
+        cursor: pointer;
+    }
+    /*分组标签后面位置列表中的弹出菜单项*/
+    .group-locations-item {
+        max-width: 320px;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
     }
 </style>

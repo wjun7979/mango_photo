@@ -40,7 +40,7 @@ const store = new Vuex.Store({
                     state.apiUrl = 'http://192.168.16.67:8000'
                 }
                 else {
-                    state.apiUrl = 'http://wlon.vicp.net:7080'
+                    state.apiUrl = 'http://58.51.106.134:8000'
                 }
             }
         },

@@ -30,7 +30,7 @@ ALLOWED_HOSTS = [
     'localhost',
     '127.0.0.1',
     '192.168.16.67',
-    'wlon.vicp.net'
+    '58.51.106.134'
 ]
 
 # Application definition

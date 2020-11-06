@@ -105,8 +105,9 @@ const router = new VueRouter({
     routes,  //ES6简写，等于routes:routes
     scrollBehavior(to, from, savedPosition) {
         //点击浏览器后退按钮时，定位到之前的滚动条位置
-        //从大图预览返回时不作处理
-        if (from.name === to.name && from.params.photo_uuid !== undefined && from.params.photo_uuid !== '') return
+        // let returnFromPreview = false  //是否从大图预览返回，如果是则不作处理
+        // if (from.name === to.name && from.params.photo_uuid !== undefined && from.params.photo_uuid !== '')
+        //     returnFromPreview = true
         if (savedPosition) {
             return new Promise((resolve) => {
                 setTimeout(() => {
@@ -114,9 +115,9 @@ const router = new VueRouter({
                 }, 300)
             })
         }
-        // else {
-        //     return {x: 0, y: 0}
-        // }
+        else {
+            return {x: 0, y: 0}
+        }
     }
 })
 

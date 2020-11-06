@@ -43,7 +43,7 @@ def upload_photo(request):
                     if photo:
                         if call_mode == 'album':
                             # 先删除后插入，避免重复写入
-                            AlbumPhoto.objects.filter(album_uuid=album_uuid, photo_uuid=photo_uuid).delete()
+                            AlbumPhoto.objects.filter(album_uuid=album_uuid, photo_uuid=photo.uuid).delete()
                             album_photo = AlbumPhoto()
                             album_photo.uuid = str(uuid.uuid1()).replace('-', '')
                             album_photo.album_uuid = Album.objects.get(uuid=album_uuid)

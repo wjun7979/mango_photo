@@ -40,7 +40,7 @@
         methods: {
             selectMenu() {
                 this.$store.commit('showMenu', {show: false})
-            }
+            },
         }
     }
 </script>

@@ -652,7 +652,7 @@
                 this.reset();
             },
             close() {
-                history.back()
+                this.$router.back()
             },
             prev() {  //上一张
                 const len = this.previewListOrder.length

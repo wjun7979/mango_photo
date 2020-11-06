@@ -18,17 +18,16 @@
                     <div class="people-wrap" @click="showPeople(people.uuid)">
                         <div class="people-cover"
                              :style="{'background-image':'url('+apiUrl+'/'+people.cover_path+'/'+people.cover_name+')'}"></div>
-                        <p class="people-name">{{people.name}}</p>
+                        <p>
+                            <span class="people-name">{{people.name}}</span>
+                            <span class="people-peoples">（{{people.faces}}）</span>
+                        </p>
                         <p class="people-peoples">
                             <span style="margin-right: 10px">特征照片: {{people.features}}</span>
                             <el-tooltip v-if="people.features===0" class="item" effect="dark" placement="bottom-start">
                                 <span slot="content">该人物没有特征照片，将无法进行智能匹配！</span>
                                 <i class="el-icon-info" style="color: #F56C6C;"></i>
                             </el-tooltip>
-                        </p>
-                        <p class="people-peoples">
-                            <span style="margin-right: 5px;">照片{{people.photos}}</span>
-                            <span>面孔{{people.faces}}</span>
                         </p>
                     </div>
                     <!--下拉菜单-->
