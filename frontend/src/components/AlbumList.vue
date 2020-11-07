@@ -37,8 +37,10 @@
             </el-col>
         </el-row>
         <el-divider id="album_divider" v-if="parentUUID!=='' && albumList.length>0">
-            <el-button v-if="albumsWrap.type==='collapse'" icon="el-icon-arrow-down" circle @click="moreAlbums"></el-button>
-            <el-button v-if="albumsWrap.type==='expand'" icon="el-icon-arrow-up" circle @click="moreAlbums"></el-button>
+            <div v-if="isShowMoreAlbums">
+                <el-button v-if="albumsWrap.type==='collapse'" icon="el-icon-arrow-down" circle @click="moreAlbums"></el-button>
+                <el-button v-if="albumsWrap.type==='expand'" icon="el-icon-arrow-up" circle @click="moreAlbums"></el-button>
+            </div>
         </el-divider>
         <!--移动影集对话框-->
         <el-dialog class="album-dialog" title="移动影集"
@@ -92,6 +94,7 @@
                 },
                 node: null,  //影集树的节点
                 resolve: null,
+                isShowMoreAlbums: false,  //是否显示更多子影集按钮
             }
         },
         props: {
@@ -130,7 +133,7 @@
         methods: {
             listenResize() {
                 //监听浏览器窗口大小变化的事件
-                if (this.albumsHeight !== 'auto') {
+                if (this.albumsWrap.height !== 'auto') {
                     this.setAlbumsHeight()
                 }
             },
@@ -148,9 +151,10 @@
                     this.albumList = result
                     this.$store.commit('refreshAlbum', {show: false})
                     //显示子影集列表时，设置一个合适的容器高度
-                    if (this.parentUUID) {
+                    if (this.parentUUID && this.albumList.length > 0) {
                         this.$nextTick(() => {
                             this.setAlbumsHeight()
+                            this.checkAlbumsHeight()
                         })
                     }
                 })
@@ -323,7 +327,7 @@
                     if (this.albumList.length > 0) {
                         let refAlbum = this.$refs.albums.$children[0]
                         let screenWidth = document.documentElement.clientWidth
-                        if (screenWidth <= 767)
+                        if (screenWidth <= 767 && this.albumList.length > 2)
                             this.albumsWrap.height = (refAlbum.$el.clientHeight * 2 - 2) + 'px'
                         else
                             this.albumsWrap.height = (refAlbum.$el.clientHeight - 2) + 'px'
@@ -331,6 +335,18 @@
                         this.albumsWrap.height = 'auto'
                     }
                 }
+            },
+            checkAlbumsHeight() {
+                //是否显示更多子影集按钮
+                let showMoreAlbums = false
+                let refAlbum = this.$refs.albums.$children[0]
+                let albumsWrapHeight = refAlbum.$el.clientHeight
+                let screenWidth = document.documentElement.clientWidth
+                if (screenWidth <= 767 && this.albumList.length > 2)
+                    albumsWrapHeight = refAlbum.$el.clientHeight * 2
+                if (this.$refs.albums.$el.scrollHeight > albumsWrapHeight)
+                    showMoreAlbums = true
+                this.isShowMoreAlbums = showMoreAlbums
             },
             moreAlbums() {
                 //显示或隐藏更多影集

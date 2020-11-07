@@ -563,32 +563,32 @@
                     this.touchStart.startX = e.touches[0].pageX
                     this.touchStart.startY = e.touches[0].pageY
                 }
-                //当照片比屏幕小时，禁止系统事件，防止在浏览大图时手指滑动操作会带动列表滚动
-                if (this.checkPhotoSize()) {
-                    e.preventDefault()
-                }
             },
             handleTouchMove(e) {
                 //单指滑动
-                if (e.touches && e.touches.length === 1) {
+                if (this.touchStart.startTouches.length === 1 && e.touches && e.touches.length === 1) {
                     if (!this.checkPhotoSize()) {  //照片比屏幕大时，判断为拖动操作
-                        this.transform.offsetX = this.touchStart.offsetX + e.touches[0].pageX - this.touchStart.startX
-                        this.transform.offsetY = this.touchStart.offsetY + e.touches[0].pageY - this.touchStart.startY
+                        this.transform.offsetX = this.touchStart.offsetX + (e.touches[0].pageX - this.touchStart.startX) * 2
+                        this.transform.offsetY = this.touchStart.offsetY + (e.touches[0].pageY - this.touchStart.startY) * 2
+                    }
+                    else {  //当照片比屏幕小时，禁止系统事件，防止在浏览大图时手指滑动操作会带动列表滚动
+                        e.preventDefault()
                     }
                 }
                 //双指缩放
                 if (e.touches && e.touches.length >= 2) {
+                    e.preventDefault()  //禁止系统事件，防止双指缩放时会同时移动照片
                     //得到缩放比例
                     let now = e.touches
                     let scale = this.$common.getDistance(now[0], now[1]) / this.$common.getDistance(this.touchStart.startTouches[0], this.touchStart.startTouches[1])
                     if (scale > 1) {
                         this.handleActions('zoomIn', {
-                            zoomRate: 0.05,
+                            zoomRate: 0.1,
                             enableTransition: false
                         })
                     } else {
                         this.handleActions('zoomOut', {
-                            zoomRate: 0.05,
+                            zoomRate: 0.1,
                             enableTransition: false
                         })
                     }
@@ -619,6 +619,9 @@
                         }
                         this.touchStart.touchTime = nowTime.getTime()
                     }
+                }
+                if (this.touchStart.startTouches.length >= 2) {  //多点触摸
+                    e.preventDefault()
                 }
             },
             checkPhotoSize() {
@@ -689,7 +692,7 @@
                         }
                         break;
                     case 'zoomIn':
-                        if (transform.scale < 3) {  //控制最大缩放比例
+                        if (transform.scale < 5) {  //控制最大缩放比例
                             transform.scale = parseFloat((transform.scale + zoomRate).toFixed(3))
                         }
                         break
