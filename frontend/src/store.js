@@ -33,14 +33,14 @@ const store = new Vuex.Store({
     mutations: {
         setApiUrl(state) {  //根据客户端访问地址改变API请求地址
             if (window.location.href.indexOf('localhost') > -1) {
-                state.apiUrl = 'http://127.0.0.1:8000'
+                state.apiUrl = 'http://127.0.0.1:8001'
             }
             else {
                 if (window.location.href.indexOf('192.168.16.67') > -1) {
-                    state.apiUrl = 'http://192.168.16.67:8000'
+                    state.apiUrl = 'http://192.168.16.67:8001'
                 }
                 else {
-                    state.apiUrl = 'http://58.51.106.134:8000'
+                    state.apiUrl = 'http://58.51.106.134:8001'
                 }
             }
         },

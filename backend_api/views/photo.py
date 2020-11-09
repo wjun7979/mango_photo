@@ -357,6 +357,7 @@ def photo_query_location(request):
                     '&region=全国&output=json'.format(ak, query)
     res = requests.get(baidu_map_api)
     result = res.json()
+    res.close()
     if result['status'] != 0:  # 接口调用失败
         raise Exception(result['message'])  # 抛出异常
     return JsonResponse(result['result'], safe=False, status=200)
@@ -382,6 +383,7 @@ def photo_set_location(request):
                                 '&location={1},{2}'.format(ak, lat, lng)
                 res = requests.get(baidu_map_api)
                 result = res.json()
+                res.close()
                 if result['status'] != 0:  # 接口调用失败
                     raise Exception(result['message'])  # 抛出异常
                 for item in photo_uuid_list:

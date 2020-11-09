@@ -4,7 +4,7 @@ module.exports = {
         allowedHosts: [
             'wlon.vicp.net',
         ],
-        port: 8001
+        port: 8002
     },
     configureWebpack: {
         externals: {

@@ -146,18 +146,22 @@
                 //有其它组件发出刷新照片的指令
                 let refreshFace = this.$store.state.refreshFace
                 if (refreshFace.action === 'reload') {  //刷新
+                    this.faces.isLoading = true  //当前正处于加载状态
                     this.faces.faceList = []
                     this.faces.page = 1
                     this.showFaces()
+                    this.photos.isLoading = true  //当前正处于加载状态
                     this.photos.photoList = []
                     this.photos.page = 1
                     this.showPhotos()
                 }
                 if (refreshFace.action === 'delete') {  //删除
+                    this.faces.isLoading = true  //当前正处于加载状态
                     for (let item of refreshFace.list) {
                         let index = this.faces.faceList.findIndex(t => t.uuid === item)
                         this.faces.faceList.splice(index, 1)
                     }
+                    this.faces.isLoading = false  //重置加载状态
                 }
                 if (refreshFace.action === 'update') {  //更新
                     let face = refreshFace.list

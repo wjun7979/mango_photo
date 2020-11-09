@@ -144,6 +144,7 @@
                     </el-dropdown>
                 </div>
                 <div v-if="callMode==='album'">
+                    <i class="el-icon-folder-add" title="添加到影集" @click="showAlbumTree"></i>
                     <i class="el-icon-folder-delete" title="从影集中移除" @click="removeFromAlbum"></i>
                     <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
                     <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
@@ -351,15 +352,18 @@
                 //有其它组件发出刷新照片的指令
                 let refreshPhoto = this.$store.state.refreshPhoto
                 if (refreshPhoto.action === 'reload') {  //刷新
+                    this.photos.isLoading = true  //当前正处于加载状态
                     this.photos.photoList = []
                     this.photos.page = 1
                     this.showPhotos()
                 }
                 if (refreshPhoto.action === 'delete') {  //删除
+                    this.photos.isLoading = true  //当前正处于加载状态
                     for (let item of refreshPhoto.list) {
                         let index = this.photos.photoList.findIndex(t => t.uuid === item)
                         this.photos.photoList.splice(index, 1)
                     }
+                    this.photos.isLoading = false
                     this.creatPhotoGroup()  //重新分组
                 }
                 if (refreshPhoto.action === 'update') {  //更新
@@ -389,7 +393,10 @@
                 //将选中的照片列表传递给上级组件
                 if (this.callMode === 'pick') {
                     let albumPhotoList = this.albumPhotoList
-                    let removeList = albumPhotoList.filter(function(v){ return val.indexOf(v) === -1 })
+                    let that = this
+                    let removeList = albumPhotoList.filter(function(v){
+                        return that.photos.photoList.find(t => t.uuid === v) && val.indexOf(v) === -1
+                    })
                     let addList = val.filter(function(v){ return albumPhotoList.indexOf(v) === -1 })
                     this.onPick(removeList, addList)
                 }
@@ -576,6 +583,12 @@
                 this.photos.photoListGroup = []
                 this. photoGroups.list= []
                 this.checkList = []
+                //将当前影集中的照片默认选中
+                if (this.callMode === 'pick') {
+                    for (let item of this.albumPhotoList) {
+                        this.checkList.push(item)  //将当前影集中的照片默认选中
+                    }
+                }
                 this.photos.page = 1
                 this.showPhotos(scrollToDivider)
             },

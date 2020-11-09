@@ -54,6 +54,7 @@ def people_face_detect(userid):
                 }
                 res = requests.post(api, data=params, headers=headers)
                 result = res.json()  # 获取响应数据，并解析JSON，转化为python字典
+                res.close()
                 if result['error_code'] != 0:  # 接口调用失败
                     raise Exception(
                         str(result['error_code']) + ' ' + result['error_msg'] + '. photo_uuid:' + photo.uuid)
@@ -179,6 +180,7 @@ def people_face_compare(userid):
                 }
                 res = requests.post(api, data=params, headers=headers)
                 result = res.json()  # 获取响应数据，并解析JSON，转化为python字典
+                res.close()
                 if result['error_code'] != 0:  # 接口调用失败
                     raise Exception(
                         str(result['error_code']) + ' ' + result['error_msg'] + '. photo_uuid:' + photo['p_uuid'])
@@ -479,6 +481,7 @@ def baidu_ai_get_token():
     api = 'https://aip.baidubce.com/oauth/2.0/token?grant_type=client_credentials&client_id={0}&client_secret={1}'.format(
         'IVeeKBHfqpt9kGNuLo8CjF33', 'EfEwCvIjxneuCGpcGDqpGfIYL5xSMVqz')
     response = requests.get(api)
+    response.close()
     if response:
         return response.json()['access_token']
 
@@ -525,6 +528,7 @@ def baidu_ai_facelib_add(face_uuid):
             }
             res = requests.post(api, data=params, headers=headers)
             result = res.json()  # 获取响应数据，并解析JSON，转化为python字典
+            res.close()
             if result['error_code'] != 0:  # 接口调用失败
                 raise Exception(str(result['error_code']) + result['error_msg'])  # 抛出异常
             face_token = result['result']['face_token']
@@ -561,6 +565,7 @@ def baidu_ai_facelib_delete(userid, people_uuid, feature_token):
         }
         res = requests.post(api, data=params, headers=headers)
         result = res.json()  # 获取响应数据，并解析JSON，转化为python字典
+        res.close()
         if result['error_code'] != 0:  # 接口调用失败
             raise Exception(str(result['error_code']) + result['error_msg'])  # 抛出异常
         time.sleep(0.5)  # 暂停一会儿，避免qps超限额

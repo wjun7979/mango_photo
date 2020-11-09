@@ -342,6 +342,7 @@ def __get_address_from_gps(lat, lat_ref, lng, lng_ref):
                     '&location={1},{2}'.format(ak, lat, lng)
     res = requests.get(baidu_map_api)
     result = res.json()  # 获取响应数据，并解析JSON，转化为python字典
+    res.close()
 
     if result['status'] != 0:  # 接口调用失败
         raise Exception(result['message'])  # 抛出异常
