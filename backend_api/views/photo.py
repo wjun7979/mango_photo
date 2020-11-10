@@ -22,23 +22,26 @@ from backend_api.views.people import people_auto_cover, baidu_ai_facelib_delete
 def photo_list(request):
     """浏览照片"""
     response = {}
-    call_mode = request.GET.get('call_mode')
+    call_mode = request.GET.get('call_mode')  # 调用方式
     userid = request.GET.get('userid')
-    album_uuid = request.GET.get('album_uuid')
-    people_uuid = request.GET.get('people_uuid')
-    group_type = request.GET.get('group_type')
-    date_filter = request.GET.get('date_filter')
+    album_uuid = request.GET.get('album_uuid')  # 影集uuid
+    people_uuid = request.GET.get('people_uuid')  # 人物uuid
+    province = request.GET.get('province')  # 省
+    city = request.GET.get('city')  # 市
+    district = request.GET.get('district')  # 县
+    group_type = request.GET.get('group_type')  # 分组类型
+    date_filter = request.GET.get('date_filter')  # 分组时间过滤
     page = request.GET.get('page')
     pagesize = request.GET.get('pagesize')
 
     photos = Photo.objects.distinct()
     photos = photos.values('uuid', 'path_original', 'path_modified', 'path_thumbnail_s', 'path_thumbnail_l', 'name',
                            'width', 'height', 'exif_datetime', 'is_favorited', 'comments', 'address__address',
-                           'address__poi_name')
+                           'address__poi_name', 'address__province', 'address__city', 'address__district')
     photos = photos.annotate(faces=Count('peopleface__uuid'))
     # 过滤条件
     photos = photos.filter(userid=userid)
-    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people', 'feature', 'pick_face']:
+    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people', 'feature', 'pick_face', 'location']:
         photos = photos.filter(is_deleted=False)
         if call_mode == 'album':  # 在影集中调用
             photos = photos.filter(albumphoto__album_uuid=album_uuid)
@@ -61,8 +64,16 @@ def photo_list(request):
                                    peopleface__is_delete=False)
         if call_mode == 'pick_face':  # 在选择面孔添加到人物中使用
             photos = photos.filter(peopleface__people_uuid__isnull=True, faces__gt=0, peopleface__is_delete=False)
+        if call_mode == 'location':  # 在地点中调用
+            if province != 'none':
+                photos = photos.filter(address__province=province)
+            if city != 'none':
+                photos = photos.filter(address__city=city)
+            if district != 'none':
+                photos = photos.filter(address__district=district)
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
+
     if date_filter:  # 按日期条件进行过滤
         if group_type == 'year':
             photos = photos.filter(
@@ -72,6 +83,7 @@ def photo_list(request):
                 exif_datetime__lt=datetime.strptime(date_filter, '%Y-%m-%d') + relativedelta(months=1))
         if group_type == 'day':
             photos = photos.filter(exif_datetime__lt=datetime.strptime(date_filter, '%Y-%m-%d') + timedelta(days=1))
+
     # 排序
     photos = photos.order_by('-exif_datetime')
 
@@ -83,6 +95,7 @@ def photo_list(request):
         response['list'] = json.loads(json.dumps(list(photos), cls=DateEncoder))
     else:
         response = json.loads(json.dumps(list(photos), cls=DateEncoder))
+
     # safe 控制是否只有字典类型的数据才能被序列化，这里的response是一个数组，所以要将safe设置为False
     return JsonResponse(response, safe=False, status=200)
 
@@ -95,6 +108,9 @@ def photo_get_groups(request):
     userid = request.GET.get('userid')
     album_uuid = request.GET.get('album_uuid')
     people_uuid = request.GET.get('people_uuid')
+    province = request.GET.get('province')  # 省
+    city = request.GET.get('city')  # 市
+    district = request.GET.get('district')  # 县
 
     photos = Photo.objects.distinct()
     if group_type == 'year':
@@ -106,7 +122,7 @@ def photo_get_groups(request):
     photos = photos.values('exif_datetime')
     # 过滤条件
     photos = photos.filter(userid=userid)
-    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people', 'feature', 'pick_face']:
+    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people', 'feature', 'pick_face','location']:
         photos = photos.filter(is_deleted=False)
         if call_mode == 'album':  # 在影集中调用
             photos = photos.filter(albumphoto__album_uuid=album_uuid)
@@ -129,6 +145,13 @@ def photo_get_groups(request):
                                    peopleface__is_delete=False)
         if call_mode == 'pick_face':  # 在选择面孔添加到人物中使用
             photos = photos.filter(peopleface__people_uuid__isnull=True, faces__gt=0, peopleface__is_delete=False)
+        if call_mode == 'location':  # 在地点中调用
+            if province != 'none':
+                photos = photos.filter(address__province=province)
+            if city != 'none':
+                photos = photos.filter(address__city=city)
+            if district != 'none':
+                photos = photos.filter(address__district=district)
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
     # 排序
@@ -401,6 +424,9 @@ def photo_set_location(request):
                     address.save()
                 response['address'] = result['result']['formatted_address']
                 response['poi_name'] = poi_name
+                response['province'] = result['result']['addressComponent']['province']
+                response['city'] = result['result']['addressComponent']['city']
+                response['district'] = result['result']['addressComponent']['district']
                 return JsonResponse(response, safe=False, status=200)
             else:  # 删除位置信息
                 return JsonResponse({'address': '', 'poi_name': ''}, safe=False, status=200)

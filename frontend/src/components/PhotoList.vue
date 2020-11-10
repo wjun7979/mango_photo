@@ -128,7 +128,7 @@
                 <span v-show="checkList.length===0" class="chk-title">选择照片</span>
             </el-col>
             <el-col v-show="checkList.length>0" :span="12" style="text-align: right">
-                <div v-if="['photo','favorites'].indexOf(callMode)>-1">
+                <div v-if="['photo','favorites','location'].indexOf(callMode)>-1">
                     <i class="el-icon-folder-add" title="添加到影集" @click="showAlbumTree"></i>
                     <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
                     <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
@@ -295,7 +295,7 @@
             callMode: {  //调用模式
                 type: String,
                 //photo:照片; album:影集; trash:回收站; pick:挑选照片到影集; favorites:收藏夹; cover:设置影集封面
-                //people:人物; feature:挑选人物特征
+                //people:人物; feature:挑选人物特征; location:地点
                 default: 'photo'
             },
             albumUUID: {  //当调用模式为album时，必须指定影集uuid
@@ -307,6 +307,18 @@
                 default: () => []
             },
             peopleUUID: {  //当调用模式为people和feature时，必须指定人物uuid
+                type: String,
+                default: 'none'
+            },
+            locationProvince: {  //当调用模式为location时，必须指定省份
+                type: String,
+                default: 'none'
+            },
+            locationCity: {  //当调用模式为location时，必须指定市
+                type: String,
+                default: 'none'
+            },
+            locationDistrict: {  //当调用模式为location时，必须指定县
                 type: String,
                 default: 'none'
             },
@@ -352,10 +364,11 @@
                 //有其它组件发出刷新照片的指令
                 let refreshPhoto = this.$store.state.refreshPhoto
                 if (refreshPhoto.action === 'reload') {  //刷新
-                    this.photos.isLoading = true  //当前正处于加载状态
-                    this.photos.photoList = []
-                    this.photos.page = 1
-                    this.showPhotos()
+                    this.reloadPhotos()
+                    // this.photos.isLoading = true  //当前正处于加载状态
+                    // this.photos.photoList = []
+                    // this.photos.page = 1
+                    // this.showPhotos()
                 }
                 if (refreshPhoto.action === 'delete') {  //删除
                     this.photos.isLoading = true  //当前正处于加载状态
@@ -404,7 +417,7 @@
                     this.onPick(this.checkList)
                 }
                 //返回选中列表中是否包含未收藏的照片
-                if (['photo','album','favorites','people'].indexOf(this.callMode) > -1) {
+                if (['photo','album','favorites','people','location'].indexOf(this.callMode) > -1) {
                     this.noFavorited = false
                     for (let item of val) {
                         let photo = this.photos.photoList.find(t => t.uuid === item)
@@ -532,11 +545,14 @@
                     url: this.apiUrl + '/api/photo_list',
                     params: {
                         userid: localStorage.getItem('userid'),
-                        call_mode: this.callMode,
-                        album_uuid: this.albumUUID,
-                        people_uuid: this.peopleUUID,
-                        group_type: this.groupType,
-                        date_filter: this.dateFilter,
+                        call_mode: this.callMode,  //调用方式
+                        album_uuid: this.albumUUID,  //影集uuid
+                        people_uuid: this.peopleUUID,  //人物uuid
+                        province: decodeURIComponent(this.locationProvince),  //省
+                        city: decodeURIComponent(this.locationCity),  //市
+                        district: decodeURIComponent(this.locationDistrict),  //县
+                        group_type: this.groupType,  //分组类型
+                        date_filter: this.dateFilter,  //分组时间过滤
                         page: this.photos.page,
                         pagesize: this.photos.pageSize,
                     }
@@ -604,6 +620,9 @@
                         call_mode: this.callMode,
                         album_uuid: this.albumUUID,
                         people_uuid: this.peopleUUID,
+                        province: decodeURIComponent(this.locationProvince),  //省
+                        city: decodeURIComponent(this.locationCity),  //市
+                        district: decodeURIComponent(this.locationDistrict),  //县
                     }
                 }).then(response => {
                     this.photoGroups.list = response.data
@@ -1161,6 +1180,19 @@
                         let photo = this.photos.photoList.find(t => t.uuid === item)
                         photo.address__poi_name = res.poi_name
                         photo.address__address = res.address
+                        //在地点调用时，修改位置信息后重新检查是否仍然属于当前地点
+                        if (this.callMode === 'location') {
+                            if (photo.city !== '') {  //有市级信息时，判断省和市是否发生了改变
+                                if (photo.address__province !== res.province || photo.address__city !== res.city) {
+                                    this.$store.commit('refreshPhoto', {action: 'delete', list: [photo.uuid]})
+                                }
+                            }
+                            else {  //没有有市级信息时，判断省、市、县是否发生了改变
+                                if (photo.address__province !== res.province || photo.address__city !== res.city || photo.address__district !== res.district) {
+                                    this.$store.commit('refreshPhoto', {action: 'delete', list: [photo.uuid]})
+                                }
+                            }
+                        }
                     }
                     this.unselectPhoto()
                 })

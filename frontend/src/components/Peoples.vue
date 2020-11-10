@@ -1,9 +1,12 @@
 <template>
     <el-container>
         <el-header class="mp-page-header" height="56px">
-            <el-col class="mp-page-header-title" :span="24">
+            <el-col class="mp-page-header-title" :span="12">
                 <div style="float: left;width: 40px"><i class="el-icon-back mp-page-header-back" @click="$router.back()"></i></div>
                 <span>人物</span>
+            </el-col>
+            <el-col :span="12" style="text-align: right">
+                <SearchButton style="margin-right: 20px"></SearchButton>
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
@@ -18,8 +21,8 @@
                     <div class="people-wrap" @click="showPeople(people.uuid)">
                         <div class="people-cover"
                              :style="{'background-image':'url('+apiUrl+'/'+people.cover_path+'/'+people.cover_name+')'}"></div>
-                        <p>
-                            <span class="people-name">{{people.name}}</span>
+                        <p class="people-name" :title="people.name+'('+people.faces+')'">
+                            <span>{{people.name}}</span>
                             <span class="people-peoples">（{{people.faces}}）</span>
                         </p>
                         <p class="people-peoples">
@@ -56,8 +59,11 @@
 </template>
 
 <script>
+    import SearchButton from "./MainHeader/SearchButton";
+
     export default {
         name: "Peoples",
+        components: {SearchButton},
         data() {
             return {
                 peopleList: [],  //人物列表

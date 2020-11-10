@@ -29,8 +29,10 @@
                         <span>人物</span>
                     </div>
                 </el-col>
-                <el-col :xs="{span:8}" :sm="{span:6}" :lg="{span:4}" :xl="{span:3}" style="display: none">
-                    <div class="group"></div>
+                <el-col :xs="{span:8}" :sm="{span:6}" :lg="{span:4}" :xl="{span:3}">
+                    <router-link to="/locations">
+                        <div class="group location"></div>
+                    </router-link>
                     <div class="group-title">地点</div>
                 </el-col>
             </el-row>
@@ -74,6 +76,12 @@
     }
     .people {
         background-image: url('../assets/images/sys-group/people.png');
+        background-position: center;
+        background-repeat: no-repeat;
+        background-size: 50%;
+    }
+    .location {
+        background-image: url('../assets/images/sys-group/location.png');
         background-position: center;
         background-repeat: no-repeat;
         background-size: 50%;

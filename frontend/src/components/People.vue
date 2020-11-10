@@ -6,11 +6,12 @@
                 <div class="people-title">{{people.name}}</div>
             </el-col>
             <el-col :span="10" style="text-align: right; padding-right: 20px">
+                <SearchButton style="margin-right: 20px"></SearchButton>
                 <el-button icon="el-icon-user-solid" size="small" type="success"
                            @click="openPick" style="margin: 15px 20px 0 0" class="hidden-mobile-only">确认其他面孔
                 </el-button>
-                <i class="iconfont iconzengjiarenwu icon-button hidden-pc-only"
-                   @click="openPick" style="font-size: 32px; margin-top: 15px;"></i>
+                <i class="iconfont iconrenwu1 icon-button hidden-pc-only"
+                   @click="openPick" style="font-size: 24px; margin-top: 15px;"></i>
                 <el-radio-group v-model="showType" size="small" @change="changeShowType" class="hidden-mobile-only"
                                 style="float:right; margin-top: 15px">
                     <el-radio-button label="photo">显示照片</el-radio-button>
@@ -43,10 +44,11 @@
 <script>
     import PhotoList from "./PhotoList";
     import FaceList from "./FaceList";
+    import SearchButton from "./MainHeader/SearchButton";
 
     export default {
         name: "People",
-        components: {PhotoList, FaceList},
+        components: {PhotoList, FaceList, SearchButton},
         data() {
             return {
                 peopleUUID: this.$route.params.uuid,  //人物uuid

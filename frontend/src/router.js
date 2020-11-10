@@ -12,6 +12,8 @@ import Trash from "./components/Trash"
 import Favorites from "./components/Favorites";
 import Peoples from "./components/Peoples";
 import People from "./components/People";
+import Locations from "./components/Locations";
+import Location from "./components/Location";
 import PickFace from "./components/PickFace";
 import PickFeature from "./components/PickFeature";
 import NotFound from "./components/NotFound";
@@ -62,6 +64,16 @@ const routes = [
             {
                 path: '/people/:uuid/:type/:photo_uuid?', name: 'people', component: People, meta: {
                     title: '人物'
+                }
+            },
+            {
+                path: '/locations', name: 'locations', component: Locations, meta: {
+                    title: '地点'
+                }
+            },
+            {
+                path: '/location/:province/:city/:district/:photo_uuid?', name: 'location', component: Location, meta: {
+                    title: '地点'
                 }
             },
             {

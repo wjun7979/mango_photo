@@ -6,6 +6,7 @@
                 <span>收藏夹</span>
             </el-col>
             <el-col :span=10 style="text-align: right">
+                <SearchButton style="margin-right: 20px"></SearchButton>
                 <MoreOption style="margin: 19px 20px 0 0"></MoreOption>
             </el-col>
         </el-header>
@@ -18,10 +19,11 @@
 <script>
     import PhotoList from "./PhotoList";
     import MoreOption from "./MainHeader/MoreOption";
+    import SearchButton from "./MainHeader/SearchButton";
 
     export default {
         name: "Favorites",
-        components: {MoreOption, PhotoList},
+        components: {MoreOption, PhotoList, SearchButton},
     }
 </script>
 
