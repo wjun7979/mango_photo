@@ -131,11 +131,11 @@ LOGGING = {
         'django.db.backends': {  # 输出ORM生成的SQL
             'handlers': ['console'],
             'propagate': True,
-            'level': 'ERROR',
+            'level': 'ERROR',  # 设置成DEBUG即可输出SQL
         },
         'django.server': {
             'handlers': ['console'],
-            'level': 'WARNING'
+            'level': 'ERROR'
         },
     }
 }

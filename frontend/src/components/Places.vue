@@ -16,12 +16,12 @@
                 <img src="../assets/images/empty.png" alt=""/>
             </div>
             <el-row :gutter="10" style="margin: 0">
-                <el-col :xs="{span:8}" :sm="{span:6}" :lg="{span:4}" :xl="{span:3}" v-for="location of locationList"
-                        :key="location.name" style="position: relative">
-                    <div class="location-wrap" @click="showLocation(location.province, location.name)">
-                        <div class="location-cover" :style="{'background-image':'url('+apiUrl+'/'+location.cover+')'}"></div>
-                        <p class="location-name">{{location.name}}</p>
-                        <p class="location-photos">{{location.photos}}项</p>
+                <el-col :xs="{span:8}" :sm="{span:6}" :lg="{span:4}" :xl="{span:3}" v-for="place of placeList"
+                        :key="place.name" style="position: relative">
+                    <div class="place-wrap" @click="showPlace(place.province, place.name)">
+                        <div class="place-cover" :style="{'background-image':'url('+apiUrl+'/'+place.cover+')'}"></div>
+                        <p class="place-name">{{place.name}}</p>
+                        <p class="place-photos">{{place.photos}}项</p>
                     </div>
                 </el-col>
             </el-row>
@@ -33,11 +33,11 @@
     import SearchButton from "./MainHeader/SearchButton";
 
     export default {
-        name: "Locations",
+        name: "Places",
         components: {SearchButton},
         data() {
             return {
-                locationList: [],  //地点列表
+                placeList: [],  //地点列表
                 isShowEmptyTips: false,  //是否显示空列表提示
             }
         },
@@ -47,29 +47,29 @@
             },
         },
         mounted() {
-            this.showLocations()
+            this.showPlaces()
         },
         methods: {
-            showLocations() {
+            showPlaces() {
                 //获取地点列表
                 this.$axios({
                     method: 'get',
-                    url: this.apiUrl + '/api/location_list',
+                    url: this.apiUrl + '/api/place_list',
                     params: {
                         userid: localStorage.getItem('userid'),
                     }
                 }).then(response => {
-                    this.locationList = response.data
-                    if (this.locationList.length === 0) {  //显示空列表提示
+                    this.placeList = response.data
+                    if (this.placeList.length === 0) {  //显示空列表提示
                         this.isShowEmptyTips = true
                     }
                 })
             },
-            showLocation(province, name) {
+            showPlace(province, name) {
                 //跳转到指定的地点
                 this.$axios({
                     method: 'get',
-                    url: this.apiUrl + '/api/location_show',
+                    url: this.apiUrl + '/api/place_show',
                     params: {
                         userid: localStorage.getItem('userid'),
                         province: province,
@@ -78,7 +78,7 @@
                 }).then(response => {
                     let res = response.data
                     this.$router.push({
-                        name: 'location',
+                        name: 'place',
                         params: {
                             province: encodeURIComponent(res.province),
                             city: encodeURIComponent(res.city),
@@ -92,12 +92,12 @@
 </script>
 
 <style scoped>
-    .location-wrap { /*地点容器*/
+    .place-wrap { /*地点容器*/
         cursor: pointer;
         margin-bottom: 15px;
     }
 
-    .location-cover { /*地点封面*/
+    .place-cover { /*地点封面*/
         position: relative;
         padding-top: 100%;
         background-color: #80868b;
@@ -107,7 +107,7 @@
         border-radius: 8px;
     }
 
-    .location-name { /*地点名称*/
+    .place-name { /*地点名称*/
         width: 100%;
         padding-top: 8px;
         font-size: 14px;
@@ -116,7 +116,7 @@
         overflow: hidden;
     }
 
-    .location-photos { /*地点中照片的数量*/
+    .place-photos { /*地点中照片的数量*/
         font-size: 12px;
         color: #5f6368;
         white-space: nowrap;

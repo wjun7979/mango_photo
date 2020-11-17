@@ -6,36 +6,36 @@ from backend_api.models import Address
 
 
 @require_http_methods(['GET'])
-def location_list(request):
+def place_list(request):
     """获取地点列表"""
     userid = request.GET.get('userid')
-    locations = Address.objects.filter(uuid__userid=userid, uuid__is_deleted=False)
-    locations = locations.values('province', name=Case(When(city='', then='district'), default='city'))
-    locations = locations.annotate(photos=Count('uuid'))
-    locations = locations.order_by('-photos')
+    places = Address.objects.filter(uuid__userid=userid, uuid__is_deleted=False)
+    places = places.values('province', name=Case(When(city='', then='district'), default='city'))
+    places = places.annotate(photos=Count('uuid'))
+    places = places.order_by('-photos')
     # 获取地点的封面图片
-    address = Address.objects.values('uuid__path_thumbnail_s', 'uuid__name')
-    address = address.filter(uuid__userid=userid, uuid__is_deleted=False)
-    for location in locations:
+    photos = Address.objects.values('uuid__path_thumbnail_s', 'uuid__name')
+    photos = photos.filter(uuid__userid=userid, uuid__is_deleted=False)
+    for place in places:
         # 首先以市级条件进行查找
-        cover = address.filter(province=location['province'], city=location['name'])
+        cover = photos.filter(province=place['province'], city=place['name'])
         cover = cover.order_by('-uuid__exif_datetime')
         cover = cover.first()
         if cover:
-            location['cover'] = cover['uuid__path_thumbnail_s'] + '/' + cover['uuid__name']
+            place['cover'] = cover['uuid__path_thumbnail_s'] + '/' + cover['uuid__name']
         # 市级名称为空时(例如湖北省神农架林区)，以县级条件进行查找
-        if location.get('cover') is None:
-            cover = address.filter(province=location['province'], district=location['name'])
+        if place.get('cover') is None:
+            cover = photos.filter(province=place['province'], district=place['name'])
             cover = cover.order_by('-uuid__exif_datetime')
             cover = cover.first()
             if cover:
-                location['cover'] = cover['uuid__path_thumbnail_s'] + '/' + cover['uuid__name']
-    response = json.loads(json.dumps(list(locations)))
+                place['cover'] = cover['uuid__path_thumbnail_s'] + '/' + cover['uuid__name']
+    response = json.loads(json.dumps(list(places)))
     return JsonResponse(response, safe=False, status=200)
 
 
 @require_http_methods(['GET'])
-def location_show(request):
+def place_show(request):
     """根据输入参数返回省、市、县三级名称"""
     userid = request.GET.get('userid')
     province = request.GET.get('province')  # 省

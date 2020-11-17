@@ -11,7 +11,7 @@
                   @click="setPhotoComments">{{currentImg.comments}}</span>
             <!--工具栏-->
             <div class="viewer-toolbar">
-                <div v-if="['photo','favorites','people','location'].indexOf(callMode)>-1">
+                <div v-if="['photo','favorites','people','place'].indexOf(callMode)>-1">
                     <i class="el-icon-s-operation hidden-mobile-only" title="修改" @click="showModify"></i>
                     <i class="el-icon-warning-outline" title="信息" @click="showInfo"></i>
                     <i v-if="currentImg.is_favorited" class="el-icon-star-on" title="收藏" @click="removeFromFavorites"></i>
@@ -95,7 +95,7 @@
             </el-row>
             <div style="padding-top: 70px">
                 <!--照片说明-->
-                <el-row v-if="['photo','album','favorites','people','location'].indexOf(callMode)>-1" class="side-href"
+                <el-row v-if="['photo','album','favorites','people','place'].indexOf(callMode)>-1" class="side-href"
                         @click.native="setPhotoComments">
                     <el-col :span="24" style="border-bottom: solid 1px #8c939d">
                         <span v-if="photoInfo.comments">{{photoInfo.comments}}</span>
@@ -116,7 +116,7 @@
                             <!--叠加特征标志-->
                             <i v-if="face.feature_token" class="el-icon-user-solid face-feature"></i>
                         </div>
-                        <el-dropdown v-if="['photo','album','favorites','people','pick','pick_face','location'].indexOf(callMode)>-1"
+                        <el-dropdown v-if="['photo','album','favorites','people','pick','pick_face','place'].indexOf(callMode)>-1"
                                      trigger="click"
                                      placement="bottom-start" @command="faceCommand" style="cursor: pointer">
                             <span class="face-name" v-if="face.people_name">
@@ -172,7 +172,7 @@
                     </el-col>
                 </el-row>
                 <el-row style="font-size: 12px">详情</el-row>
-                <el-row :class="{'side-href':['photo','album','favorites','people','location'].indexOf(callMode)>-1}" v-if="photoInfo.exif_datetime"
+                <el-row :class="{'side-href':['photo','album','favorites','people','place'].indexOf(callMode)>-1}" v-if="photoInfo.exif_datetime"
                         @click.native="showModifyDateTime">
                     <el-col :span="3">
                         <i class="el-icon-date" style="font-size: 24px; line-height: 44px"></i>
@@ -215,7 +215,7 @@
                     </el-col>
                 </el-row>
                 <!--位置信息-->
-                <el-row :class="{'side-href':['photo','album','favorites','people','location'].indexOf(callMode)>-1}"
+                <el-row :class="{'side-href':['photo','album','favorites','people','place'].indexOf(callMode)>-1}"
                         @click.native="showModifyLocation">
                     <el-col :span="3">
                         <i class="el-icon-location" style="font-size: 24px;"></i>
@@ -1217,7 +1217,7 @@
             },
             showModifyDateTime() {
                 //显示修改日期和时间对话框
-                if (['photo','album','favorites','people','location'].indexOf(this.callMode) === -1)
+                if (['photo','album','favorites','people','place'].indexOf(this.callMode) === -1)
                     return false
                 this.deviceSupportUninstall()  //卸载键盘按键支持，避免与dialog的esc关闭冲突
                 this.photoDateTime = this.photoInfo.exif_datetime
@@ -1255,7 +1255,7 @@
             },
             showModifyLocation(){
                 //显示修改位置信息对话框
-                if (['photo','album','favorites','people','location'].indexOf(this.callMode) === -1)
+                if (['photo','album','favorites','people','place'].indexOf(this.callMode) === -1)
                     return false
                 this.deviceSupportUninstall()
                 this.photoLocationName = ''
@@ -1336,7 +1336,7 @@
                     photo.address__address = res.address
                     this.$store.commit('refreshPhoto', {action: 'update', list: photo, refreshPhotoGroup: false})
                     //在地点调用时，修改位置信息后重新检查是否仍然属于当前地点
-                    if (this.callMode === 'location') {
+                    if (this.callMode === 'place') {
                         if (photo.city !== '') {  //有市级信息时，判断省和市是否发生了改变
                             if (photo.address__province !== res.province || photo.address__city !== res.city) {
                                 this.$store.commit('refreshPhoto', {action: 'delete', list: [photo.uuid]})

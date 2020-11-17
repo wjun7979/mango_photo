@@ -113,6 +113,12 @@
                     </div>
                 </el-checkbox-group>
             </el-row>
+            <el-row v-show="photos.photoList.length>0" class="div-pagination">
+                <el-pagination background layout="prev, pager, next" :total="photos.total" :pager-count="5"
+                               :page-size="photos.pageSize" :current-page.sync="photos.page" :hide-on-single-page="true"
+                               @current-change="goPage($event)">
+                </el-pagination>
+            </el-row>
         </el-checkbox-group>
         <!--大图预览-->
         <Photo v-if="isShowPreview" :callMode="callMode" :uuid="previewPhotoUUID" :photoList="photos.photoList"
@@ -128,7 +134,7 @@
                 <span v-show="checkList.length===0" class="chk-title">选择照片</span>
             </el-col>
             <el-col v-show="checkList.length>0" :span="12" style="text-align: right">
-                <div v-if="['photo','favorites','location'].indexOf(callMode)>-1">
+                <div v-if="['photo','favorites','place'].indexOf(callMode)>-1">
                     <i class="el-icon-folder-add" title="添加到影集" @click="showAlbumTree"></i>
                     <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
                     <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
@@ -295,7 +301,7 @@
             callMode: {  //调用模式
                 type: String,
                 //photo:照片; album:影集; trash:回收站; pick:挑选照片到影集; favorites:收藏夹; cover:设置影集封面
-                //people:人物; feature:挑选人物特征; location:地点
+                //people:人物; feature:挑选人物特征; place:地点
                 default: 'photo'
             },
             albumUUID: {  //当调用模式为album时，必须指定影集uuid
@@ -310,15 +316,15 @@
                 type: String,
                 default: 'none'
             },
-            locationProvince: {  //当调用模式为location时，必须指定省份
+            placeProvince: {  //当调用模式为place时，必须指定省份
                 type: String,
                 default: 'none'
             },
-            locationCity: {  //当调用模式为location时，必须指定市
+            placeCity: {  //当调用模式为place时，必须指定市
                 type: String,
                 default: 'none'
             },
-            locationDistrict: {  //当调用模式为location时，必须指定县
+            placeDistrict: {  //当调用模式为place时，必须指定县
                 type: String,
                 default: 'none'
             },
@@ -417,7 +423,7 @@
                     this.onPick(this.checkList)
                 }
                 //返回选中列表中是否包含未收藏的照片
-                if (['photo','album','favorites','people','location'].indexOf(this.callMode) > -1) {
+                if (['photo','album','favorites','people','place'].indexOf(this.callMode) > -1) {
                     this.noFavorited = false
                     for (let item of val) {
                         let photo = this.photos.photoList.find(t => t.uuid === item)
@@ -468,14 +474,14 @@
                 this.multiple = false
             this.setImgHeight()
             window.addEventListener('resize', this.listenResize)
-            window.addEventListener('scroll', this.listenScroll)
+            // window.addEventListener('scroll', this.listenScroll)
         },
         beforeDestroy() {
             if (['pick','cover','feature'].indexOf(this.callMode) === -1) {
                 this.deviceSupportUninstall()  //卸载键盘按键支持
             }
             window.removeEventListener('resize', this.listenResize)
-            window.removeEventListener('scroll', this.listenScroll)
+            // window.removeEventListener('scroll', this.listenScroll)
             this.$store.commit('pickPhotoMode', {show: false})  //重置移动设备下是否进入选择照片模式
         },
         methods: {
@@ -548,9 +554,9 @@
                         call_mode: this.callMode,  //调用方式
                         album_uuid: this.albumUUID,  //影集uuid
                         people_uuid: this.peopleUUID,  //人物uuid
-                        province: decodeURIComponent(this.locationProvince),  //省
-                        city: decodeURIComponent(this.locationCity),  //市
-                        district: decodeURIComponent(this.locationDistrict),  //县
+                        province: decodeURIComponent(this.placeProvince),  //省
+                        city: decodeURIComponent(this.placeCity),  //市
+                        district: decodeURIComponent(this.placeDistrict),  //县
                         group_type: this.groupType,  //分组类型
                         date_filter: this.dateFilter,  //分组时间过滤
                         page: this.photos.page,
@@ -565,7 +571,8 @@
                         for (let index in tempPhotoList) {
                             tempPhotoList[index]['timestamp'] = this.getGroupLabel(tempPhotoList[index]['exif_datetime'])
                         }
-                        this.photos.photoList.push.apply(this.photos.photoList, tempPhotoList)
+                        // this.photos.photoList.push.apply(this.photos.photoList, tempPhotoList)
+                        this.photos.photoList = tempPhotoList
                         this.creatPhotoGroup()  //创建照片分组
                         //列表载入成功后，是否需要滚动到子影集列表的下面
                         if (scrollToDivider) {
@@ -592,12 +599,20 @@
                     this.photos.isLoading = false  //重置加载状态
                 })
             },
+            goPage(e) {
+                //跳转到指定的页
+                this.photos.isLoading = true  //当前正处于加载状态
+                this.photos.photoList = []
+                this.photos.photoListGroup = []
+                this.photos.page = e
+                this.showPhotos()
+            },
             reloadPhotos(scrollToDivider = false) {
                 //重新载入照片列表
                 this.photos.isLoading = true  //当前正处于加载状态
                 this.photos.photoList = []
                 this.photos.photoListGroup = []
-                this. photoGroups.list= []
+                this.photoGroups.list= []
                 this.checkList = []
                 //将当前影集中的照片默认选中
                 if (this.callMode === 'pick') {
@@ -620,9 +635,9 @@
                         call_mode: this.callMode,
                         album_uuid: this.albumUUID,
                         people_uuid: this.peopleUUID,
-                        province: decodeURIComponent(this.locationProvince),  //省
-                        city: decodeURIComponent(this.locationCity),  //市
-                        district: decodeURIComponent(this.locationDistrict),  //县
+                        province: decodeURIComponent(this.placeProvince),  //省
+                        city: decodeURIComponent(this.placeCity),  //市
+                        district: decodeURIComponent(this.placeDistrict),  //县
                     }
                 }).then(response => {
                     this.photoGroups.list = response.data
@@ -1181,7 +1196,7 @@
                         photo.address__poi_name = res.poi_name
                         photo.address__address = res.address
                         //在地点调用时，修改位置信息后重新检查是否仍然属于当前地点
-                        if (this.callMode === 'location') {
+                        if (this.callMode === 'place') {
                             if (photo.city !== '') {  //有市级信息时，判断省和市是否发生了改变
                                 if (photo.address__province !== res.province || photo.address__city !== res.city) {
                                     this.$store.commit('refreshPhoto', {action: 'delete', list: [photo.uuid]})
@@ -1256,6 +1271,11 @@
     .div-images .div-img {
         position: relative;
         margin: 0 5px 5px 0;
+    }
+    .div-pagination {  /*分页工具条*/
+        margin: 20px auto;
+        padding-bottom: 20px;
+        text-align: center;
     }
     .div-img >>> .el-image {
         position: absolute;

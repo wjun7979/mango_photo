@@ -26,7 +26,7 @@ class User(models.Model):
 class Photo(models.Model):
     """照片"""
     uuid = models.CharField(primary_key=True, max_length=32)
-    userid = models.ForeignKey('user', on_delete=models.CASCADE, db_column='userid')  # 所属用户
+    userid = models.ForeignKey('User', on_delete=models.CASCADE, db_column='userid')  # 所属用户
     path_original = models.CharField(max_length=500)  # 原始照片文件存储路径
     path_modified = models.CharField(null=True, max_length=500)  # 修改后的原始照片存储路径
     path_thumbnail_s = models.CharField(null=True, max_length=500)  # 小缩略图存储路径
@@ -53,6 +53,7 @@ class Photo(models.Model):
     is_favorited = models.BooleanField(default=False)  # 收藏标志
     is_deleted = models.BooleanField(default=False)  # 删除标志
     is_detect_face = models.BooleanField(default=False)  # 是否已进行过人脸检测
+    is_get_tag = models.BooleanField(default=False)  # 是否已获取过图像标签
     input_date = models.DateTimeField(auto_now_add=True)  # 录入时间
     update_date = models.DateTimeField(auto_now=True)  # 修改时间
 
@@ -86,7 +87,7 @@ class Address(models.Model):
 class Album(models.Model):
     """影集"""
     uuid = models.CharField(primary_key=True, max_length=32)
-    userid = models.ForeignKey('user', on_delete=models.CASCADE, db_column='userid')  # 所属用户
+    userid = models.ForeignKey('User', on_delete=models.CASCADE, db_column='userid')  # 所属用户
     name = models.CharField(max_length=200)  # 影集名称
     cover = models.ForeignKey('Photo', null=True, on_delete=models.CASCADE, db_column='cover')  # 封面
     cover_from = models.CharField(default='auto', max_length=10)  # 封面产生的方式:auto自动产生,user用户指定
@@ -118,7 +119,7 @@ class AlbumPhoto(models.Model):
 class People(models.Model):
     """人物"""
     uuid = models.CharField(primary_key=True, max_length=32)
-    userid = models.ForeignKey('user', on_delete=models.CASCADE, db_column='userid')  # 所属用户
+    userid = models.ForeignKey('User', on_delete=models.CASCADE, db_column='userid')  # 所属用户
     name = models.CharField(max_length=200)  # 人物姓名
     cover = models.ForeignKey('PeopleFace', null=True, on_delete=models.SET_NULL, db_column='cover')  # 封面
     cover_from = models.CharField(default='auto', max_length=10)  # 封面产生的方式:auto自动产生,user用户指定
@@ -135,7 +136,7 @@ class People(models.Model):
 class PeopleFace(models.Model):
     """人物中的人脸"""
     uuid = models.CharField(primary_key=True, max_length=32)
-    userid = models.ForeignKey('user', on_delete=models.CASCADE, db_column='userid')  # 所属用户
+    userid = models.ForeignKey('User', on_delete=models.CASCADE, db_column='userid')  # 所属用户
     photo_uuid = models.ForeignKey('Photo', on_delete=models.CASCADE, db_column='photo_uuid')  # 所属照片uuid
     people_uuid = models.ForeignKey('People', null=True, on_delete=models.CASCADE, db_column='people_uuid')  # 所属人物uuid
     path = models.CharField(max_length=500)  # 人脸图片存储路径
@@ -174,3 +175,18 @@ class PeopleFaceExcept(models.Model):
     def __str__(self):
         return 'm_people_face_except:' + self.uuid
 
+
+class PhotoTag(models.Model):
+    """图像标签"""
+    uuid = models.CharField(primary_key=True, max_length=32)
+    userid = models.ForeignKey('User', on_delete=models.CASCADE, db_column='userid')  # 所属用户
+    photo_uuid = models.ForeignKey('Photo', on_delete=models.CASCADE, db_column='photo_uuid')  # 所属照片uuid
+    tag_name = models.CharField(max_length=200)  # 标签名称
+    confidence = models.FloatField()  # 置信度0-100
+    input_date = models.DateTimeField(auto_now_add=True)  # 添加时间
+
+    class Meta:
+        db_table = 'm_photo_tag'
+
+    def __str__(self):
+        return 'm_photo_tag:' + self.uuid

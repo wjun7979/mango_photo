@@ -12,8 +12,8 @@ import Trash from "./components/Trash"
 import Favorites from "./components/Favorites";
 import Peoples from "./components/Peoples";
 import People from "./components/People";
-import Locations from "./components/Locations";
-import Location from "./components/Location";
+import Places from "./components/Places";
+import Place from "./components/Place";
 import PickFace from "./components/PickFace";
 import PickFeature from "./components/PickFeature";
 import NotFound from "./components/NotFound";
@@ -67,12 +67,12 @@ const routes = [
                 }
             },
             {
-                path: '/locations', name: 'locations', component: Locations, meta: {
+                path: '/places', name: 'places', component: Places, meta: {
                     title: '地点'
                 }
             },
             {
-                path: '/location/:province/:city/:district/:photo_uuid?', name: 'location', component: Location, meta: {
+                path: '/place/:province/:city/:district/:photo_uuid?', name: 'place', component: Place, meta: {
                     title: '地点'
                 }
             },
@@ -124,7 +124,7 @@ const router = new VueRouter({
             return new Promise((resolve) => {
                 setTimeout(() => {
                     resolve(savedPosition)
-                }, 300)
+                }, 500)
             })
         }
         else {

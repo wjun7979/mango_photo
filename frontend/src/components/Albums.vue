@@ -30,8 +30,8 @@
                     </div>
                 </el-col>
                 <el-col :xs="{span:8}" :sm="{span:6}" :lg="{span:4}" :xl="{span:3}">
-                    <router-link to="/locations">
-                        <div class="group location"></div>
+                    <router-link to="/places">
+                        <div class="group place"></div>
                     </router-link>
                     <div class="group-title">地点</div>
                 </el-col>
@@ -80,8 +80,8 @@
         background-repeat: no-repeat;
         background-size: 50%;
     }
-    .location {
-        background-image: url('../assets/images/sys-group/location.png');
+    .place {
+        background-image: url('../assets/images/sys-group/place.png');
         background-position: center;
         background-repeat: no-repeat;
         background-size: 50%;

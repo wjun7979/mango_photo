@@ -157,6 +157,9 @@
                             this.checkAlbumsHeight()
                         })
                     }
+                    if (this.albumList.length === 0) {
+                        this.albumsWrap.height = 'auto'
+                    }
                 })
             },
             beforeHandleCommand(uuid, name, parent_uuid, command) {

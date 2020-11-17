@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 from PIL import Image  # 图像处理
 from django.db import transaction
-from django.db.models import Count, Sum, Q, F, Min, Max
+from django.db.models import Count, Sum, Q, F, Min, Max, Subquery
 from django.http import JsonResponse
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
@@ -16,6 +16,8 @@ from backend_api.common.date_encoder import DateEncoder
 from backend_api.models import Photo, AlbumPhoto, Album, Address, People, PeopleFace
 from backend_api.views.album import album_auto_cover
 from backend_api.views.people import people_auto_cover, baidu_ai_facelib_delete
+
+from backend_api.views.thing import thing_get_tags
 
 
 @require_http_methods(['GET'])
@@ -41,7 +43,7 @@ def photo_list(request):
     photos = photos.annotate(faces=Count('peopleface__uuid'))
     # 过滤条件
     photos = photos.filter(userid=userid)
-    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people', 'feature', 'pick_face', 'location']:
+    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people', 'feature', 'pick_face', 'place']:
         photos = photos.filter(is_deleted=False)
         if call_mode == 'album':  # 在影集中调用
             photos = photos.filter(albumphoto__album_uuid=album_uuid)
@@ -64,7 +66,7 @@ def photo_list(request):
                                    peopleface__is_delete=False)
         if call_mode == 'pick_face':  # 在选择面孔添加到人物中使用
             photos = photos.filter(peopleface__people_uuid__isnull=True, faces__gt=0, peopleface__is_delete=False)
-        if call_mode == 'location':  # 在地点中调用
+        if call_mode == 'place':  # 在地点中调用
             if province != 'none':
                 photos = photos.filter(address__province=province)
             if city != 'none':
@@ -112,17 +114,13 @@ def photo_get_groups(request):
     city = request.GET.get('city')  # 市
     district = request.GET.get('district')  # 县
 
-    photos = Photo.objects.distinct()
-    if group_type == 'year':
-        photos = photos.extra(select={"exif_datetime": "DATE_FORMAT(exif_datetime, '%%Y-01-01')"})
-    if group_type == 'month':
-        photos = photos.extra(select={"exif_datetime": "DATE_FORMAT(exif_datetime, '%%Y-%%m-01')"})
-    if group_type == 'day':
-        photos = photos.extra(select={"exif_datetime": "DATE_FORMAT(exif_datetime, '%%Y-%%m-%%d')"})
-    photos = photos.values('exif_datetime')
+    # 首先生成符合条件的照片集合
+    photos = Photo.objects
+    photos = photos.values('uuid')
+    photos = photos.annotate(faces=Count('peopleface__uuid'))
     # 过滤条件
     photos = photos.filter(userid=userid)
-    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people', 'feature', 'pick_face','location']:
+    if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people', 'feature', 'pick_face', 'place']:
         photos = photos.filter(is_deleted=False)
         if call_mode == 'album':  # 在影集中调用
             photos = photos.filter(albumphoto__album_uuid=album_uuid)
@@ -145,7 +143,7 @@ def photo_get_groups(request):
                                    peopleface__is_delete=False)
         if call_mode == 'pick_face':  # 在选择面孔添加到人物中使用
             photos = photos.filter(peopleface__people_uuid__isnull=True, faces__gt=0, peopleface__is_delete=False)
-        if call_mode == 'location':  # 在地点中调用
+        if call_mode == 'place':  # 在地点中调用
             if province != 'none':
                 photos = photos.filter(address__province=province)
             if city != 'none':
@@ -154,10 +152,22 @@ def photo_get_groups(request):
                 photos = photos.filter(address__district=district)
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
-    # 排序
-    photos = photos.order_by('-exif_datetime')
 
-    response = json.loads(json.dumps(list(photos)))
+    # 把前面生成的集合作为条件，获取时间分组列表
+    groups = Photo.objects.distinct()
+    if group_type == 'year':
+        groups = groups.extra(select={"exif_datetime": "DATE_FORMAT(exif_datetime, '%%Y-01-01')"})
+    if group_type == 'month':
+        groups = groups.extra(select={"exif_datetime": "DATE_FORMAT(exif_datetime, '%%Y-%%m-01')"})
+    if group_type == 'day':
+        groups = groups.extra(select={"exif_datetime": "DATE_FORMAT(exif_datetime, '%%Y-%%m-%%d')"})
+    groups = groups.values('exif_datetime')
+    groups = groups.filter(uuid__in=Subquery(photos.values('uuid')))
+
+    # 排序
+    groups = groups.order_by('-exif_datetime')
+
+    response = json.loads(json.dumps(list(groups)))
     return JsonResponse(response, safe=False, status=200)
 
 
@@ -172,6 +182,9 @@ def photo_get_info(request):
                                  photo_lng=F('address__lng'))
     photo = photo.get(uuid=photo_uuid)
     photo['exif_datetime'] = photo['exif_datetime'].strftime('%Y-%m-%d %H:%M:%S')  # 对日期型字段进行转换
+
+    # thing_get_tags()
+
     return JsonResponse(photo, safe=False, status=200)
 
 
@@ -289,7 +302,7 @@ def photo_remove(request):
                 People.objects.filter(uuid=item.uuid).update(cover=None, cover_from='auto')  # 取消人物封面
                 PeopleFace.objects.filter(photo_uuid__in=photos).delete()  # 删除人脸
                 people_auto_cover(item.uuid)  # 重新生成人物封面
-            # 删除照片，Address、AlbumPhoto将会被级联删除
+            # 删除照片，Address、AlbumPhoto、PhotoTag将会被级联删除
             Photo.objects.filter(uuid__in=photos).delete()
             return JsonResponse(response, status=200)
     except Exception as e:
@@ -339,7 +352,7 @@ def photo_empty_trash(request):
                 People.objects.filter(uuid=item.uuid).update(cover=None, cover_from='auto')  # 取消人物封面
                 PeopleFace.objects.filter(photo_uuid__in=photos).delete()  # 删除人脸
                 people_auto_cover(item.uuid)  # 重新生成人物封面
-            # 删除照片，Address、AlbumPhoto将会被级联删除
+            # 删除照片，Address、AlbumPhoto、PhotoTag将会被级联删除
             Photo.objects.filter(userid=userid, is_deleted=True).delete()
             return JsonResponse(response, status=200)
     except Exception as e:

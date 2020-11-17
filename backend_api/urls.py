@@ -5,7 +5,7 @@ from backend_api.views.photo import *
 from backend_api.views.user import *
 from backend_api.views.album import *
 from backend_api.views.people import *
-from backend_api.views.location import *
+from backend_api.views.place import *
 
 urlpatterns = [
     path('login', login),  # 用户登录
@@ -58,6 +58,6 @@ urlpatterns = [
     path('people_get_faces', people_get_faces),  # 获取面孔列表
     path('people_rename', people_rename),  # 重命名人物
     path('people_remove', people_remove),  # 删除人物
-    path('location_list', location_list),  # 获取地点列表
-    path('location_show', location_show),  # 根据输入参数返回省、市、县三级名称
+    path('place_list', place_list),  # 获取地点列表
+    path('place_show', place_show),  # 根据输入参数返回省、市、县三级名称
 ]

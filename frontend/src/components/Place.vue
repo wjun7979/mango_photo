@@ -3,10 +3,10 @@
         <el-header class="mp-page-header" height="64px">
             <el-col class="mp-page-header-title" :span="14">
                 <div style="float: left;width: 40px"><i class="el-icon-back mp-page-header-back" @click="$router.back()"></i></div>
-                <div class="location-title">
-                    <span>{{locationProvince}}</span>
-                    <span v-if="locationCity!=='none'">{{locationCity}}</span>
-                    <span v-if="locationDistrict!=='none'">{{locationDistrict}}</span>
+                <div class="place-title">
+                    <span>{{placeProvince}}</span>
+                    <span v-if="placeCity!=='none'">{{placeCity}}</span>
+                    <span v-if="placeDistrict!=='none'">{{placeDistrict}}</span>
                 </div>
             </el-col>
             <el-col :span="10" style="text-align: right">
@@ -15,8 +15,8 @@
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
-            <PhotoList callMode="location" :locationProvince="locationProvince" :locationCity="locationCity"
-                       :locationDistrict="locationDistrict"></PhotoList>
+            <PhotoList callMode="place" :placeProvince="placeProvince" :placeCity="placeCity"
+                       :placeDistrict="placeDistrict"></PhotoList>
         </el-main>
     </el-container>
 </template>
@@ -27,20 +27,20 @@
     import PhotoList from "./PhotoList";
 
     export default {
-        name: "Location",
+        name: "Place",
         components: {PhotoList, SearchButton, MoreOption},
         data() {
             return {
-                locationProvince: decodeURIComponent(this.$route.params.province),  //省
-                locationCity: decodeURIComponent(this.$route.params.city),  //市
-                locationDistrict: decodeURIComponent(this.$route.params.district),  //县
+                placeProvince: decodeURIComponent(this.$route.params.province),  //省
+                placeCity: decodeURIComponent(this.$route.params.city),  //市
+                placeDistrict: decodeURIComponent(this.$route.params.district),  //县
             }
         },
     }
 </script>
 
 <style scoped>
-    .location-title {
+    .place-title {
         float: left;
         width: calc(100% - 40px);
         white-space: nowrap;
@@ -48,7 +48,7 @@
         overflow: hidden;
     }
     @media only screen and (max-width: 767px) {
-        .location-title {
+        .place-title {
             width: calc(100% - 50px);
         }
     }
