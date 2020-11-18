@@ -59,12 +59,13 @@
         top: 64px;
         z-index: 2;
         height: calc(100% - 64px);
+        overflow: hidden;
         background-color: #fff;
         border-right: 1px solid #dadce0;
     }
 
     .div-menu {  /*菜单*/
-        height: calc(100% - 42px);
+        height: calc(100% - 56px);
     }
 
     .div-main {  /*主内容区*/

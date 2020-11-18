@@ -56,7 +56,7 @@
 
 <style scoped>
     .statistics {
-        padding: 10px 20px;
+        padding: 10px 20px 24px 20px;
         font-size: 12px;
         line-height: 22px;
         color: #5f6368;

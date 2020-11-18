@@ -621,6 +621,8 @@
                 this.photos.isLoading = true  //当前正处于加载状态
                 this.photos.photoList = []
                 this.photos.photoListGroup = []
+                this.checkList = []
+                this.checkGroupList = []
                 this.photos.page = e
                 this.showPhotos()
             },
@@ -631,6 +633,7 @@
                 this.photos.photoListGroup = []
                 this.photoGroups.list= []
                 this.checkList = []
+                this.checkGroupList = []
                 //将当前影集中的照片默认选中
                 if (this.callMode === 'pick') {
                     for (let item of this.albumPhotoList) {
