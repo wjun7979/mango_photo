@@ -31,6 +31,7 @@ def photo_list(request):
     province = request.GET.get('province')  # 省
     city = request.GET.get('city')  # 市
     district = request.GET.get('district')  # 县
+    keyword = request.GET.get('keyword')  # 搜索关键字
     group_type = request.GET.get('group_type')  # 分组类型
     date_filter = request.GET.get('date_filter')  # 分组时间过滤
     page = request.GET.get('page')
@@ -76,7 +77,8 @@ def photo_list(request):
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
 
-    if date_filter:  # 按日期条件进行过滤
+    # 按日期条件进行过滤
+    if date_filter:
         if group_type == 'year':
             photos = photos.filter(
                 exif_datetime__lt=datetime.strptime(date_filter, '%Y-%m-%d') + relativedelta(years=1))
@@ -85,6 +87,11 @@ def photo_list(request):
                 exif_datetime__lt=datetime.strptime(date_filter, '%Y-%m-%d') + relativedelta(months=1))
         if group_type == 'day':
             photos = photos.filter(exif_datetime__lt=datetime.strptime(date_filter, '%Y-%m-%d') + timedelta(days=1))
+
+    # 搜索（标签、说明、地址、poi名称）
+    if keyword:
+        photos = photos.filter(Q(phototag__tag_name__icontains=keyword) | Q(comments__icontains=keyword) | Q(
+            address__address__icontains=keyword) | Q(address__poi_name__icontains=keyword))
 
     # 排序
     photos = photos.order_by('-exif_datetime')
@@ -113,6 +120,7 @@ def photo_get_groups(request):
     province = request.GET.get('province')  # 省
     city = request.GET.get('city')  # 市
     district = request.GET.get('district')  # 县
+    keyword = request.GET.get('keyword')  # 搜索关键字
 
     # 首先生成符合条件的照片集合
     photos = Photo.objects
@@ -152,6 +160,11 @@ def photo_get_groups(request):
                 photos = photos.filter(address__district=district)
     if call_mode == 'trash':  # 在回收站中调用
         photos = photos.filter(is_deleted=True)
+
+    # 搜索（标签、说明、地址、poi名称）
+    if keyword:
+        photos = photos.filter(Q(phototag__tag_name__icontains=keyword) | Q(comments__icontains=keyword) | Q(
+            address__address__icontains=keyword) | Q(address__poi_name__icontains=keyword))
 
     # 把前面生成的集合作为条件，获取时间分组列表
     groups = Photo.objects.distinct()

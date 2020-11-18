@@ -5,7 +5,7 @@
         </transition>
 
         <!--回到顶部-->
-        <el-backtop :right="20" :bottom="50" style="z-index: 1"></el-backtop>
+        <el-backtop :right="20" :bottom="57" style="z-index: 1"></el-backtop>
 
         <!--文件上传进度条-->
         <el-card v-if="showUploadProgress" class="upload-progress">

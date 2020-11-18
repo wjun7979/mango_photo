@@ -7,7 +7,8 @@
             <el-row>
                 <el-col :span="14">
                     <el-input class="input-search hidden-xs-only" placeholder="搜索你的照片" v-model="keyword"
-                              prefix-icon="el-icon-search"></el-input>
+                              prefix-icon="el-icon-search" :clearable="true" @clear="clearKeyword"
+                              @keypress.native="search($event)"></el-input>
                 </el-col>
                 <el-col :span="10" style="text-align: right">
                     <UserCard></UserCard>
@@ -32,11 +33,29 @@
             showMenu() {
                 return this.$store.state.showMenu  //小尺寸屏幕下是否显示菜单
             },
+            searchKeyword() {  //全局搜索关键字
+                return this.$store.state.searchKeyword
+            },
+        },
+        watch: {
+            searchKeyword(val) {
+                this.keyword = val
+            }
         },
         methods: {
             toggleMenu() {
                 //切换菜单
                 this.$store.commit('showMenu', {show: !this.showMenu})
+            },
+            search(e) {
+                //搜索
+                if (e.keyCode === 13) {
+                    this.$store.commit('searchKeyword', {keyword: this.keyword})
+                }
+            },
+            clearKeyword() {
+                //清除搜索关键字
+                this.$store.commit('searchKeyword', {keyword: ''})
             },
         }
     }

@@ -1,16 +1,12 @@
 <template>
-    <div class="footer">
-        <el-row>
-            <el-col :span="24" class="status">
-                <div>照片库中共有 {{photoCount.nums}} 张照片，占用空间 {{photoCount.size}}</div>
-            </el-col>
-        </el-row>
+    <div class="statistics">
+        共 {{photoCount.nums}} 张照片，占用空间 {{photoCount.size}}
     </div>
 </template>
 
 <script>
     export default {
-        name: "Footer",
+        name: "Statistics",
         data() {
             return {
                 photoCount: {
@@ -59,15 +55,10 @@
 </script>
 
 <style scoped>
-    .footer {
-        margin-top: 8px;
-        height: 40px;
-        border-top: 1px solid #dadce0;
-    }
-
-    .status {
-        padding: 0 20px;
+    .statistics {
+        padding: 10px 20px;
         font-size: 12px;
-        line-height: 39px;
+        line-height: 22px;
+        color: #5f6368;
     }
 </style>

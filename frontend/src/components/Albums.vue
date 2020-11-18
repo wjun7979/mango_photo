@@ -6,7 +6,6 @@
                 <span>影集</span>
             </el-col>
             <el-col :span="12" style="text-align: right">
-                <SearchButton style="margin-right: 20px"></SearchButton>
                 <CreateAlbum style="margin-right: 20px"></CreateAlbum>
             </el-col>
         </el-header>
@@ -45,11 +44,10 @@
     import AlbumList from "./AlbumList";
     import ToggleMenu from "./MainHeader/ToggleMenu";
     import CreateAlbum from "./MainHeader/CreateAlbum";
-    import SearchButton from "./MainHeader/SearchButton";
 
     export default {
         name: "Albums",
-        components: {SearchButton, ToggleMenu, AlbumList, CreateAlbum},
+        components: {ToggleMenu, AlbumList, CreateAlbum},
     }
 </script>
 

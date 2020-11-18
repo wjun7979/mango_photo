@@ -49,13 +49,12 @@ def thing_get_tags():
                 photo_tag.tag_name = tag['tag']
                 photo_tag.confidence = tag['confidence']
                 photo_tag.save()
-        except Exception as e:
-            traceback.print_exc()  # 输出详细的错误信息
-            print(str(e))
-            continue
-        finally:
             # 写入Photo表的图像标签检测标志
             Photo.objects.filter(uuid=photo.uuid).update(is_get_tag=True)
+        except Exception as e:
+            # traceback.print_exc()  # 输出详细的错误信息
+            print(str(e))
+            continue
     print('图像标签检测任务执行成功...')
 
 

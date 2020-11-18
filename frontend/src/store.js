@@ -29,6 +29,7 @@ const store = new Vuex.Store({
         showMenu: false,  //小尺寸屏幕下是否显示菜单
         pickPhotoMode: false,  //移动设备下是否进入选择照片模式
         pickFaceMode: false,  //移动设备下是否进入选择面孔模式
+        searchKeyword: '',  //搜索关键字
     },
     mutations: {
         setApiUrl(state) {  //根据客户端访问地址改变API请求地址
@@ -92,6 +93,9 @@ const store = new Vuex.Store({
         pickFaceMode(state, payload) {  //更改"移动设备下是否进入选择面孔模式"的值
             state.pickFaceMode = payload.show
         },
+        searchKeyword(state, payload) {  //更改"搜索关键字"的值
+            state.searchKeyword = payload.keyword
+        }
     }
 })
 store.commit('setApiUrl')

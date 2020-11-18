@@ -13,7 +13,7 @@
                 </el-button>
                 <i class="iconfont icontianjiatupian icon-button hidden-pc-only" @click="openPick"
                    style="margin-left: 20px; font-size: 22px"></i>
-                <MoreOption style="margin: 0 20px"></MoreOption>
+                <MoreOption :showSearch="true" style="margin: 0 20px"></MoreOption>
             </el-col>
         </el-header>
         <el-main class="mp-page-main">

@@ -27,11 +27,17 @@
         </div>
         <!--子影集列表-->
         <AlbumList v-if="callMode==='album'" :parentUUID="albumUUID"></AlbumList>
+        <!--当搜索时显示搜索关键字-->
+        <el-alert v-if="keyword!==''" type="info" close-text="显示全部" show-icon
+                  @close="$store.commit('searchKeyword', {keyword: ''})"
+                  style="width:calc(100% - 20px);margin:5px 10px">
+            <template slot="title">搜索：{{keyword}}</template>
+        </el-alert>
         <!--当照片列表为空时显示一些提示信息-->
         <div v-if="isShowTips" style="text-align: center; padding-top: 80px">
             <div style="font-size: 18px; font-weight: 400; color: #202124; margin-bottom: 20px">空空如也，没有任何内容。</div>
             <div>
-                <UploadFile v-if="callMode==='photo'" button-type="primary"></UploadFile>
+                <UploadFile v-if="callMode==='photo' && keyword===''" button-type="primary"></UploadFile>
             </div>
             <img src="../assets/images/empty.png" alt=""/>
         </div>
@@ -125,7 +131,7 @@
                :albumUUID="albumUUID" :peopleUUID="peopleUUID" :on-close="closePreview"></Photo>
         <!--选中照片后的工具栏-->
         <el-row class="chk-toolbar" v-show="showChkToolBar">
-            <el-col :span="12">
+            <el-col :span="10">
                 <i class="el-icon-close" style="color: #202124;" @click="unselectPhoto"></i>
                 <span v-show="checkList.length>0" class="chk-title">
                     <span class="hidden-xs-only">选择了 {{checkList.length}} 张照片</span>
@@ -133,7 +139,7 @@
                 </span>
                 <span v-show="checkList.length===0" class="chk-title">选择照片</span>
             </el-col>
-            <el-col v-show="checkList.length>0" :span="12" style="text-align: right">
+            <el-col v-show="checkList.length>0" :span="14" style="text-align: right">
                 <div v-if="['photo','favorites','place'].indexOf(callMode)>-1">
                     <i class="el-icon-folder-add" title="添加到影集" @click="showAlbumTree"></i>
                     <i class="el-icon-delete" title="删除" @click="trashPhoto"></i>
@@ -301,7 +307,7 @@
             callMode: {  //调用模式
                 type: String,
                 //photo:照片; album:影集; trash:回收站; pick:挑选照片到影集; favorites:收藏夹; cover:设置影集封面
-                //people:人物; feature:挑选人物特征; place:地点
+                //people:人物; feature:挑选人物特征; place:地点; search:搜索
                 default: 'photo'
             },
             albumUUID: {  //当调用模式为album时，必须指定影集uuid
@@ -361,8 +367,11 @@
             showPhotoTools() {  //是否始终显示照片上的浮动选择框预览按钮
                 return ['pick', 'cover', 'feature'].indexOf(this.callMode) > -1  || this.pickPhotoMode
             },
-            previewPhotoUUID() {
-                return this.$route.params.photo_uuid  //当前预览的照片
+            previewPhotoUUID() {  //当前预览的照片
+                return this.$route.params.photo_uuid
+            },
+            keyword() {  //全局搜索关键字
+                return this.$store.state.searchKeyword
             },
         },
         watch: {
@@ -462,6 +471,12 @@
                 this.dateFilter = ''
                 this.reloadPhotos()
             },
+            keyword() {
+                //当搜索关键字变化时，重新转入照片列表
+                window.scrollTo(0,0)
+                this.dateFilter = ''
+                this.reloadPhotos()
+            },
         },
         mounted() {
             if (this.callMode === 'album') {
@@ -483,6 +498,7 @@
             window.removeEventListener('resize', this.listenResize)
             // window.removeEventListener('scroll', this.listenScroll)
             this.$store.commit('pickPhotoMode', {show: false})  //重置移动设备下是否进入选择照片模式
+            this.$store.commit('searchKeyword', {keyword: ''})  //重置全局搜索关键字
         },
         methods: {
             deviceSupportInstall() {
@@ -557,6 +573,7 @@
                         province: decodeURIComponent(this.placeProvince),  //省
                         city: decodeURIComponent(this.placeCity),  //市
                         district: decodeURIComponent(this.placeDistrict),  //县
+                        keyword: this.keyword,  //搜索关键字
                         group_type: this.groupType,  //分组类型
                         date_filter: this.dateFilter,  //分组时间过滤
                         page: this.photos.page,
@@ -638,6 +655,7 @@
                         province: decodeURIComponent(this.placeProvince),  //省
                         city: decodeURIComponent(this.placeCity),  //市
                         district: decodeURIComponent(this.placeDistrict),  //县
+                        keyword: this.keyword,  //搜索关键字
                     }
                 }).then(response => {
                     this.photoGroups.list = response.data
@@ -1263,6 +1281,7 @@
     }
     .images-wrap {
         padding-left: 10px;
+        padding-bottom: 52px;
     }
     .div-images::after {
         content: '';
@@ -1273,9 +1292,17 @@
         margin: 0 5px 5px 0;
     }
     .div-pagination {  /*分页工具条*/
-        margin: 20px auto;
-        padding-bottom: 20px;
+        width: calc(100% - 20px);
+        padding: 10px 256px 10px 0;
         text-align: center;
+        position: fixed;
+        bottom: 0;
+        background-color: #fff;
+    }
+    @media only screen and (max-width: 767px) {
+        .div-pagination {
+            padding: 10px 0;
+        }
     }
     .div-img >>> .el-image {
         position: absolute;
@@ -1473,7 +1500,7 @@
     .div-float-tools {
         position: fixed;
         margin-left: 10px;
-        bottom: 50px;
+        bottom: 57px;
         z-index: 1;
     }
     .btn-float-tools { /*照片分组和尺寸工具按钮*/

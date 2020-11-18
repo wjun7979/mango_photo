@@ -4,8 +4,9 @@
             <Header></Header>
         </el-header>
         <el-container class="div-body">
-            <el-aside width="256px" :class="{'hidden-xs-only': !showMenu}" class="div-menu">
-                <NavMenu></NavMenu>
+            <el-aside width="256px" :class="{'hidden-xs-only': !showMenu}" class="div-aside">
+                <NavMenu class="div-menu"></NavMenu>
+                <Statistics></Statistics>
             </el-aside>
             <el-main class="div-main">
                 <transition name="fade" :duration="{ enter: 1000, leave: 0 }">
@@ -13,21 +14,18 @@
                 </transition>
             </el-main>
         </el-container>
-        <el-footer height="48px" class="div-footer">
-            <Footer></Footer>
-        </el-footer>
     </el-container>
 </template>
 
 <script>
     import Header from "./Header";
     import NavMenu from "./NavMenu";
-    import Footer from "./Footer";
+    import Statistics from "./Statistics";
 
     export default {
         name: 'Main',
         components: {
-            Footer, Header, NavMenu
+            Header, NavMenu, Statistics
         },
         computed: {
             showMenu() {
@@ -49,7 +47,6 @@
 
     .div-body { /*中部*/
         padding-top: 64px;
-        padding-bottom: 48px;
     }
     @media only screen and (max-width: 767px) {
         .div-body {
@@ -57,23 +54,17 @@
         }
     }
 
-    .div-footer { /*底部*/
-        position: fixed;
-        bottom: 0;
-        width: 100%;
-        min-width: 1280px;
-        padding: 0;
-        background-color: #fff;
-        z-index: 1;
-    }
-
-    .div-menu { /*菜单*/
+    .div-aside { /*侧边栏*/
         position: fixed;
         top: 64px;
         z-index: 2;
-        height: calc(100% - 64px - 40px);
+        height: calc(100% - 64px);
         background-color: #fff;
         border-right: 1px solid #dadce0;
+    }
+
+    .div-menu {  /*菜单*/
+        height: calc(100% - 42px);
     }
 
     .div-main {  /*主内容区*/
