@@ -1,6 +1,8 @@
 import json
 import traceback
 import uuid
+from datetime import datetime
+
 from django.db import transaction
 from django.db.models import Count, Q, Min, Max
 from django.db.models import F
@@ -40,8 +42,12 @@ def album_list(request):
         photos = Photo.objects.filter(albumphoto__album_uuid__in=albums_uuid_list, is_deleted=False)
         photos = photos.aggregate(photos=Count('uuid'), min_time=Min('exif_datetime'), max_time=Max('exif_datetime'))
         album['photos'] = photos['photos']
-        album['min_time'] = photos['min_time']
-        album['max_time'] = photos['max_time']
+        if photos['photos'] > 0:
+            album['min_time'] = photos['min_time']
+            album['max_time'] = photos['max_time']
+        else:
+            album['min_time'] = datetime.strptime('1900-01-01', "%Y-%m-%d")
+            album['max_time'] = datetime.strptime('1900-01-01', "%Y-%m-%d")
 
     # 对影集列表按照成员最新时间进行排序
     albums = sorted(list(albums), key=lambda x: x['max_time'], reverse=True)

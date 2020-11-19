@@ -57,7 +57,7 @@
                     cover_path: '',
                     cover_name: '',
                 },
-                showType: this.$route.params.type,  //显示类型：photo:照片; face:面孔
+                showType: 'photo',  //显示类型：photo:照片; face:面孔
             }
         },
         computed: {
@@ -67,6 +67,9 @@
             refreshPhoto() {
                 return this.$store.state.refreshPhoto  //是否刷新照片列表
             },
+            paramsType() {
+                return this.$route.params.type  //路由传递过来的参数
+            },
         },
         watch: {
             refreshPhoto() {
@@ -75,6 +78,9 @@
                     this.getPeople()
                 }
             },
+            paramsType(val) {
+                this.showType = val
+            }
         },
         mounted() {
             this.getPeople()

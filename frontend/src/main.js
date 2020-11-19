@@ -95,5 +95,23 @@ new Vue({
     render: h => h(App),
     router,  //路由
     store,  //全局状态管理
+	methods: {
+		searchPhoto(keyword) {
+			//搜索照片
+			this.$store.commit('searchKeyword', {keyword: keyword})
+			let route = this.$route
+			if (['albums', 'peoples', 'places', 'user_info'].indexOf(route.name) !== -1) {
+				this.$router.push({
+					name: 'photos'
+				})
+			}
+			if (route.name === 'people' && route.params.type === 'face') {
+				this.$router.replace({
+					name: 'people',
+					params: {uuid: route.params.uuid, type: 'photo'}
+				})
+			}
+		},
+	}
 }).$mount('#app')
 

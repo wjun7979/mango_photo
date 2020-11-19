@@ -51,6 +51,12 @@
                     </el-image>
                 </div>
             </div>
+            <el-row v-show="faces.faceList.length>0" class="div-pagination">
+                <el-pagination background layout="prev, pager, next" :total="faces.total" :pager-count="5"
+                               :page-size="faces.pageSize" :current-page.sync="faces.page" :hide-on-single-page="true"
+                               @current-change="goPage($event)">
+                </el-pagination>
+            </el-row>
         </el-checkbox-group>
         <!--大图预览-->
         <Photo v-if="isShowPreview" :callMode="callMode" :uuid="previewPhotoUUID" :photoList="photos.photoList"
@@ -206,11 +212,11 @@
                 this.getPeople()
             }
             this.deviceSupportInstall()  //注册键盘按键支持
-            window.addEventListener('scroll', this.listenScroll)
+            // window.addEventListener('scroll', this.listenScroll)
         },
         beforeDestroy() {
             this.deviceSupportUninstall()  //卸载键盘按键支持
-            window.removeEventListener('scroll', this.listenScroll)
+            // window.removeEventListener('scroll', this.listenScroll)
             this.$store.commit('pickFaceMode', {show: false})  //重置移动设备下是否进入选择面孔模式
         },
         methods: {
@@ -289,6 +295,19 @@
                     this.photos.photoList.push.apply(this.photos.photoList, response.data.list)
                     this.photos.isLoading = false  //重置加载状态
                 })
+            },
+            goPage(e) {
+                //跳转到指定的页
+                this.faces.isLoading = true  //当前正处于加载状态
+                this.faces.faceList = []
+                this.faces.page = e
+                this.checkList = []
+                this.checkGroupList = []
+                this.showFaces()
+                this.photos.isLoading = true  //当前正处于加载状态
+                this.photos.photoList = []
+                this.photos.photoListGroup = []
+                this.showPhotos()
             },
             showPreview(photo_uuid) {
                 //显示大图预览
@@ -421,7 +440,7 @@
     .div-images { /*瀑布流照片*/
         display: flex;
         flex-wrap: wrap;
-        padding: 10px 0 10px 10px;
+        padding: 10px 0 52px 10px;
     }
 
     .div-images::after {
@@ -450,6 +469,20 @@
         height: 100%;
         border-radius: 8px;
         cursor: pointer;
+    }
+    .div-pagination {  /*分页工具条*/
+        width: calc(100% - 20px);
+        padding: 10px 256px 10px 0;
+        text-align: center;
+        position: fixed;
+        bottom: 0;
+        background-color: #fff;
+        z-index: 2;
+    }
+    @media only screen and (max-width: 767px) {
+        .div-pagination {
+            padding: 10px 0;
+        }
     }
     .btn-checkbox { /*选择控件*/
         visibility: hidden; /*控件默认隐藏*/

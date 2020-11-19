@@ -50,7 +50,7 @@
             search(e) {
                 //搜索
                 if (e.keyCode === 13) {
-                    this.$store.commit('searchKeyword', {keyword: this.keyword})
+                    this.$root.searchPhoto(this.keyword)
                 }
             },
             clearKeyword() {

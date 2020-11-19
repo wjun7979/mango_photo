@@ -15,7 +15,7 @@
                     closeOnClickModal: false,
                     callback: ((action, instance) => {
                         if (action === 'confirm') {
-                            this.$store.commit('searchKeyword', {keyword: instance.inputValue})
+                            this.$root.searchPhoto(instance.inputValue)
                         }
                     })
                 })

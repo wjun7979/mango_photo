@@ -773,7 +773,8 @@
                 this.previewListOrder = previewList.slice(index).concat(previewList.slice(0, index))
                 this.currentImg = this.previewListOrder[0]
                 //如果用户上一次操作时，信息侧边栏是打开状态的，则恢复它
-                if (this.infoSideStatus) {
+                let screenWidth = document.documentElement.clientWidth
+                if (this.infoSideStatus && screenWidth > 767) {
                     this.showInfo()
                 }
             },

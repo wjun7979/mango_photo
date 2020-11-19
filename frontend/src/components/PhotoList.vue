@@ -1301,6 +1301,7 @@
         position: fixed;
         bottom: 0;
         background-color: #fff;
+        z-index: 1;
     }
     @media only screen and (max-width: 767px) {
         .div-pagination {
