@@ -39,14 +39,12 @@ def album_list(request):
                         )
                         SELECT uuid FROM m_album WHERE EXISTS(SELECT uuid FROM tmp_albums WHERE rootId = uuid)
                     ''', [album['uuid']])
-        photos = Photo.objects.filter(albumphoto__album_uuid__in=albums_uuid_list, is_deleted=False)
-        photos = photos.aggregate(photos=Count('uuid'), min_time=Min('exif_datetime'), max_time=Max('exif_datetime'))
+        photos = Photo.objects.distinct().filter(albumphoto__album_uuid__in=albums_uuid_list, is_deleted=False)
+        photos = photos.aggregate(photos=Count('uuid'), max_time=Max('exif_datetime'))
         album['photos'] = photos['photos']
         if photos['photos'] > 0:
-            album['min_time'] = photos['min_time']
             album['max_time'] = photos['max_time']
         else:
-            album['min_time'] = datetime.strptime('1900-01-01', "%Y-%m-%d")
             album['max_time'] = datetime.strptime('1900-01-01', "%Y-%m-%d")
 
     # 对影集列表按照成员最新时间进行排序
