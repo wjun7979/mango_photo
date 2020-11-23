@@ -35,6 +35,7 @@ urlpatterns = [
     path('photo_get_faces', photo_get_faces),  # 获取指定照片中的人脸列表
     path('photo_rotate', photo_rotate),  # 旋转照片
     path('photo_query_peoples', photo_query_peoples),  # 查询人物列表
+    path('photo_get_tags', photo_get_tags),  # 获取指定照片的标签列表
     path('album_list', album_list),  # 获取影集列表
     path('album_target_list', album_target_list),  # 获取影集列表（用于影集移动）
     path('album_get', album_get),  # 获取指定的影集信息

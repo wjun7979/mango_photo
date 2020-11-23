@@ -4,7 +4,7 @@
             <el-col class="mp-page-header-title" :span="14">
                 <div style="float: left;width: 40px"><i class="el-icon-back mp-page-header-back" @click="$router.back()"></i></div>
                 <div class="place-title">
-                    <span>{{placeProvince}}</span>
+                    <span v-if="placeProvince!==placeCity">{{placeProvince}}</span>
                     <span v-if="placeCity!=='none'">{{placeCity}}</span>
                     <span v-if="placeDistrict!=='none'">{{placeDistrict}}</span>
                 </div>

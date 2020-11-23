@@ -13,7 +13,7 @@ from django.conf import settings
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from backend_api.common.date_encoder import DateEncoder
-from backend_api.models import Photo, AlbumPhoto, Album, Address, People, PeopleFace
+from backend_api.models import Photo, AlbumPhoto, Album, Address, People, PeopleFace, PhotoTag
 from backend_api.views.album import album_auto_cover
 from backend_api.views.people import people_auto_cover, baidu_ai_facelib_delete
 
@@ -564,4 +564,14 @@ def photo_query_peoples(request):
     peoples = peoples.values('uuid', 'name')
     peoples = peoples.order_by('name')
     response = json.loads(json.dumps(list(peoples), cls=DateEncoder))
+    return JsonResponse(response, safe=False, status=200)
+
+
+@require_http_methods(['GET'])
+def photo_get_tags(request):
+    """获取指定照片的标签列表"""
+    photo_uuid = request.GET.get('photo_uuid')
+    photo_tags = PhotoTag.objects.values('tag_name').filter(photo_uuid=photo_uuid)
+    photo_tags = photo_tags.order_by('-confidence')
+    response = json.loads(json.dumps(list(photo_tags), cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)

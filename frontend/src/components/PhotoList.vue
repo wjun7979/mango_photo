@@ -338,6 +338,10 @@
                 type: Function,
                 default: () => {}
             },
+            searchKey: {  //从search.vue中传递过来的搜索关键字
+                type: String,
+                default: ''
+            }
         },
         computed: {
             //重要：vuex中定义的数据一定要在这里绑定，放在data()里视图不会更新
@@ -477,10 +481,18 @@
                 this.dateFilter = ''
                 this.reloadPhotos()
             },
+            searchKey(val) {
+                //当父组件传递过来的搜索关键字变化时，重新搜索
+                this.$store.commit('searchKeyword', {keyword: val})
+            },
         },
         mounted() {
             if (this.callMode === 'album') {
                 this.getAlbum()
+            }
+            //当父组件传递了搜索关键字时
+            if (this.searchKey !== '') {
+                this.$store.commit('searchKeyword', {keyword: this.searchKey})
             }
             this.showPhotos()  //获取并显示照片列表
             if (['pick','cover','feature'].indexOf(this.callMode) === -1)
@@ -610,6 +622,15 @@
                                 }
                             })
                         }
+                    }
+                    //判断是否需要显示大图预览,通常在刷新大图预览页面时发生
+                    if (this.previewPhotoUUID !== undefined) {
+                        if (['pick', 'cover', 'feature'].indexOf(this.callMode) === -1) {
+                            this.deviceSupportUninstall()  //卸载键盘按键支持
+                        }
+                        // 隐藏滚动条
+                        document.getElementsByTagName('body')[0].classList.add("el-popup-parent--hidden")
+                        this.isShowPreview = true
                     }
                     // 当没有照片时显示上传提示
                     this.isShowTips = this.photos.photoList.length === 0

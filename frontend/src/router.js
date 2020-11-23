@@ -16,6 +16,7 @@ import Places from "./components/Places";
 import Place from "./components/Place";
 import PickFace from "./components/PickFace";
 import PickFeature from "./components/PickFeature";
+import Search from "./components/Search";
 import NotFound from "./components/NotFound";
 
 //解决ElementUI导航栏中的vue-router重复点菜单报错问题
@@ -84,6 +85,11 @@ const routes = [
             {
                 path: '/user_info', name: 'user_info', component: UserInfo, meta: {
                     title: '管理账号'
+                }
+            },
+            {
+                path: '/search/:keyword/:photo_uuid?', name: 'search', component: Search, meta: {
+                    title: '照片'
                 }
             },
         ]

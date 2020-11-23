@@ -157,7 +157,7 @@
                     </el-col>
                 </el-row>
                 <el-row v-show="photoAlbums.length>0" style="font-size: 12px">影集</el-row>
-                <el-row v-for="(album, index) of this.photoAlbums" :key="index">
+                <el-row v-for="(album,index) of this.photoAlbums" :key="index">
                     <el-col :span="4">
                         <div class="side-album-cover"
                              :style="{'background-image':'url('+apiUrl+'/'+album.cover_path+'/'+album.cover_name+')'}"></div>
@@ -198,6 +198,14 @@
                             <span style="margin-right: 10px;">{{photoInfo.width}} × {{photoInfo.height}}</span>
                             <span>{{$common.bytesToSize(photoInfo.size)}}</span>
                         </p>
+                    </el-col>
+                </el-row>
+                <el-row>
+                    <el-col :span="3">
+                        <i class="el-icon-collection-tag" style="font-size: 24px; line-height: 24px"></i>
+                    </el-col>
+                    <el-col :span="21" class="side-tags">
+                        <span v-for="(tag,index) of photoTags" :key="index" @click="goTag(tag.tag_name)">{{tag.tag_name}}</span>
                     </el-col>
                 </el-row>
                 <el-row v-show="photoInfo.exif_make">
@@ -361,6 +369,7 @@
                 photoInfo: {},  //当前照片的详细信息
                 photoAlbums: [],  //当前照片所属的影集列表
                 photoFaces: [],  //当前照片中的人脸列表
+                photoTags: [],  //当前照片的标签列表
                 baiduMap: null,  //百度地图对象
                 isShowAddToAlbumDialog: false,  //是否显示添加到影集对话框
                 isShowModifyDateTimeDialog: false,  //是否显示修改日期时间对话框
@@ -417,11 +426,7 @@
                 handler: function () {
                     this.currentImg = this.previewListOrder[this.index]
                     this.reset();
-                    if (this.isShowInfoSide) {
-                        this.getPhotoInfo()  //重新获取照片详细信息
-                        this.getPhotoAlbums()  //重新获取照片所属的影集列表
-                        this.getPhotoFaces()  //重新获取照片中的人物
-                    }
+                    this.reloadInfo()  //重新加载信息侧边栏信息
                 }
             },
             currentImg() {
@@ -787,16 +792,22 @@
                 this.isShowModifySide = false
                 this.viewerWrapperMargin = '0px'
             },
-            showInfo() {  //显示信息侧边栏
+            showInfo() {
+                //显示信息侧边栏
                 this.isShowModifySide = false
                 this.isShowInfoSide = !this.isShowInfoSide
                 //保存信息侧边栏当前的打开状态，便于下次进入页面时恢复
                 this.$store.commit('setInfoSideStatus',{status: this.isShowInfoSide})
                 this.viewerWrapperMargin = this.isShowInfoSide ? '360px' : '0px'
+                this.reloadInfo()  //重新加载信息侧边栏信息
+            },
+            reloadInfo() {
+                //重新加载信息侧边栏信息
                 if (this.isShowInfoSide) {
                     this.getPhotoInfo()  //获取照片详细信息
                     this.getPhotoAlbums()  //获取照片所属的影集列表
                     this.getPhotoFaces()  //获取照片中的人脸列表
+                    this.getPhotoTags()  //获取指定照片的标签列表
                 }
             },
             closeInfo() {  //关闭信息侧边栏
@@ -860,6 +871,27 @@
                     this.photoFaces = response.data
                 })
             },
+            getPhotoTags() {
+                //获取指定照片的标签列表
+                this.$axios({
+                    method: 'get',
+                    url: this.apiUrl + '/api/photo_get_tags',
+                    params: {
+                        photo_uuid: this.currentImg.uuid
+                    }
+                }).then(response => {
+                    this.photoTags = response.data
+                })
+            },
+            goTag(tag_name) {
+                //根据标签进行搜索
+                this.$router.push({
+                    name: 'search',
+                    params: {
+                        keyword: encodeURIComponent(tag_name),
+                    }
+                })
+            },
             addToFavorites() {
                 //收藏
                 this.$axios({
@@ -903,11 +935,7 @@
                             if (this.index > this.previewListOrder.length - 1)
                                 this.index = 0
                             this.currentImg = this.previewListOrder[this.index]
-                            if (this.isShowInfoSide) {
-                                this.getPhotoInfo()  //重新获取照片详细信息
-                                this.getPhotoAlbums()  //重新获取照片所属的影集列表
-                                this.getPhotoFaces()  //重新获取照片中的人物
-                            }
+                            this.reloadInfo()  //重新加载信息侧边栏信息
                         }
                         else
                             this.close()  //否则关闭预览
@@ -1026,11 +1054,7 @@
                             if (this.index > this.previewListOrder.length - 1)
                                 this.index = 0
                             this.currentImg = this.previewListOrder[this.index]
-                            if (this.isShowInfoSide) {
-                                this.getPhotoInfo()  //重新获取照片详细信息
-                                this.getPhotoAlbums()  //重新获取照片所属的影集列表
-                                this.getPhotoFaces()  //重新获取照片中的人物
-                            }
+                            this.reloadInfo()  //重新加载信息侧边栏信息
                         }
                         else
                             this.close()  //否则关闭预览
@@ -1068,11 +1092,7 @@
                             if (this.index > this.previewListOrder.length - 1)
                                 this.index = 0
                             this.currentImg = this.previewListOrder[this.index]
-                            if (this.isShowInfoSide) {
-                                this.getPhotoInfo()  //重新获取照片详细信息
-                                this.getPhotoAlbums()  //重新获取照片所属的影集列表
-                                this.getPhotoFaces()  //重新获取照片中的人物
-                            }
+                            this.reloadInfo()  //重新加载信息侧边栏信息
                         }
                         else
                             this.close()  //否则关闭预览
@@ -1131,11 +1151,7 @@
                             if (this.index > this.previewListOrder.length - 1)
                                 this.index = 0
                             this.currentImg = this.previewListOrder[this.index]
-                            if (this.isShowInfoSide) {
-                                this.getPhotoInfo()  //重新获取照片详细信息
-                                this.getPhotoAlbums()  //重新获取照片所属的影集列表
-                                this.getPhotoFaces()  //重新获取照片中的人物
-                            }
+                            this.reloadInfo()  //重新加载信息侧边栏信息
                         }
                         else
                             this.close()  //否则关闭预览
@@ -1166,11 +1182,7 @@
                         if (this.index > this.previewListOrder.length - 1)
                             this.index = 0
                         this.currentImg = this.previewListOrder[this.index]
-                        if (this.isShowInfoSide) {
-                            this.getPhotoInfo()  //重新获取照片详细信息
-                            this.getPhotoAlbums()  //重新获取照片所属的影集列表
-                            this.getPhotoFaces()  //重新获取照片中的人物
-                        }
+                        this.reloadInfo()  //重新加载信息侧边栏信息
                     } else
                         this.close()  //否则关闭预览
                 })
@@ -1459,11 +1471,7 @@
                                 if (this.index > this.previewListOrder.length - 1)
                                     this.index = 0
                                 this.currentImg = this.previewListOrder[this.index]
-                                if (this.isShowInfoSide) {
-                                    this.getPhotoInfo()  //重新获取照片详细信息
-                                    this.getPhotoAlbums()  //重新获取照片所属的影集列表
-                                    this.getPhotoFaces()  //重新获取照片中的人物
-                                }
+                                this.reloadInfo()  //重新加载信息侧边栏信息
                             } else
                                 this.close()  //否则关闭预览
                         }
@@ -1572,11 +1580,7 @@
                                     if (this.index > this.previewListOrder.length - 1)
                                         this.index = 0
                                     this.currentImg = this.previewListOrder[this.index]
-                                    if (this.isShowInfoSide) {
-                                        this.getPhotoInfo()  //重新获取照片详细信息
-                                        this.getPhotoAlbums()  //重新获取照片所属的影集列表
-                                        this.getPhotoFaces()  //重新获取照片中的人物
-                                    }
+                                    this.reloadInfo()  //重新加载信息侧边栏信息
                                 } else
                                     this.close()  //否则关闭预览
                             }
@@ -1820,7 +1824,18 @@
         text-overflow: ellipsis;
         overflow: hidden;
     }
-
+    .side-tags span {  /*侧边栏中的标签*/
+        display: inline-block;
+        margin: 0 5px 5px 0;
+        padding: 4px 10px;
+        background-color: #454545;
+        border-radius: 5px;
+        font-size: 12px;
+        cursor: pointer;
+    }
+    .side-tags span:hover {
+        background-color: #7b7b7b;
+    }
     .album-tree { /*影集树*/
         height: 300px;
         overflow: auto;
