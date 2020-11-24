@@ -157,7 +157,8 @@
                     </el-col>
                 </el-row>
                 <el-row v-show="photoAlbums.length>0" style="font-size: 12px">影集</el-row>
-                <el-row v-for="(album,index) of this.photoAlbums" :key="index">
+                <el-row v-for="(album,index) of this.photoAlbums" :key="index" class="side-href"
+                        @click.native="goAlbum(album.uuid)">
                     <el-col :span="4">
                         <div class="side-album-cover"
                              :style="{'background-image':'url('+apiUrl+'/'+album.cover_path+'/'+album.cover_name+')'}"></div>
@@ -857,6 +858,15 @@
                     }
                 }).then(response => {
                     this.photoAlbums = response.data
+                })
+            },
+            goAlbum(album_uuid) {
+                //跳转到指定的影集
+                this.$router.push({
+                    name: 'album',
+                    params: {
+                        album_uuid: album_uuid,
+                    }
                 })
             },
             getPhotoFaces() {
