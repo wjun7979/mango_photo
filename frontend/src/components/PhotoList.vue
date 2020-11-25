@@ -1074,7 +1074,36 @@
             },
             downloadPhoto() {
                 //下载
-                this.$message('下载功能还没做好呢:-)')
+                this.$message({
+                    message: '照片打包中，请稍候...',
+                    type: 'info',
+                    duration: 0,
+                    showClose: true,
+                })
+                this.$axios({
+                    method: 'post',
+                    url: this.apiUrl + '/api/photo_download',
+                    data: {
+                        userid: localStorage.getItem('userid'),
+                        photo_list: this.checkList,
+                    },
+                    responseType: 'blob'
+                }).then(response => {
+                    this.$message.closeAll()
+                    if (!response.data) {
+                        return
+                    }
+                    let url = window.URL.createObjectURL(new Blob([response.data]))
+                    let link = document.createElement('a')
+                    link.style.display = 'none'
+                    link.href = url
+                    link.setAttribute('download', 'photo.zip')
+                    document.body.appendChild(link)
+                    link.click()
+                    document.body.removeChild(link); //下载完成移除元素
+                    window.URL.revokeObjectURL(url); //释放掉blob对象
+                    this.unselectPhoto()
+                })
             },
             addToFavorites() {
                 //收藏
@@ -1305,7 +1334,7 @@
     }
     .images-wrap {
         padding-left: 10px;
-        padding-bottom: 52px;
+        padding-bottom: 72px;
     }
     .div-images::after {
         content: '';

@@ -5,10 +5,11 @@ import requests  # 调用api
 import uuid
 from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
+import zipfile
 from PIL import Image  # 图像处理
 from django.db import transaction
 from django.db.models import Count, Sum, Q, F, Min, Max, Subquery
-from django.http import JsonResponse
+from django.http import JsonResponse, StreamingHttpResponse
 from django.conf import settings
 from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
@@ -575,3 +576,44 @@ def photo_get_tags(request):
     photo_tags = photo_tags.order_by('-confidence')
     response = json.loads(json.dumps(list(photo_tags), cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)
+
+
+@require_http_methods(['POST'])
+def photo_download(request):
+    """照片打包下载"""
+    request_data = json.loads(request.body)
+    userid = request_data.get('userid')
+    photo_uuid_list = request_data.get('photo_list')
+    photos = Photo.objects.filter(uuid__in=photo_uuid_list)
+    # 在当前用户文件夹下生成下载目录
+    zip_path = os.path.join(settings.BASE_DIR, 'photos', userid, 'temp')
+    if not os.path.exists(zip_path):  # 如果目标文件夹不存在则创建
+        os.makedirs(zip_path, exist_ok=True)
+    zip_file = os.path.join(zip_path, 'photo.zip')
+    zf = zipfile.ZipFile(zip_file, 'w', zipfile.ZIP_DEFLATED, True)
+    for photo in photos:
+        photo_path = os.path.join(settings.BASE_DIR, photo.path_original, photo.name)  # 照片原图
+        zf.write(photo_path, photo.name)  # 将照片写入到压缩包
+    zf.close()
+
+    def file_iterator(file_path, chunk_size=512):
+        """
+        文件生成器,防止文件过大，导致内存溢出
+        :param file_path: 文件绝对路径
+        :param chunk_size: 块大小
+        :return: 生成器
+        """
+        with open(file_path, mode='rb') as f:
+            while True:
+                c = f.read(chunk_size)
+                if c:
+                    yield c
+                else:
+                    break
+
+    response = StreamingHttpResponse(file_iterator(zip_file))
+    # 以流的形式下载文件,这样可以实现任意格式的文件下载
+    response['Content-Type'] = 'application/octet-stream'
+    # Content-Disposition就是当用户想把请求所得的内容存为一个文件的时候提供一个默认的文件名
+    response['Content-Disposition'] = 'attachment;filename="{}"'.format(os.path.basename(zip_file))
+    return response
