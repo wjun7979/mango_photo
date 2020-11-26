@@ -29,26 +29,7 @@ def album_list(request):
     #     max_time=Max('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
     # albums = albums.order_by('-max_time')
 
-    # 获取影集的照片数量、最旧照片的时间和最新照片的时间，包括其子影集
-    for album in albums:
-        albums_uuid_list = Album.objects.raw('''
-                        WITH RECURSIVE tmp_albums AS (
-                            SELECT uuid AS rootId FROM m_album WHERE uuid= %s
-                            UNION ALL
-                            SELECT uuid FROM m_album a,tmp_albums b WHERE a.parent_uuid = b.rootId
-                        )
-                        SELECT uuid FROM m_album WHERE EXISTS(SELECT uuid FROM tmp_albums WHERE rootId = uuid)
-                    ''', [album['uuid']])
-        photos = Photo.objects.distinct().filter(albumphoto__album_uuid__in=albums_uuid_list, is_deleted=False)
-        photos = photos.aggregate(photos=Count('uuid'), max_time=Max('exif_datetime'))
-        album['photos'] = photos['photos']
-        if photos['photos'] > 0:
-            album['max_time'] = photos['max_time']
-        else:
-            album['max_time'] = datetime.strptime('1900-01-01', "%Y-%m-%d")
-
-    # 对影集列表按照成员最新时间进行排序
-    albums = sorted(list(albums), key=lambda x: x['max_time'], reverse=True)
+    albums = __album_count(albums)
     response = json.loads(json.dumps(albums, cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)
 
@@ -64,15 +45,9 @@ def album_target_list(request):
     albums = albums.filter(~Q(uuid=curr_album_uuid))  # 目标影集不能是自己或者子集
     albums = albums.values('uuid', 'name', 'parent_uuid', cover_path=F('cover__path_thumbnail_s'),
                            cover_name=F('cover__name'))  # 通过外键关联查询封面路径
-    # 影集中的照片数量通过外键表获取
-    albums = albums.annotate(photos=Count('albumphoto', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
-    albums = albums.annotate(
-        min_time=Min('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
-    albums = albums.annotate(
-        max_time=Max('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
-    albums = albums.order_by('-max_time')
 
-    response = json.loads(json.dumps(list(albums), cls=DateEncoder))
+    albums = __album_count(albums)
+    response = json.loads(json.dumps(albums, cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)
 
 
@@ -280,3 +255,29 @@ def album_set_cover(request):
     album.cover_from = 'manual'
     album.save()
     return JsonResponse({}, status=200)
+
+
+def __album_count(albums):
+    """统计影集中的照片数量、最早和最晚拍摄日期，包括其子影集"""
+    for album in albums:
+        albums_uuid_list = Album.objects.raw('''
+                            WITH RECURSIVE tmp_albums AS (
+                                SELECT uuid AS rootId FROM m_album WHERE uuid= %s
+                                UNION ALL
+                                SELECT uuid FROM m_album a,tmp_albums b WHERE a.parent_uuid = b.rootId
+                            )
+                            SELECT uuid FROM m_album WHERE EXISTS(SELECT uuid FROM tmp_albums WHERE rootId = uuid)
+                        ''', [album['uuid']])
+        photos = Photo.objects.distinct().filter(albumphoto__album_uuid__in=albums_uuid_list, is_deleted=False)
+        photos = photos.aggregate(photos=Count('uuid'), min_time=Min('exif_datetime'), max_time=Max('exif_datetime'))
+        album['photos'] = photos['photos']
+        if photos['photos'] > 0:
+            album['min_time'] = photos['min_time']
+            album['max_time'] = photos['max_time']
+        else:
+            album['min_time'] = datetime.strptime('1900-01-01', "%Y-%m-%d")
+            album['max_time'] = datetime.strptime('1900-01-01', "%Y-%m-%d")
+
+    # 对影集列表按照成员最新时间进行排序
+    albums = sorted(list(albums), key=lambda x: x['max_time'], reverse=True)
+    return albums

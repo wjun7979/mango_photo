@@ -15,10 +15,8 @@ from django.views.decorators.http import require_http_methods
 from django.core.paginator import Paginator
 from backend_api.common.date_encoder import DateEncoder
 from backend_api.models import Photo, AlbumPhoto, Album, Address, People, PeopleFace, PhotoTag
-from backend_api.views.album import album_auto_cover
+from backend_api.views.album import album_auto_cover, __album_count
 from backend_api.views.people import people_auto_cover, baidu_ai_facelib_delete
-
-from backend_api.views.thing import thing_get_tags
 
 
 @require_http_methods(['GET'])
@@ -212,15 +210,9 @@ def photo_get_albums(request):
     albums = Album.objects.filter(uuid__in=album_uuid_list)
     albums = albums.values('uuid', 'name', cover_path=F('cover__path_thumbnail_s'),
                            cover_name=F('cover__name'))  # 通过外键关联查询封面路径
-    # 影集中的照片数量通过外键表获取
-    albums = albums.annotate(photos=Count('albumphoto', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
-    albums = albums.annotate(
-        min_time=Min('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
-    albums = albums.annotate(
-        max_time=Max('albumphoto__photo_uuid__exif_datetime', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
-    albums = albums.order_by('name')
-    # 返回结果
-    response = json.loads(json.dumps(list(albums), cls=DateEncoder))
+
+    albums = __album_count(albums)
+    response = json.loads(json.dumps(albums, cls=DateEncoder))
     return JsonResponse(response, safe=False, status=200)
 
 
