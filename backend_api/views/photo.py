@@ -31,6 +31,8 @@ def photo_list(request):
     city = request.GET.get('city')  # 市
     district = request.GET.get('district')  # 县
     keyword = request.GET.get('keyword')  # 搜索关键字
+    time_group = request.GET.get('time_group')  # 时间分组字段
+    order_by = request.GET.get('order_by')  # 排序依据
     group_type = request.GET.get('group_type')  # 分组类型
     date_filter = request.GET.get('date_filter')  # 分组时间过滤
     page = request.GET.get('page')
@@ -38,9 +40,11 @@ def photo_list(request):
 
     photos = Photo.objects.distinct()
     photos = photos.values('uuid', 'path_original', 'path_modified', 'path_thumbnail_s', 'path_thumbnail_l', 'name',
-                           'width', 'height', 'exif_datetime', 'is_favorited', 'comments', 'address__address',
-                           'address__poi_name', 'address__province', 'address__city', 'address__district')
-    photos = photos.annotate(faces=Count('peopleface__uuid'))
+                           'width', 'height', 'exif_datetime', 'is_favorited', 'comments',
+                           'address__address', 'address__poi_name', 'address__province', 'address__city',
+                           'address__district')
+    photos = photos.annotate(time_group=F(time_group))  # 时间分组字段
+    photos = photos.annotate(faces=Count('peopleface__uuid'))  # 照片中人脸的数量
     # 过滤条件
     photos = photos.filter(userid=userid)
     if call_mode in ['photo', 'album', 'pick', 'favorites', 'cover', 'people', 'feature', 'pick_face', 'place']:
@@ -93,7 +97,7 @@ def photo_list(request):
             address__address__icontains=keyword) | Q(address__poi_name__icontains=keyword))
 
     # 排序
-    photos = photos.order_by('-exif_datetime')
+    photos = photos.order_by(order_by)  # 默认是-exif_datetime
 
     # 分页
     if page:
@@ -120,6 +124,8 @@ def photo_get_groups(request):
     city = request.GET.get('city')  # 市
     district = request.GET.get('district')  # 县
     keyword = request.GET.get('keyword')  # 搜索关键字
+    time_group = request.GET.get('time_group')  # 时间分组字段
+    order_by = request.GET.get('order_by')  # 排序依据
 
     # 首先生成符合条件的照片集合
     photos = Photo.objects
@@ -168,16 +174,16 @@ def photo_get_groups(request):
     # 把前面生成的集合作为条件，获取时间分组列表
     groups = Photo.objects.distinct()
     if group_type == 'year':
-        groups = groups.extra(select={"exif_datetime": "DATE_FORMAT(exif_datetime, '%%Y-01-01')"})
+        groups = groups.extra(select={"time_group": "DATE_FORMAT("+time_group+", '%%Y-01-01')"})
     if group_type == 'month':
-        groups = groups.extra(select={"exif_datetime": "DATE_FORMAT(exif_datetime, '%%Y-%%m-01')"})
+        groups = groups.extra(select={"time_group": "DATE_FORMAT("+time_group+", '%%Y-%%m-01')"})
     if group_type == 'day':
-        groups = groups.extra(select={"exif_datetime": "DATE_FORMAT(exif_datetime, '%%Y-%%m-%%d')"})
-    groups = groups.values('exif_datetime')
+        groups = groups.extra(select={"time_group": "DATE_FORMAT("+time_group+", '%%Y-%%m-%%d')"})
+    groups = groups.values('time_group')
     groups = groups.filter(uuid__in=Subquery(photos.values('uuid')))
 
     # 排序
-    groups = groups.order_by('-exif_datetime')
+    groups = groups.order_by('-time_group')
 
     response = json.loads(json.dumps(list(groups)))
     return JsonResponse(response, safe=False, status=200)

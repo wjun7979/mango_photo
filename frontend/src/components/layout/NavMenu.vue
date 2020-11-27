@@ -5,10 +5,16 @@
             <UserCard style="margin-top: 10px"></UserCard>
         </div>
         <el-menu :default-active="$route.path" router @select="selectMenu">
-            <el-menu-item index="/photos">
-                <i class="el-icon-picture-outline"></i>
-                <span>照片</span>
-            </el-menu-item>
+            <el-menu-item-group title="照片">
+                <el-menu-item index="/photos">
+                    <i class="el-icon-picture-outline"></i>
+                    <span>全部照片</span>
+                </el-menu-item>
+                <el-menu-item index="/recent">
+                    <i class="el-icon-time"></i>
+                    <span>最近上传</span>
+                </el-menu-item>
+            </el-menu-item-group>
             <el-menu-item-group title="照片库">
                 <el-menu-item index="/albums">
                     <i class="el-icon-collection"></i>

@@ -12,9 +12,9 @@
                 <ul ref="photo_groups" class="photo-groups">
                     <li v-for="(group,index) of photoGroups.list" :key="index" @click="filterPhotos(group.exif_datetime)"
                         :class="{active: dateFilter===group.exif_datetime}">
-                        <span v-if="groupType==='year'">{{$common.dateFormat(group.exif_datetime, 'yyyy年')}}</span>
-                        <span v-if="groupType==='month'">{{$common.dateFormat(group.exif_datetime, 'yyyy年MM月')}}</span>
-                        <span v-if="groupType==='day'">{{$common.dateFormat(group.exif_datetime, 'yyyy年MM月dd日')}}</span>
+                        <span v-if="groupType==='year'">{{$common.dateFormat(group.time_group, 'yyyy年')}}</span>
+                        <span v-if="groupType==='month'">{{$common.dateFormat(group.time_group, 'yyyy年MM月')}}</span>
+                        <span v-if="groupType==='day'">{{$common.dateFormat(group.time_group, 'yyyy年MM月dd日')}}</span>
                     </li>
                 </ul>
                 <i class="el-icon-menu btn-float-tools" slot="reference"></i>
@@ -285,7 +285,7 @@
                 dateFilter: '',  //当前日期分组过滤的值
                 checkList: [],  //选中的照片列表
                 isShowTips: false,  //是否显示上传提示
-                groupType: 'month',  //分组类型 day, month, year
+                groupType: 'day',  //分组类型 day, month, year
                 groupLocationList: [],  //分组列表中包含的位置列表
                 checkGroupList: [],  //选中的分组列表
                 multiple: true,  //是否允许多选
@@ -341,6 +341,14 @@
             searchKey: {  //从search.vue中传递过来的搜索关键字
                 type: String,
                 default: ''
+            },
+            timeGroup: {  //时间分组字段
+                type: String,
+                default: 'exif_datetime'
+            },
+            orderBy: {  //排序依据
+                type: String,
+                default: '-exif_datetime'
             }
         },
         computed: {
@@ -586,6 +594,8 @@
                         city: decodeURIComponent(this.placeCity),  //市
                         district: decodeURIComponent(this.placeDistrict),  //县
                         keyword: this.keyword,  //搜索关键字
+                        time_group: this.timeGroup,  //时间分组字段
+                        order_by: this.orderBy,  //排序依据
                         group_type: this.groupType,  //分组类型
                         date_filter: this.dateFilter,  //分组时间过滤
                         page: this.photos.page,
@@ -598,7 +608,7 @@
                     if (tempPhotoList.length > 0) {
                         //为照片列表增加分组信息
                         for (let index in tempPhotoList) {
-                            tempPhotoList[index]['timestamp'] = this.getGroupLabel(tempPhotoList[index]['exif_datetime'])
+                            tempPhotoList[index]['timestamp'] = this.getGroupLabel(tempPhotoList[index]['time_group'])
                         }
                         // this.photos.photoList.push.apply(this.photos.photoList, tempPhotoList)
                         this.photos.photoList = tempPhotoList
@@ -680,6 +690,8 @@
                         city: decodeURIComponent(this.placeCity),  //市
                         district: decodeURIComponent(this.placeDistrict),  //县
                         keyword: this.keyword,  //搜索关键字
+                        time_group: this.timeGroup,  //时间分组字段
+                        order_by: this.orderBy,  //排序依据
                     }
                 }).then(response => {
                     this.photoGroups.list = response.data
@@ -701,9 +713,9 @@
                 //将照片列表转换成时间线要求的分组格式
                 let dataMap = []
                 for (let d of this.photos.photoList) {
-                    let findData = dataMap.find(t => t.timestamp === this.getGroupLabel(d['exif_datetime']))
+                    let findData = dataMap.find(t => t.timestamp === this.getGroupLabel(d['time_group']))
                     if (!findData)
-                        dataMap.push({'timestamp': this.getGroupLabel(d['exif_datetime']), 'list': [d]})
+                        dataMap.push({'timestamp': this.getGroupLabel(d['time_group']), 'list': [d]})
                     else
                         findData.list.push(d)
                 }

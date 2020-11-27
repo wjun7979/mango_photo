@@ -4,6 +4,7 @@ import Login from './components/Login'
 import UserInfo from "./components/UserInfo";
 import Main from './components/layout/Main'
 import Photos from "./components/Photos"
+import Recent from "./components/Recent";
 import Albums from "./components/Albums";
 import Album from "./components/Album";
 import PickPhoto from "./components/PickPhoto";
@@ -40,6 +41,11 @@ const routes = [
             {
                 path: '/photos/:photo_uuid?', name: 'photos', component: Photos, meta: {
                     title: '照片'
+                }
+            },
+            {
+                path: '/recent/:photo_uuid?', name: 'recent', component: Recent, meta: {
+                    title: '最近上传'
                 }
             },
             {
