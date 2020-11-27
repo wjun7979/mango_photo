@@ -10,7 +10,7 @@
                     <el-radio-button label="day">按天</el-radio-button>
                 </el-radio-group>
                 <ul ref="photo_groups" class="photo-groups">
-                    <li v-for="(group,index) of photoGroups.list" :key="index" @click="filterPhotos(group.exif_datetime)"
+                    <li v-for="(group,index) of photoGroups.list" :key="index" @click="filterPhotos(group.time_group)"
                         :class="{active: dateFilter===group.exif_datetime}">
                         <span v-if="groupType==='year'">{{$common.dateFormat(group.time_group, 'yyyy年')}}</span>
                         <span v-if="groupType==='month'">{{$common.dateFormat(group.time_group, 'yyyy年MM月')}}</span>

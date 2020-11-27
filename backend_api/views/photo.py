@@ -32,7 +32,11 @@ def photo_list(request):
     district = request.GET.get('district')  # 县
     keyword = request.GET.get('keyword')  # 搜索关键字
     time_group = request.GET.get('time_group')  # 时间分组字段
+    if not time_group:
+        time_group = 'exif_datetime'  # 赋默认值
     order_by = request.GET.get('order_by')  # 排序依据
+    if not order_by:
+        order_by = '-exif_datetime'
     group_type = request.GET.get('group_type')  # 分组类型
     date_filter = request.GET.get('date_filter')  # 分组时间过滤
     page = request.GET.get('page')
@@ -84,12 +88,12 @@ def photo_list(request):
     if date_filter:
         if group_type == 'year':
             photos = photos.filter(
-                exif_datetime__lt=datetime.strptime(date_filter, '%Y-%m-%d') + relativedelta(years=1))
+                time_group__lt=datetime.strptime(date_filter, '%Y-%m-%d') + relativedelta(years=1))
         if group_type == 'month':
             photos = photos.filter(
-                exif_datetime__lt=datetime.strptime(date_filter, '%Y-%m-%d') + relativedelta(months=1))
+                time_group__lt=datetime.strptime(date_filter, '%Y-%m-%d') + relativedelta(months=1))
         if group_type == 'day':
-            photos = photos.filter(exif_datetime__lt=datetime.strptime(date_filter, '%Y-%m-%d') + timedelta(days=1))
+            photos = photos.filter(time_group__lt=datetime.strptime(date_filter, '%Y-%m-%d') + timedelta(days=1))
 
     # 搜索（标签、说明、地址、poi名称）
     if keyword:
