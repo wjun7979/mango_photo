@@ -412,12 +412,13 @@ def people_get_faces(request):
     """获取面孔列表"""
     response = {}
     call_mode = request.GET.get('call_mode')
+    userid = request.GET.get('userid')
     people_uuid = request.GET.get('people_uuid')
     page = request.GET.get('page')
     pagesize = request.GET.get('pagesize')
 
     faces = PeopleFace.objects
-    faces = faces.filter(is_delete=False)
+    faces = faces.filter(userid=userid, is_delete=False)
     if call_mode == 'people':
         faces = faces.filter(people_uuid=people_uuid)
     if call_mode == 'pick_face':

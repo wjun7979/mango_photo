@@ -6,6 +6,7 @@ from backend_api.views.user import *
 from backend_api.views.album import *
 from backend_api.views.people import *
 from backend_api.views.place import *
+from backend_api.views.thing import *
 
 urlpatterns = [
     path('login', login),  # 用户登录
@@ -62,4 +63,5 @@ urlpatterns = [
     path('people_remove', people_remove),  # 删除人物
     path('place_list', place_list),  # 获取地点列表
     path('place_show', place_show),  # 根据输入参数返回省、市、县三级名称
+    path('thing_get_tags', thing_get_tags),  # 获取图像标签
 ]

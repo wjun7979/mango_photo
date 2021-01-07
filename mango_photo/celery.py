@@ -11,7 +11,7 @@ project_settings = '%s.settings' % project_name
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', project_settings)
 
 # 实例化Celery,网上很多教程这里都是没有设置broker造成启动失败
-app = Celery('tasks', broker='redis://127.0.0.1:6379/0')
+app = Celery('tasks', broker='redis://localhost:6379/0')
 
 # 使用django的settings文件配置celery
 app.config_from_object('django.conf:settings')

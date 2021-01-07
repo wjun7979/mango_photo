@@ -261,6 +261,7 @@
                     method: 'get',
                     url: this.apiUrl + '/api/people_get_faces',
                     params: {
+                        userid: localStorage.getItem('userid'),
                         call_mode: this.callMode,
                         people_uuid: this.peopleUUID,
                         page: this.faces.page,
@@ -306,7 +307,7 @@
                 this.showFaces()
                 this.photos.isLoading = true  //当前正处于加载状态
                 this.photos.photoList = []
-                this.photos.photoListGroup = []
+                this.photos.page = e
                 this.showPhotos()
             },
             showPreview(photo_uuid) {

@@ -17,6 +17,7 @@ from backend_api.common.date_encoder import DateEncoder
 from backend_api.models import Photo, AlbumPhoto, Album, Address, People, PeopleFace, PhotoTag
 from backend_api.views.album import album_auto_cover, __album_count
 from backend_api.views.people import people_auto_cover, baidu_ai_facelib_delete
+# from backend_api.views.thing import thing_get_tags
 
 
 @require_http_methods(['GET'])
