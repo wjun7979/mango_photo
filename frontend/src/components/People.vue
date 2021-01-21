@@ -83,6 +83,7 @@
             }
         },
         mounted() {
+            this.showType = this.$route.params.type
             this.getPeople()
         },
         methods: {

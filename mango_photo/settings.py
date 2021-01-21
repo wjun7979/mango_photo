@@ -28,6 +28,7 @@ DEBUG = True
 
 ALLOWED_HOSTS = [
     'localhost',
+    'wjun-pc',
     '127.0.0.1',
     '192.168.16.67',
     '58.51.106.134'

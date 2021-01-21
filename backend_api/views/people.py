@@ -424,8 +424,10 @@ def people_get_faces(request):
     if call_mode == 'pick_face':
         faces = faces.filter(people_uuid__isnull=True)
     faces = faces.values('uuid', 'path', 'path_thumbnail', 'name', 'input_date', 'people_uuid', 'photo_uuid',
-                         'feature_token', people_name=F('people_uuid__name'),
-                         exif_datetime=F('photo_uuid__exif_datetime'))
+                         'feature_token', 'photo_uuid__name', 'photo_uuid__width', 'photo_uuid__height',
+                         'photo_uuid__path_thumbnail_l', 'photo_uuid__comments', 'photo_uuid__is_favorited',
+                         'photo_uuid__exif_datetime', 'photo_uuid__address__poi_name', 'photo_uuid__address__address',
+                         people_name=F('people_uuid__name'), exif_datetime=F('photo_uuid__exif_datetime'))
     faces = faces.order_by('-exif_datetime')
 
     # 分页

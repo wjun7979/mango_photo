@@ -30,6 +30,8 @@ const store = new Vuex.Store({
         pickPhotoMode: false,  //移动设备下是否进入选择照片模式
         pickFaceMode: false,  //移动设备下是否进入选择面孔模式
         searchKeyword: '',  //搜索关键字
+        photoPageSize: 100,  //照片列表每页的数量
+        facePageSize: 100,  //面孔列表每页的数量
     },
     mutations: {
         setApiUrl(state) {  //根据客户端访问地址改变API请求地址
@@ -95,7 +97,13 @@ const store = new Vuex.Store({
         },
         searchKeyword(state, payload) {  //更改"搜索关键字"的值
             state.searchKeyword = payload.keyword
-        }
+        },
+        setPhotoPageSize(state, payload) {  //更改“照片列表每页的数量”的值
+            state.photoPageSize = payload.pagesize
+        },
+        setFacePageSize(state, payload) {  //更改“面孔列表每页的数量”的值
+            state.facePageSize = payload.pagesize
+        },
     }
 })
 store.commit('setApiUrl')

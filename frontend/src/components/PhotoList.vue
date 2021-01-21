@@ -119,10 +119,11 @@
                     </div>
                 </el-checkbox-group>
             </el-row>
-            <el-row v-show="photos.photoList.length>0" class="div-pagination">
-                <el-pagination background layout="prev, pager, next" :total="photos.total" :pager-count="5"
-                               :page-size="photos.pageSize" :current-page.sync="photos.page" :hide-on-single-page="true"
-                               @current-change="goPage($event)">
+            <el-row v-if="photos.total>0" class="div-pagination">
+                <el-pagination background layout="sizes, prev, pager, next" :total="photos.total" :pager-count="5"
+                               :page-size="photos.pageSize" :page-sizes="[50,100,200,500]"
+                               :current-page.sync="photos.page" :hide-on-single-page="false"
+                               @current-change="goPage($event)" @size-change="chagePageSize($event)">
                 </el-pagination>
             </el-row>
         </el-checkbox-group>
@@ -276,7 +277,6 @@
                     page: 1,  //当前页号
                     pages: 1,  //总页数
                     pageSize: 100,  //每页的数量
-                    isLoading: false,  //当前是否为加载状态
                 },
                 photoGroups: {
                     list: [],  //当前所有照片的分组列表
@@ -392,19 +392,17 @@
                 let refreshPhoto = this.$store.state.refreshPhoto
                 if (refreshPhoto.action === 'reload') {  //刷新
                     this.reloadPhotos()
-                    // this.photos.isLoading = true  //当前正处于加载状态
                     // this.photos.photoList = []
                     // this.photos.page = 1
                     // this.showPhotos()
                 }
                 if (refreshPhoto.action === 'delete') {  //删除
-                    this.photos.isLoading = true  //当前正处于加载状态
-                    for (let item of refreshPhoto.list) {
-                        let index = this.photos.photoList.findIndex(t => t.uuid === item)
-                        this.photos.photoList.splice(index, 1)
+                    this.photos.total = this.photos.total - refreshPhoto.list.length  //将照片总数减去删除的数量
+                    this.photos.pages = Math.ceil(this.photos.total / this.photos.pageSize)  //重新计算总页数
+                    if (this.photos.page > this.photos.pages) {  //当前页号大于总页总时
+                        this.photos.page = this.photos.pages  //将当前页号定位到最后一页
                     }
-                    this.photos.isLoading = false
-                    this.creatPhotoGroup()  //重新分组
+                    this.showPhotos()
                 }
                 if (refreshPhoto.action === 'update') {  //更新
                     let photo = refreshPhoto.list
@@ -460,13 +458,9 @@
                 this.photoGroups.scrollTop = 0  //重置分组列表的滚动条位置
                 this.creatPhotoGroup()
             },
-            albumPhotoList(val) {
+            albumPhotoList() {
                 //AddPhotoToAlbum组件载入时会异步获取影集照片列表并传入，所以这里要监视该属性的变化
-                if (this.callMode === 'pick') {
-                    for (let item of val) {
-                        this.checkList.push(item)  //将当前影集中的照片默认选中
-                    }
-                }
+                this.selectAlbumList()
             },
             previewPhotoUUID(val) {
                 //当照片uuid变化时，判断是否需要显示大图预览
@@ -502,6 +496,7 @@
             if (this.searchKey !== '') {
                 this.$store.commit('searchKeyword', {keyword: this.searchKey})
             }
+            this.photos.pageSize = this.$store.state.photoPageSize  //从vuex中读取照片列表每页的数量
             this.showPhotos()  //获取并显示照片列表
             if (['pick','cover','feature'].indexOf(this.callMode) === -1)
                 this.deviceSupportInstall()  //注册键盘按键支持
@@ -509,14 +504,12 @@
                 this.multiple = false
             this.setImgHeight()
             window.addEventListener('resize', this.listenResize)
-            // window.addEventListener('scroll', this.listenScroll)
         },
         beforeDestroy() {
             if (['pick','cover','feature'].indexOf(this.callMode) === -1) {
                 this.deviceSupportUninstall()  //卸载键盘按键支持
             }
             window.removeEventListener('resize', this.listenResize)
-            // window.removeEventListener('scroll', this.listenScroll)
             this.$store.commit('pickPhotoMode', {show: false})  //重置移动设备下是否进入选择照片模式
             this.$store.commit('searchKeyword', {keyword: ''})  //重置全局搜索关键字
         },
@@ -541,17 +534,6 @@
             listenResize: function () {
                 //监听浏览器窗口大小变化的事件
                 this.setImgHeight()
-            },
-            listenScroll() {
-                //监听滚动事件，实现滚动加载
-                let bottomOfWindow = document.documentElement.offsetHeight - document.documentElement.scrollTop - window.innerHeight
-                if (bottomOfWindow >= 0 && bottomOfWindow <= 20 && this.photos.isLoading === false) {
-                    this.photos.isLoading = true  //当前正处于加载状态
-                    if (this.photos.page < this.photos.pages) {
-                        this.photos.page ++
-                        this.showPhotos()
-                    }
-                }
             },
             setImgWidth(img) {
                 //计算照片的宽度
@@ -644,22 +626,31 @@
                     }
                     // 当没有照片时显示上传提示
                     this.isShowTips = this.photos.photoList.length === 0
-                    this.photos.isLoading = false  //重置加载状态
                 })
             },
             goPage(e) {
                 //跳转到指定的页
-                this.photos.isLoading = true  //当前正处于加载状态
                 this.photos.photoList = []
                 this.photos.photoListGroup = []
                 this.checkList = []
                 this.checkGroupList = []
                 this.photos.page = e
                 this.showPhotos()
+                this.selectAlbumList()
+            },
+            chagePageSize(e) {
+                //pageSize 改变时触发
+                this.photos.pageSize = e
+                this.$store.commit('setPhotoPageSize', {pagesize: e})  //将每页的数量存入全局变量
+                this.photos.pages = Math.ceil(this.photos.total / this.photos.pageSize)  //重新计算总页数
+                if (this.photos.page > this.photos.pages) {  //当前页号大于总页总时
+                    this.photos.page = this.photos.pages  //将当前页号定位到最后一页
+                }
+                this.showPhotos()
+                this.selectAlbumList()
             },
             reloadPhotos(scrollToDivider = false) {
                 //重新载入照片列表
-                this.photos.isLoading = true  //当前正处于加载状态
                 this.photos.photoList = []
                 this.photos.photoListGroup = []
                 this.photoGroups.list= []
@@ -673,6 +664,14 @@
                 }
                 this.photos.page = 1
                 this.showPhotos(scrollToDivider)
+            },
+            selectAlbumList() {
+                //当往影集添加照片时，将当前影集中的已存在的照片选中
+                if (this.callMode === 'pick') {
+                    for (let item of this.albumPhotoList) {
+                        this.checkList.push(item)
+                    }
+                }
             },
             getPhotoGroups() {
                 //获取照片的分组列表
@@ -1368,6 +1367,11 @@
     @media only screen and (max-width: 767px) {
         .div-pagination {
             padding: 10px 0;
+        }
+    }
+    @media only screen and (max-width: 767px) {
+        .div-pagination >>> .el-pagination__sizes {
+            display: none;
         }
     }
     .div-img >>> .el-image {

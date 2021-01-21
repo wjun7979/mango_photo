@@ -51,15 +51,16 @@
                     </el-image>
                 </div>
             </div>
-            <el-row v-show="faces.faceList.length>0" class="div-pagination">
-                <el-pagination background layout="prev, pager, next" :total="faces.total" :pager-count="5"
-                               :page-size="faces.pageSize" :current-page.sync="faces.page" :hide-on-single-page="true"
-                               @current-change="goPage($event)">
+            <el-row v-if="faces.total>0" class="div-pagination">
+                <el-pagination background layout="sizes, prev, pager, next" :total="faces.total" :pager-count="5"
+                               :page-size="faces.pageSize" :page-sizes="[50,100,200,500]"
+                               :current-page.sync="faces.page" :hide-on-single-page="false"
+                               @current-change="goPage($event)" @size-change="chagePageSize($event)">
                 </el-pagination>
             </el-row>
         </el-checkbox-group>
         <!--大图预览-->
-        <Photo v-if="isShowPreview" :callMode="callMode" :uuid="previewPhotoUUID" :photoList="photos.photoList"
+        <Photo v-if="isShowPreview" :callMode="callMode" :uuid="previewPhotoUUID" :photoList="faces.photoList"
                :peopleUUID="peopleUUID" :on-close="closePreview"></Photo>
     </div>
 </template>
@@ -76,19 +77,11 @@
             return {
                 faces: {
                     faceList: [],  //面孔列表
-                    total: 0,  //照片总数
-                    page: 1,  //当前页号
-                    pages: 1,  //总页数
-                    pageSize: 100,  //每页的数量
-                    isLoading: false,  //当前是否为加载状态
-                },
-                photos: {
                     photoList: [],  //照片列表
                     total: 0,  //照片总数
                     page: 1,  //当前页号
                     pages: 1,  //总页数
                     pageSize: 100,  //每页的数量
-                    isLoading: false,  //当前是否为加载状态
                 },
                 checkList: [],  //选中的照片列表
                 isShowTips: false,  //是否显示上传提示
@@ -152,22 +145,17 @@
                 //有其它组件发出刷新照片的指令
                 let refreshFace = this.$store.state.refreshFace
                 if (refreshFace.action === 'reload') {  //刷新
-                    this.faces.isLoading = true  //当前正处于加载状态
                     this.faces.faceList = []
                     this.faces.page = 1
                     this.showFaces()
-                    this.photos.isLoading = true  //当前正处于加载状态
-                    this.photos.photoList = []
-                    this.photos.page = 1
-                    this.showPhotos()
                 }
                 if (refreshFace.action === 'delete') {  //删除
-                    this.faces.isLoading = true  //当前正处于加载状态
-                    for (let item of refreshFace.list) {
-                        let index = this.faces.faceList.findIndex(t => t.uuid === item)
-                        this.faces.faceList.splice(index, 1)
+                    this.faces.total = this.faces.total - refreshFace.list.length  //将照片总数减去删除的数量
+                    this.faces.pages = Math.ceil(this.faces.total / this.faces.pageSize)  //重新计算总页数
+                    if (this.faces.page > this.faces.pages) {  //当前页号大于总页总时
+                        this.faces.page = this.faces.pages  //将当前页号定位到最后一页
                     }
-                    this.faces.isLoading = false  //重置加载状态
+                    this.showFaces()
                 }
                 if (refreshFace.action === 'update') {  //更新
                     let face = refreshFace.list
@@ -206,17 +194,15 @@
             },
         },
         mounted() {
+            this.faces.pageSize = this.$store.state.facePageSize  //从vuex中读取面孔列表每页的数量
             this.showFaces()  //获取并显示面孔列表
-            this.showPhotos()  //获取照片列表
             if (this.callMode === 'people') {
                 this.getPeople()
             }
             this.deviceSupportInstall()  //注册键盘按键支持
-            // window.addEventListener('scroll', this.listenScroll)
         },
         beforeDestroy() {
             this.deviceSupportUninstall()  //卸载键盘按键支持
-            // window.removeEventListener('scroll', this.listenScroll)
             this.$store.commit('pickFaceMode', {show: false})  //重置移动设备下是否进入选择面孔模式
         },
         methods: {
@@ -237,24 +223,6 @@
                 off(document, 'keydown', this._keyDownHandler)
                 this._keyDownHandler = null
             },
-            listenScroll() {
-                //监听滚动事件，实现滚动加载
-                let bottomOfWindow = document.documentElement.offsetHeight - document.documentElement.scrollTop - window.innerHeight <= 20
-                if (bottomOfWindow && this.faces.isLoading === false) {
-                    this.faces.isLoading = true  //当前正处于加载状态
-                    if (this.faces.page < this.faces.pages) {
-                        this.faces.page ++
-                        this.showFaces()
-                    }
-                }
-                if (bottomOfWindow && this.photos.isLoading === false) {
-                    this.photos.isLoading = true  //当前正处于加载状态
-                    if (this.photos.page < this.photos.pages) {
-                        this.photos.page ++
-                        this.showPhotos()
-                    }
-                }
-            },
             showFaces() {
                 //获取并显示面孔列表
                 this.$axios({
@@ -270,45 +238,43 @@
                 }).then(response => {
                     this.faces.total = response.data.total  //总照片数
                     this.faces.pages = Math.ceil(this.faces.total / this.faces.pageSize)  //总页数
-                    this.faces.faceList.push.apply(this.faces.faceList, response.data.list)
-
+                    this.faces.faceList = response.data.list
                     // 当没有照片时显示上传提示
                     this.isShowTips = this.faces.faceList.length === 0
-                    this.faces.isLoading = false  //重置加载状态
-                })
-            },
-            showPhotos() {
-                //获取照片列表
-                this.$axios({
-                    method: 'get',
-                    url: this.apiUrl + '/api/photo_list',
-                    params: {
-                        userid: localStorage.getItem('userid'),
-                        call_mode: this.callMode,
-                        album_uuid: this.albumUUID,
-                        people_uuid: this.peopleUUID,
-                        page: this.photos.page,
-                        pagesize: this.photos.pageSize,
+                    //生成photoList数组，用于传递到大图预览组件
+                    for (let photo of this.faces.faceList) {
+                        this.faces.photoList.push({
+                            uuid: photo.photo_uuid,
+                            name: photo.photo_uuid__name,
+                            width: photo.photo_uuid__width,
+                            height: photo.photo_uuid__height,
+                            path_thumbnail_l: photo.photo_uuid__path_thumbnail_l,
+                            comments: photo.photo_uuid__comments,
+                            is_favorited: photo.photo_uuid__is_favorited,
+                            exif_datetime: photo.photo_uuid__exif_datetime,
+                            address__poi_name: photo.photo_uuid__address__poi_name,
+                            address__address: photo.photo_uuid__address__address,
+                        })
                     }
-                }).then(response => {
-                    this.photos.total = response.data.total  //总照片数
-                    this.photos.pages = Math.ceil(this.photos.total / this.photos.pageSize)  //总页数
-                    this.photos.photoList.push.apply(this.photos.photoList, response.data.list)
-                    this.photos.isLoading = false  //重置加载状态
                 })
             },
             goPage(e) {
                 //跳转到指定的页
-                this.faces.isLoading = true  //当前正处于加载状态
                 this.faces.faceList = []
                 this.faces.page = e
                 this.checkList = []
                 this.checkGroupList = []
                 this.showFaces()
-                this.photos.isLoading = true  //当前正处于加载状态
-                this.photos.photoList = []
-                this.photos.page = e
-                this.showPhotos()
+            },
+            chagePageSize(e) {
+                //pageSize 改变时触发
+                this.faces.pageSize = e
+                this.$store.commit('setFacePageSize', {pagesize: e})  //将每页的数量存入全局变量
+                this.faces.pages = Math.ceil(this.faces.total / this.faces.pageSize)  //重新计算总页数
+                if (this.faces.page > this.faces.pages) {  //当前页号大于总页总时
+                    this.faces.page = this.faces.pages  //将当前页号定位到最后一页
+                }
+                this.showFaces()
             },
             showPreview(photo_uuid) {
                 //显示大图预览
