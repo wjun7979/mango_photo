@@ -620,3 +620,4 @@ def photo_download(request):
     # Content-Disposition就是当用户想把请求所得的内容存为一个文件的时候提供一个默认的文件名
     response['Content-Disposition'] = 'attachment;filename="{}"'.format(os.path.basename(zip_file))
     return response
+

@@ -55,7 +55,7 @@ def album_target_list(request):
 def album_get(request):
     """获取指定的影集信息"""
     album_uuid = request.GET.get('uuid')
-    album = Album.objects.values('uuid', 'name', cover_path=F('cover__path_thumbnail_s'),
+    album = Album.objects.values('uuid', 'name', 'cover_from', cover_path=F('cover__path_thumbnail_s'),
                                  cover_name=F('cover__name'))
     album = album.annotate(photos=Count('albumphoto', filter=Q(albumphoto__photo_uuid__is_deleted=False)))
     album = album.filter(uuid=album_uuid).first()
@@ -254,6 +254,18 @@ def album_set_cover(request):
     album.cover = Photo.objects.get(uuid=photo_uuid)
     album.cover_from = 'manual'
     album.save()
+    return JsonResponse({}, status=200)
+
+
+@require_http_methods(['POST'])
+def album_set_cover_to_default(request):
+    """将影集封面设置为自动产生"""
+    request_data = json.loads(request.body)
+    album_uuid = request_data.get('album_uuid')
+    album = Album.objects.get(uuid=album_uuid)
+    album.cover_from = 'auto'
+    album.save()
+    album_auto_cover(album_uuid)  # 自动设置指定影集及其父集的封面
     return JsonResponse({}, status=200)
 
 

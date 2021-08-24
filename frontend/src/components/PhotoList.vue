@@ -1201,7 +1201,9 @@
                     //更新前端列表
                     for (let item of this.checkList) {
                         let photo = this.photos.photoList.find(t => t.uuid === item)
-                        photo.exif_datetime = this.photoDateTime
+                        photo.exif_datetime = this.photoDateTime  //拍摄时间
+                        photo.time_group = this.photoDateTime  //时间分组字段
+                        photo.timestamp = this.getGroupLabel(this.photoDateTime)  //时间分组标签
                     }
                     this.creatPhotoGroup()  //时间变了要重新分组
                     this.unselectPhoto()

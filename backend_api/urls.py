@@ -49,6 +49,7 @@ urlpatterns = [
     path('album_rename', album_rename),  # 重命名影集
     path('album_move', album_move),  # 移动影集
     path('album_set_cover', album_set_cover),  # 手动设置影集封面
+    path('album_set_cover_to_default', album_set_cover_to_default),  # 将影集封面设置为自动产生
     path('people_add_face', people_add_face),  # 添加面孔
     path('people_add_faces', people_add_faces),  # 批量添加面孔
     path('people_remove_face', people_remove_face),  # 删除面孔

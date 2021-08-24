@@ -92,12 +92,7 @@
                 let formData = new FormData()
                 // 因为要传一个文件数组过去，所以要循环append
                 this.fileList.forEach((file) => {
-                    let fileDate = this.$common.dateFormat(new Date(), 'yyyy-MM-dd hh:mm:ss')
-                    if (file.raw.lastModifiedDate !== undefined) {
-                        fileDate = this.$common.dateFormat(file.raw.lastModifiedDate, 'yyyy-MM-dd hh:mm:ss')
-                    }
                     formData.append('file', file.raw)
-                    formData.append(file.name, fileDate)
                 })
 
                 this.$axios({
@@ -180,10 +175,10 @@
                         fileList.pop()
                     }
                     //检查文件大小
-                    const isOverSize = file.size / 1024 / 1024 <= 20
+                    const isOverSize = file.size / 1024 / 1024 <= 50
                     if (!isOverSize) {
                         if (document.getElementsByClassName('el-message').length === 0) {
-                            let msg = file.name + ' 文件大小超过了20MB'
+                            let msg = file.name + ' 文件大小超过了50MB'
                             this.$message({
                                 message: msg,
                                 type: 'error',

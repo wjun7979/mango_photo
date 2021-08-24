@@ -81,6 +81,9 @@ def upload_photo(request):
                     # 将照片转正
                     __spin_photo(fullpath_original, exif['Orientation'])
 
+                    # 获取照片的实际大小，不能用file.size，因为照片转正操作后，im.save()把图像压缩了
+                    file_size = os.path.getsize(fullpath_original)
+
                     # 创建缩略图
                     thumbnail = __create_thumbnail(userid, fullpath_original, path_original, file_md5)
                     fullpath_thumbnail_s = thumbnail[1]  # 小缩略图的完整路径
@@ -102,7 +105,7 @@ def upload_photo(request):
                     photo.name = file_new_name
                     photo.name_original = file_name
                     photo.md5 = file_md5
-                    photo.size = file.size
+                    photo.size = file_size
                     photo.width = im_width
                     photo.height = im_height
                     photo.exif_datetime = exif['DateTime']
@@ -251,7 +254,7 @@ def __spin_photo(full_path, orientation):
             im = im.rotate(270, expand=True)  # 将图像逆时针旋转270度
         elif orientation == '8' or orientation.upper() == 'ROTATE 270 CW':  # 顺时针旋转270度
             im = im.rotate(90, expand=True)  # 将图像逆时针旋转270度
-        im.save(full_path)
+        im.save(full_path, quality=95)
         im.close()
     except Exception as e:
         traceback.print_exc()  # 输出详细的错误信息

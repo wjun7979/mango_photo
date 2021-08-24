@@ -7,7 +7,8 @@
                 <span class="hidden-xs-only">：{{albumName}}</span>
             </el-col>
             <el-col :span="10" style="text-align: right">
-                <el-button type="primary" @click="_setCover" style="margin: 11px 10px 0 0">完成</el-button>
+                <el-button v-if="coverFrom=='manual'" size="small" @click="setCoverToDefault" style="margin: 16px 10px 0 0">默认</el-button>
+                <el-button type="primary" size="small" @click="_setCover" style="margin: 16px 10px 0 0">完成</el-button>
             </el-col>
         </el-header>
         <el-main class="mp-page-main">
@@ -25,7 +26,8 @@
             return {
                 albumUUID: this.$route.params.albumUUID,
                 albumName: '',
-                photo_uuid: ''  //选中的封面照片
+                photo_uuid: '',  //选中的封面照片
+                coverFrom: '',  //当前影集封面产生的方式
             }
         },
         components: {PhotoList},
@@ -59,6 +61,7 @@
                 }).then(response => {
                     const result = response.data
                     this.albumName = result.name
+                    this.coverFrom = result.cover_from
                 })
             },
             onPick(checkList) {
@@ -89,6 +92,31 @@
                     })
                     this.onClose()
                 })
+            },
+            setCoverToDefault() {
+                //将影集封面设置为自动产生
+                this.$confirm('即将更改为将该影集中最后一次上传的照片作为封面。', '继续吗？', {
+                    confirmButtonText: '继续',
+                    cancelButtonText: '放弃',
+                    closeOnClickModal: false,
+                    type: 'warning',
+                }).then(() => {
+                    this.$axios({
+                        method: 'post',
+                        url: this.apiUrl + '/api/album_set_cover_to_default',
+                        data: {
+                            album_uuid: this.albumUUID
+                        }
+                    }).then(() => {
+                        let msg = '影集 [' + this.albumName + '] 的封面产生方式已更改为自动'
+                        this.$message({
+                            message: msg,
+                            type: 'success',
+                        })
+                        this.onClose()
+                    })
+                }).catch(() => {
+                });
             }
         }
     }
