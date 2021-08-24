@@ -265,6 +265,7 @@ def album_set_cover_to_default(request):
     album = Album.objects.get(uuid=album_uuid)
     album.cover_from = 'auto'
     album.save()
+
     album_auto_cover(album_uuid)  # 自动设置指定影集及其父集的封面
     return JsonResponse({}, status=200)
 
