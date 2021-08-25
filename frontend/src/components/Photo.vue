@@ -19,6 +19,8 @@
                     <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
                         <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
                         <el-dropdown-menu slot="dropdown">
+                            <el-dropdown-item v-show="displayQuality=='thumbnail'" icon="el-icon-s-tools" command="show_original">显示原图</el-dropdown-item>
+                            <el-dropdown-item v-show="displayQuality=='original'" icon="el-icon-setting" command="show_thumbnail">显示高清图</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-folder-add" command="add_to_album">添加到影集</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-delete" command="trash">移到回收站</el-dropdown-item>
@@ -33,6 +35,8 @@
                     <el-dropdown trigger="click" @command="handCommand" placement="bottom-end">
                         <i class="el-icon-more" title="更多选项" style="transform: rotate(90deg);"></i>
                         <el-dropdown-menu slot="dropdown">
+                            <el-dropdown-item v-show="displayQuality=='thumbnail'" icon="el-icon-s-tools" command="show_original">显示原图</el-dropdown-item>
+                            <el-dropdown-item v-show="displayQuality=='original'" icon="el-icon-setting" command="show_thumbnail">显示高清图</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-download" command="download">下载</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-plus" command="add_to_album">添加到影集</el-dropdown-item>
                             <el-dropdown-item icon="el-icon-folder-delete" command="remove_from_album">从影集中移除</el-dropdown-item>
@@ -395,6 +399,7 @@
                     startTouches: [],  //双指触摸时的起始坐标
                     touchTime: 0,  //点击时的时间
                 },
+                displayQuality: 'thumbnail',  //照片的显示质量，默认为高清图
             }
         },
         props: {
@@ -426,7 +431,9 @@
             index: {
                 handler: function () {
                     this.currentImg = this.previewListOrder[this.index]
+                    this.changeQuality(this.displayQuality)  //改变显示质量
                     this.reset();
+                    this.mode = Mode.CONTAIN
                     this.reloadInfo()  //重新加载信息侧边栏信息
                 }
             },
@@ -583,6 +590,9 @@
                 }
                 //双指缩放
                 if (e.touches && e.touches.length >= 2) {
+                    if (this.mode == Mode.ORIGINAL) {
+                        return false  //显示原始尺寸时不允许进行缩放
+                    }
                     e.preventDefault()  //禁止系统事件，防止双指缩放时会同时移动照片
                     //得到缩放比例
                     let now = e.touches
@@ -689,6 +699,9 @@
                 const {transform} = this;
                 switch (action) {
                     case 'zoomOut':
+                        if (this.mode == Mode.ORIGINAL) {
+                            return false  //显示原始尺寸时不允许进行缩放
+                        }
                         if (!this.checkPhotoSize()) {  //照片比屏幕小时不允许缩小
                             transform.scale = parseFloat((transform.scale - zoomRate).toFixed(3))
                         }
@@ -698,7 +711,10 @@
                         }
                         break;
                     case 'zoomIn':
-                        if (transform.scale < 5) {  //控制最大缩放比例
+                        if (this.mode == Mode.ORIGINAL) {
+                            return false  //显示原始尺寸时不允许进行缩放
+                        }
+                        if (transform.scale < 10) {  //控制最大缩放比例
                             transform.scale = parseFloat((transform.scale + zoomRate).toFixed(3))
                         }
                         break
@@ -713,6 +729,7 @@
                             }
                         }).then(response => {
                             let res = response.data
+                            //previewListOrder被改变时，currentImg也会同步更新，参见getPreviewList方法
                             this.previewListOrder[this.index].name = res.file_name
                             this.previewListOrder[this.index].url = this.apiUrl + '/' + res.path_thumbnail_l + '/' + res.file_name
                             this.reset()
@@ -770,6 +787,8 @@
                         'uuid': item.uuid,
                         'name': item.name,
                         'url': this.apiUrl + '/' + item.path_thumbnail_l + '/' + item.name,
+                        'url_original': this.apiUrl + '/' + item.path_original + '/' + item.name,
+                        'url_thumbnail': this.apiUrl + '/' + item.path_thumbnail_l + '/' + item.name,
                         'comments': item.comments,
                         'is_favorited': item.is_favorited,
                     })
@@ -961,6 +980,12 @@
             handCommand(command) {
                 //更多选项
                 switch (command) {
+                    case 'show_original':  //显示原图
+                        this.changeQuality('original')
+                        break
+                    case 'show_thumbnail':  //显示高清图
+                        this.changeQuality('thumbnail')
+                        break
                     case 'download':
                         this.downloadPhoto()
                         break
@@ -1628,6 +1653,18 @@
                     })
                 }).catch(() => {
                 });
+            },
+            changeQuality(quality) {
+                //更改照片显示质量,original原图,thumbnail缩略图
+                this.displayQuality = quality
+                if (quality == 'original') {
+                    this.previewListOrder[this.index].url = this.previewListOrder[this.index].url_original
+                }
+                else {
+                    this.previewListOrder[this.index].url = this.previewListOrder[this.index].url_thumbnail
+                }
+                this.reset()
+                this.mode = Mode.CONTAIN
             },
         }
     }
