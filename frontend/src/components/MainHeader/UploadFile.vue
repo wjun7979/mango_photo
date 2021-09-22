@@ -92,7 +92,13 @@
                 let formData = new FormData()
                 // 因为要传一个文件数组过去，所以要循环append
                 this.fileList.forEach((file) => {
+                    //取文件最后一次修改时间，如果没有，则以当前时间代替
+                    let fileDate = this.$common.dateFormat(new Date(), 'yyyy-MM-dd hh:mm:ss')
+                    if (file.raw.lastModifiedDate !== undefined) {
+                        fileDate = this.$common.dateFormat(file.raw.lastModifiedDate, 'yyyy-MM-dd hh:mm:ss')
+                    }
                     formData.append('file', file.raw)
+                    formData.append(file.name, fileDate)  //将最后一次修改时间存入file.name中，以便后台获取
                 })
 
                 this.$axios({
