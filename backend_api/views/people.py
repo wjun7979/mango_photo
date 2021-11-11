@@ -415,6 +415,8 @@ def people_get_faces(request):
     userid = request.GET.get('userid')
     people_uuid = request.GET.get('people_uuid')
     page = request.GET.get('page')
+    if int(page) < 1:  # 页号不能小于1
+        page = 1
     pagesize = request.GET.get('pagesize')
 
     faces = PeopleFace.objects

@@ -19,7 +19,8 @@ def thing_get_tags():
     headers = {'content-type': 'application/json;charset=utf8', 'X-Auth-Token': access_token}
 
     # 从Photo中获取没有执行图像标签检测的照片列表
-    photos = Photo.objects.filter(is_get_tag=False).all()[:2000]
+    # 每天控制只检测1000张图像，费用0.6元
+    photos = Photo.objects.filter(is_get_tag=False).all()[:1000]
     total = len(photos)
     for index, photo in enumerate(photos):
         print('正在执行图像标签检测：' + str(index + 1) + '/' + str(total) + ' ' + str(

@@ -41,6 +41,8 @@ def photo_list(request):
     group_type = request.GET.get('group_type')  # 分组类型
     date_filter = request.GET.get('date_filter')  # 分组时间过滤
     page = request.GET.get('page')
+    if int(page) < 1:  # 页号不能小于1
+        page = 1
     pagesize = request.GET.get('pagesize')
 
     photos = Photo.objects.distinct()
