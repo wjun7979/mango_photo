@@ -51,7 +51,7 @@ def login_get_bgimg(request):
 
 
 def __get_ip_address(request):
-    """获取客户端ip地址"""
+    """获取客户端IP地址"""
     ip = request.META.get("HTTP_X_FORWARDED_FOR", "")
     if not ip:
         ip = request.META.get('REMOTE_ADDR', "")
