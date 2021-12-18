@@ -2,8 +2,7 @@
     <el-row class="div-login">
         <el-carousel ref="carousel" class="bg-carousel" height="100%" indicator-position="none" :autoplay="false"
                      arrow="never">
-            <el-carousel-item class="bg-item" v-for="(img, index) of bgList" :key="index"
-                              :style="{'background-image': 'url(https://www.bing.com'+img.url+')'}">
+            <el-carousel-item class="bg-item" :style="{'background-image': 'url('+imgURL+')'}">
             </el-carousel-item>
         </el-carousel>
 
@@ -31,10 +30,6 @@
                 </div>
             </el-form>
         </el-col>
-        <div class="bgimg-tools">
-            <el-button class="btn-prev" icon="el-icon-arrow-left" title="上一张" circle @click="prevBackImg"></el-button>
-            <el-button class="btn-next" icon="el-icon-arrow-right" title="下一张" circle @click="nextBackImg"></el-button>
-        </div>
     </el-row>
 </template>
 
@@ -55,7 +50,7 @@
                         {required: true, message: '请输入登录密码', trigger: 'blur'}
                     ],
                 },
-                bgList: [],  //背景图片列表
+                imgURL: '',  //背景图片
             }
         },
         computed: {
@@ -108,17 +103,9 @@
                     method: 'get',
                     url: this.apiUrl + '/api/login_get_bgimg',
                 }).then(response => {
-                    const res = response.data.images
-                    this.bgList = res
+                    const res = response.data.url
+                    this.imgURL = this.apiUrl + res
                 })
-            },
-            prevBackImg() {
-                //选择上一张背景图片
-                this.$refs.carousel.next()
-            },
-            nextBackImg() {
-                //选择下一张背景图片
-                this.$refs.carousel.prev()
             },
         }
     }
